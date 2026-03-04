@@ -31,99 +31,63 @@
   </div>
 
 <script>
-  // ✅ Your Mapbox public token (ok to use on a web page)
-  mapboxgl.accessToken = "pk.eyJ1IjoiYmlnYWwxIiwiYSI6ImNtbWIzODZuaDA0cWYycXIyMXVydmx1eDkifQ.2tS6Ro5jbDlGjbR74_Ox0Q";
 
-  // ✅ Your Apps Script Web App endpoint (must be deployed as Web App)
-  const ROUTES_URL = "https://script.google.com/macros/s/AKfycbxLgr_yoMOXC1v_KY-YovZ2QklYhHuSNpQ-bJPYBZICT4ly0mST8W0XYqTJBARM17FH/exec";
+mapboxgl.accessToken = "pk.eyJ1IjoiYmlnYWwxIiwiYSI6ImNtbWIzODZuaDA0cWYycXIyMXVydmx1eDkifQ.2tS6Ro5jbDlGjbR74_Ox0Q";
 
-  const REFRESH_MS = 5000;
+const ROUTES_URL = "https://script.google.com/macros/s/AKfycbxLgr_yoMOXC1v_KY-YovZ2QklYhHuSNpQ-bJPYBZICT4ly0mST8W0XYqTJBARM17FH/exec";
 
-  const map = new mapboxgl.Map({
-    container: "map",
-    style: "mapbox://styles/mapbox/light-v11",
-    center: [-0.11, 51.51], // London
-    zoom: 11
-  });
+const REFRESH_MS = 5000;
 
-  map.addControl(new mapboxgl.NavigationControl(), "top-right");
-
-  async function loadRoutes() {
-    const statusEl = document.getElementById("status");
-    try {
-      // Cache-buster so it actually refreshes
-      const url = ROUTES_URL + "?t=" + Date.now();
-      const fc = await (await fetch(url)).json();
-
-      if (!fc || fc.type !== "FeatureCollection") {
-        statusEl.textContent = "Endpoint did not return GeoJSON FeatureCollection.";
-        return;
-      }
-
-      statusEl.textContent = `Routes: ${fc.features.length}`;
-
-      if (!map.getSource("routes")) {
-        map.addSource("routes", { type: "geojson", data: fc });
-        async function loadCulturalPlaces() {
-
-  const bbox = map.getBounds();
-
-  const query = `
-  [out:json][timeout:25];
-  (
-    node["tourism"~"museum|gallery|attraction"](${bbox.getSouth()},${bbox.getWest()},${bbox.getNorth()},${bbox.getEast()});
-    node["historic"](${bbox.getSouth()},${bbox.getWest()},${bbox.getNorth()},${bbox.getEast()});
-    node["amenity"="theatre"](${bbox.getSouth()},${bbox.getWest()},${bbox.getNorth()},${bbox.getEast()});
-  );
-  out;
-  `;
-
-  const url = "https://overpass-api.de/api/interpreter?data=" + encodeURIComponent(query);
-
-  const res = await fetch(url);
-  const data = await res.json();
-
-  data.elements.forEach(el => {
-
-    const name = el.tags?.name || "Cultural site";
-
-    new mapboxgl.Marker({ color: "#e63946" })
-      .setLngLat([el.lon, el.lat])
-      .setPopup(
-        new mapboxgl.Popup().setHTML(`<b>${name}</b>`)
-      )
-      .addTo(map);
-
-  });
-
-}
-
-map.on("load", () => {
-  loadCulturalPlaces();
+const map = new mapboxgl.Map({
+  container: "map",
+  style: "mapbox://styles/mapbox/light-v11",
+  center: [-0.11, 51.51],
+  zoom: 11
 });
-        map.addLayer({
-          id: "routes-line",
-          type: "line",
-          source: "routes",
-          paint: {
-            "line-width": 3,
-            "line-opacity": 0.85
-          }
-        });
-      } else {
-        map.getSource("routes").setData(fc);
-      }
-    } catch (err) {
-      statusEl.textContent = "Error loading routes (check deploy/public access).";
-      console.error(err);
-    }
-  }
 
-  map.on("load", async () => {
-    await loadRoutes();
-    setInterval(loadRoutes, REFRESH_MS);
-  });
-  async function loadCulturalPlaces() {
+map.addControl(new mapboxgl.NavigationControl(), "top-right");
+
+async function loadRoutes() {
+
+  const statusEl = document.getElementById("status");
+
+  try {
+
+    const url = ROUTES_URL + "?t=" + Date.now();
+    const fc = await (await fetch(url)).json();
+
+    if (!fc || fc.type !== "FeatureCollection") {
+      statusEl.textContent = "Endpoint did not return GeoJSON.";
+      return;
+    }
+
+    statusEl.textContent = `Routes: ${fc.features.length}`;
+
+    if (!map.getSource("routes")) {
+
+      map.addSource("routes", { type: "geojson", data: fc });
+
+      map.addLayer({
+        id: "routes-line",
+        type: "line",
+        source: "routes",
+        paint: {
+          "line-width": 3,
+          "line-opacity": 0.85
+        }
+      });
+
+    } else {
+      map.getSource("routes").setData(fc);
+    }
+
+  } catch (err) {
+    statusEl.textContent = "Error loading routes.";
+    console.error(err);
+  }
+}
+
+async function loadCulturalPlaces() {
 
   const bbox = map.getBounds();
 
@@ -154,11 +118,15 @@ map.on("load", () => {
       .addTo(map);
 
   });
-
 }
 
-map.on("load", () => {
+map.on("load", async () => {
+
+  await loadRoutes();
   loadCulturalPlaces();
+
+  setInterval(loadRoutes, REFRESH_MS);
+
 });
 </script>
 </body>
