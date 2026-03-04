@@ -9,30 +9,45 @@
   <link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet" />
   <script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
 
+  <!-- Turf.js (for buffering + within-500m analytics) -->
+  <script src="https://unpkg.com/@turf/turf@6/turf.min.js"></script>
+
   <style>
     html, body { margin: 0; padding: 0; height: 100%; }
     #map { width: 100%; height: 100%; }
+
     .hud {
-      position: absolute; top: 10px; left: 10px; z-index: 1;
-      background: rgba(255,255,255,0.92); padding: 12px 14px; border-radius: 12px;
-      font: 14px/1.35 system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-      box-shadow: 0 6px 22px rgba(0,0,0,0.18);
-      min-width: 260px;
+      position: absolute; top: 12px; left: 12px; z-index: 5;
+      background: rgba(255,255,255,0.95); padding: 12px 14px; border-radius: 14px;
+      font: 14px/1.3 system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.18);
+      width: 320px;
     }
-    .hud b { display:block; margin-bottom:6px; font-size: 16px; }
-    .small { font-size: 12px; opacity: 0.8; margin-top: 6px; }
-    .row { display:flex; align-items:center; gap:8px; margin: 8px 0; }
-    button {
-      display:inline-block;
-      border: 1px solid rgba(0,0,0,0.2);
+    .hud b { display:block; margin-bottom:8px; font-size:16px; }
+    .row { display:flex; align-items:center; gap:10px; margin:8px 0; }
+    .row input[type="checkbox"] { transform: scale(1.15); }
+    .small { font-size: 12px; opacity: 0.8; }
+    .btn {
+      appearance: none;
+      border: 2px solid #111;
       background: #fff;
       padding: 8px 10px;
-      border-radius: 10px;
-      cursor:pointer;
-      font: inherit;
+      border-radius: 12px;
+      cursor: pointer;
+      font-weight: 600;
     }
-    button:active { transform: translateY(1px); }
-    .dim { opacity: 0.6; }
+    .btn:disabled { opacity: 0.5; cursor: default; }
+    .divider { height: 1px; background: rgba(0,0,0,0.1); margin: 10px 0; }
+    .insights { font-size: 13px; }
+    .insights .k { opacity: 0.75; }
+    .pill {
+      display:inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: rgba(0,0,0,0.06);
+      margin-left: 6px;
+      font-size: 12px;
+    }
   </style>
 </head>
 
@@ -41,80 +56,151 @@
 
   <div class="hud">
     <b>Live Routes</b>
+
     <div id="status">Loading…</div>
 
     <div class="row">
-      <input id="toggleRoutes" type="checkbox" checked />
-      <label for="toggleRoutes">Show routes</label>
+      <label><input id="toggleRoutes" type="checkbox" checked> Show routes</label>
     </div>
 
     <div class="row">
-      <input id="toggleCultural" type="checkbox" checked />
-      <label for="toggleCultural">Show cultural places</label>
+      <label><input id="toggleCultural" type="checkbox" checked> Show cultural places</label>
+      <span class="pill">clustered</span>
     </div>
 
     <div class="row">
-      <button id="refreshCultural">Refresh cultural places</button>
+      <label style="display:flex; align-items:center; gap:8px;">
+        Within
+        <select id="radiusSelect">
+          <option value="0.25">250m</option>
+          <option value="0.5" selected>500m</option>
+          <option value="1">1km</option>
+        </select>
+        of routes
+      </label>
+    </div>
+
+    <div class="row">
+      <button id="btnRefreshCultural" class="btn">Refresh cultural places</button>
+      <button id="btnRecompute" class="btn">Recompute stats</button>
     </div>
 
     <div class="small">Routes auto-refresh every 5s</div>
-    <div class="small dim">Tip: click a cultural point for its name</div>
+
+    <div class="divider"></div>
+
+    <div class="insights" id="insights">
+      <div><span class="k">Avg cultural within radius:</span> —</div>
+      <div><span class="k">Best route:</span> —</div>
+      <div><span class="k">Worst route:</span> —</div>
+      <div class="small" style="margin-top:6px;">Tip: click a route to see its nearby cultural places.</div>
+    </div>
   </div>
 
 <script>
-  // ✅ Mapbox public token (ok on a web page)
-  mapboxgl.accessToken = "pk.eyJ1IjoiYmlnYWwxIiwiYSI6ImNtbWIzODZuaDA0cWYycXIyMXVydmx1eDkifQ.2tS6Ro5jbDlGjbR74_Ox0Q";
+  /*************************************************************
+   * CONFIG
+   *************************************************************/
+  // ✅ Mapbox public token (OK on a web page).
+  // IMPORTANT: In Mapbox dashboard, restrict this token to your GitHub Pages domain.
+  mapboxgl.accessToken = "YOUR_PUBLIC_MAPBOX_TOKEN_HERE";
 
   // ✅ Apps Script Web App endpoint (/exec)
-  const ROUTES_URL = "https://script.google.com/macros/s/AKfycbxLgr_yoMOXC1v_KY-YovZ2QklYhHuSNpQ-bJPYBZICT4ly0mST8W0XYqTJBARM17FH/exec";
+  const ROUTES_URL = "YOUR_APPS_SCRIPT_WEB_APP_EXEC_URL_HERE";
 
   const REFRESH_MS = 5000;
-  const OVERPASS_URL = "https://overpass-api.de/api/interpreter";
 
-  let showRoutes = true;
-  let showCultural = true;
+  // London bbox (faster + more reliable than re-querying every pan/zoom)
+  // [south, west, north, east]
+  const LONDON_BBOX = [51.28, -0.55, 51.70, 0.32];
 
+  // Overpass endpoint
+  const OVERPASS_URL = "https://overpass-api.de/api/interpreter?data=";
+
+  /*************************************************************
+   * MAP INIT
+   *************************************************************/
   const map = new mapboxgl.Map({
     container: "map",
     style: "mapbox://styles/mapbox/light-v11",
     center: [-0.11, 51.51],
-    zoom: 11
+    zoom: 10.5
   });
-
   map.addControl(new mapboxgl.NavigationControl(), "top-right");
 
-  // Optional: keep it around London (helps avoid accidental world/big Overpass queries)
-  map.setMaxBounds([
-    [-0.55, 51.25], // SW
-    [ 0.35, 51.75]  // NE
-  ]);
+  const elStatus = document.getElementById("status");
+  const elInsights = document.getElementById("insights");
 
-  function setStatus(routesCount, culturalCountText) {
-    const statusEl = document.getElementById("status");
-    const r = (typeof routesCount === "number") ? `Routes: ${routesCount}` : `Routes: …`;
-    const c = (culturalCountText != null) ? ` | Cultural: ${culturalCountText}` : "";
-    statusEl.textContent = r + c;
+  const elToggleRoutes = document.getElementById("toggleRoutes");
+  const elToggleCultural = document.getElementById("toggleCultural");
+  const elRadiusSelect = document.getElementById("radiusSelect");
+  const elBtnRefreshCultural = document.getElementById("btnRefreshCultural");
+  const elBtnRecompute = document.getElementById("btnRecompute");
+
+  /*************************************************************
+   * STATE
+   *************************************************************/
+  let routesFC = null;          // GeoJSON FeatureCollection (routes)
+  let culturalFC = null;        // GeoJSON FeatureCollection (cultural as points)
+  let routeStats = new Map();   // routeId -> { count, nearest[] }
+
+  // For route highlighting
+  const SELECTED_ROUTE_ID = "selected-route";
+  let selectedRouteFeature = null;
+
+  /*************************************************************
+   * HELPERS
+   *************************************************************/
+  function setStatus(text) { elStatus.textContent = text; }
+
+  function getRadiusKm() {
+    return Number(elRadiusSelect.value); // 0.25, 0.5, 1
   }
 
+  function featureId(f, idx) {
+    // stable-ish ID: prefer properties.row if you have it; else fall back to index
+    const row = f?.properties?.row;
+    return (row !== undefined && row !== null) ? `row:${row}` : `idx:${idx}`;
+  }
+
+  function formatNearest(list) {
+    if (!list || !list.length) return "<i>No named places nearby in this radius.</i>";
+    return "<ol style='margin:6px 0 0 18px; padding:0;'>" +
+      list.map(x => `<li>${escapeHtml(x.name)} <span style="opacity:.75">(${Math.round(x.m)}m)</span></li>`).join("") +
+      "</ol>";
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, (c) => ({
+      "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"
+    }[c]));
+  }
+
+  function setLayerVisibility(layerId, visible) {
+    if (!map.getLayer(layerId)) return;
+    map.setLayoutProperty(layerId, "visibility", visible ? "visible" : "none");
+  }
+
+  /*************************************************************
+   * ROUTES: LOAD + DRAW
+   *************************************************************/
   async function loadRoutes() {
     try {
-      // Cache-buster so it actually refreshes
-      const url = ROUTES_URL + "?t=" + Date.now();
+      const url = ROUTES_URL + "?t=" + Date.now(); // cache-buster
       const fc = await (await fetch(url)).json();
 
       if (!fc || fc.type !== "FeatureCollection") {
-        setStatus(null, "endpoint error");
+        setStatus("Routes endpoint did not return a GeoJSON FeatureCollection.");
         return;
       }
 
-      // Update count without clobbering cultural text
-      const statusEl = document.getElementById("status");
-      const culturalPart = statusEl.textContent.includes("| Cultural:")
-        ? statusEl.textContent.split("| Cultural:")[1].trim()
-        : null;
+      routesFC = fc;
 
-      setStatus(fc.features.length, culturalPart);
+      // Update UI line (keep cultural counts appended later)
+      const culturalCount = culturalFC?.features?.length ?? 0;
+      setStatus(`Routes: ${fc.features.length} | Cultural: ${culturalCount} | Within ${Math.round(getRadiusKm()*1000)}m: computing…`);
 
+      // Add/update map source + layer
       if (!map.getSource("routes")) {
         map.addSource("routes", { type: "geojson", data: fc });
 
@@ -127,42 +213,89 @@
             "line-opacity": 0.85
           }
         });
+
+        // Click interaction (2)
+        map.on("click", "routes-line", (e) => {
+          if (!e.features || !e.features.length) return;
+          const f = e.features[0];
+
+          // Build stable ID for lookup
+          const id = featureId(f, 0);
+
+          selectedRouteFeature = f;
+
+          // Highlight selected route
+          drawSelectedRoute(f);
+
+          // Popup with stats
+          const stats = routeStats.get(id);
+          const count = stats?.count ?? "—";
+
+          const html = `
+            <div style="font: 13px/1.35 system-ui, -apple-system, Segoe UI, Roboto, Arial;">
+              <b>Route ${escapeHtml(id)}</b><br/>
+              Cultural within ${Math.round(getRadiusKm()*1000)}m: <b>${count}</b>
+              ${formatNearest(stats?.nearest)}
+              <div style="margin-top:8px; opacity:.75;">
+                Tip: change radius and click “Recompute stats”.
+              </div>
+            </div>
+          `;
+
+          new mapboxgl.Popup({ closeButton: true, maxWidth: "360px" })
+            .setLngLat(e.lngLat)
+            .setHTML(html)
+            .addTo(map);
+        });
+
+        map.on("mouseenter", "routes-line", () => map.getCanvas().style.cursor = "pointer");
+        map.on("mouseleave", "routes-line", () => map.getCanvas().style.cursor = "");
       } else {
         map.getSource("routes").setData(fc);
       }
 
-      // apply toggle state
-      if (map.getLayer("routes-line")) {
-        map.setLayoutProperty("routes-line", "visibility", showRoutes ? "visible" : "none");
-      }
+      // visibility toggle
+      setLayerVisibility("routes-line", elToggleRoutes.checked);
 
     } catch (err) {
       console.error("Routes error:", err);
-      setStatus(null, "routes load error");
+      setStatus("Error loading routes (check web app deploy/public access).");
     }
   }
 
-  // --- Cultural places as clustered GeoJSON layer (FAST) ---
-  async function loadCulturalPlaces() {
-    if (!map.getSource("cultural")) return;
+  function drawSelectedRoute(routeFeature) {
+    // Build single-feature FC
+    const fc = { type: "FeatureCollection", features: [routeFeature] };
 
-    try {
-      setStatus(
-        // keep existing routes count text
-        (() => {
-          const t = document.getElementById("status").textContent;
-          const m = t.match(/Routes:\s*(\d+)/);
-          return m ? Number(m[1]) : null;
-        })(),
-        "loading…"
-      );
+    if (!map.getSource(SELECTED_ROUTE_ID)) {
+      map.addSource(SELECTED_ROUTE_ID, { type: "geojson", data: fc });
+      map.addLayer({
+        id: "routes-selected",
+        type: "line",
+        source: SELECTED_ROUTE_ID,
+        paint: {
+          "line-width": 6,
+          "line-opacity": 0.55
+        }
+      });
+    } else {
+      map.getSource(SELECTED_ROUTE_ID).setData(fc);
+    }
 
-      const bbox = map.getBounds();
-      const s = bbox.getSouth(), w = bbox.getWest(), n = bbox.getNorth(), e = bbox.getEast();
+    // Keep selected visibility in sync with route toggle
+    setLayerVisibility("routes-selected", elToggleRoutes.checked);
+  }
 
-      // Overpass query: nodes + ways + relations; ways/relations returned with "center"
-      const query = `
-      [out:json][timeout:25];
+  /*************************************************************
+   * CULTURAL: LOAD + CLUSTERED DRAW  (1)
+   *************************************************************/
+  function buildOverpassQueryForLondon() {
+    const [s, w, n, e] = LONDON_BBOX;
+
+    // A little broader than just nodes:
+    // - nodes, ways, relations; use out center for ways/relations.
+    return `
+      [out:json][timeout:30];
       (
         node["tourism"~"museum|gallery|attraction"](${s},${w},${n},${e});
         way["tourism"~"museum|gallery|attraction"](${s},${w},${n},${e});
@@ -177,176 +310,273 @@
         relation["amenity"="theatre"](${s},${w},${n},${e});
       );
       out center;
-      `;
+    `;
+  }
 
-      const url = OVERPASS_URL + "?data=" + encodeURIComponent(query);
+  async function loadCulturalPlaces() {
+    elBtnRefreshCultural.disabled = true;
+    try {
+      const query = buildOverpassQueryForLondon();
+      const url = OVERPASS_URL + encodeURIComponent(query);
 
-      // A tiny bit of resilience: one retry if Overpass is busy
-      let res = await fetch(url);
-      if (!res.ok) {
-        console.warn("Overpass not ok:", res.status, "retrying once…");
-        await new Promise(r => setTimeout(r, 1200));
-        res = await fetch(url);
-      }
+      const res = await fetch(url);
       if (!res.ok) throw new Error(`Overpass HTTP ${res.status}`);
-
       const data = await res.json();
 
+      // Convert Overpass elements -> GeoJSON points
       const features = [];
       for (const el of (data.elements || [])) {
         const lon = (typeof el.lon === "number") ? el.lon : el.center?.lon;
         const lat = (typeof el.lat === "number") ? el.lat : el.center?.lat;
         if (typeof lon !== "number" || typeof lat !== "number") continue;
 
-        const name = el.tags?.name || "Cultural site";
+        const tags = el.tags || {};
+        const name = tags.name || "Cultural site";
+
+        // crude type labeling (optional)
+        let kind = "cultural";
+        if (tags.amenity === "theatre") kind = "theatre";
+        else if (tags.tourism) kind = "tourism";
+        else if (tags.historic) kind = "historic";
 
         features.push({
           type: "Feature",
-          properties: { name },
+          properties: {
+            name,
+            kind,
+            osm_type: el.type,
+            osm_id: el.id
+          },
           geometry: { type: "Point", coordinates: [lon, lat] }
         });
       }
 
-      map.getSource("cultural").setData({ type: "FeatureCollection", features });
+      culturalFC = { type: "FeatureCollection", features };
 
-      // apply toggle state
-      setCulturalVisibility(showCultural);
+      // Add/update clustered source
+      if (!map.getSource("cultural")) {
+        map.addSource("cultural", {
+          type: "geojson",
+          data: culturalFC,
+          cluster: true,
+          clusterMaxZoom: 14,
+          clusterRadius: 50
+        });
 
-      // update HUD
-      const routesCount = (() => {
-        const t = document.getElementById("status").textContent;
-        const m = t.match(/Routes:\s*(\d+)/);
-        return m ? Number(m[1]) : null;
-      })();
+        // cluster circles
+        map.addLayer({
+          id: "cultural-clusters",
+          type: "circle",
+          source: "cultural",
+          filter: ["has", "point_count"],
+          paint: {
+            "circle-radius": ["step", ["get", "point_count"], 16, 50, 22, 200, 28],
+            "circle-opacity": 0.75
+          }
+        });
 
-      setStatus(routesCount, features.length);
+        // cluster count labels
+        map.addLayer({
+          id: "cultural-cluster-count",
+          type: "symbol",
+          source: "cultural",
+          filter: ["has", "point_count"],
+          layout: {
+            "text-field": "{point_count_abbreviated}",
+            "text-size": 12
+          }
+        });
+
+        // unclustered points
+        map.addLayer({
+          id: "cultural-points",
+          type: "circle",
+          source: "cultural",
+          filter: ["!", ["has", "point_count"]],
+          paint: {
+            "circle-radius": 5,
+            "circle-opacity": 0.85
+          }
+        });
+
+        // click cultural point -> popup
+        map.on("click", "cultural-points", (e) => {
+          const f = e.features?.[0];
+          if (!f) return;
+          const name = f.properties?.name || "Cultural site";
+          const kind = f.properties?.kind || "cultural";
+          new mapboxgl.Popup({ maxWidth: "320px" })
+            .setLngLat(e.lngLat)
+            .setHTML(`<b>${escapeHtml(name)}</b><div style="opacity:.75">${escapeHtml(kind)}</div>`)
+            .addTo(map);
+        });
+
+        // click cluster -> zoom in
+        map.on("click", "cultural-clusters", (e) => {
+          const features = map.queryRenderedFeatures(e.point, { layers: ["cultural-clusters"] });
+          const clusterId = features[0]?.properties?.cluster_id;
+          if (clusterId == null) return;
+          map.getSource("cultural").getClusterExpansionZoom(clusterId, (err, zoom) => {
+            if (err) return;
+            map.easeTo({ center: e.lngLat, zoom });
+          });
+        });
+
+        map.on("mouseenter", "cultural-clusters", () => map.getCanvas().style.cursor = "pointer");
+        map.on("mouseleave", "cultural-clusters", () => map.getCanvas().style.cursor = "");
+        map.on("mouseenter", "cultural-points", () => map.getCanvas().style.cursor = "pointer");
+        map.on("mouseleave", "cultural-points", () => map.getCanvas().style.cursor = "");
+
+      } else {
+        map.getSource("cultural").setData(culturalFC);
+      }
+
+      // Toggle visibility
+      setLayerVisibility("cultural-clusters", elToggleCultural.checked);
+      setLayerVisibility("cultural-cluster-count", elToggleCultural.checked);
+      setLayerVisibility("cultural-points", elToggleCultural.checked);
+
+      // Update status line
+      const routeCount = routesFC?.features?.length ?? 0;
+      setStatus(`Routes: ${routeCount} | Cultural: ${culturalFC.features.length} | Within ${Math.round(getRadiusKm()*1000)}m: computing…`);
 
     } catch (err) {
-      console.error("Cultural places error:", err);
-
-      const routesCount = (() => {
-        const t = document.getElementById("status").textContent;
-        const m = t.match(/Routes:\s*(\d+)/);
-        return m ? Number(m[1]) : null;
-      })();
-
-      setStatus(routesCount, "error (Overpass busy — try refresh)");
+      console.error("Cultural load error:", err);
+      const routeCount = routesFC?.features?.length ?? 0;
+      setStatus(`Routes: ${routeCount} | Cultural: error (see console)`);
+    } finally {
+      elBtnRefreshCultural.disabled = false;
     }
   }
 
-  function setCulturalVisibility(isVisible) {
-    const vis = isVisible ? "visible" : "none";
-    if (map.getLayer("cultural-clusters")) map.setLayoutProperty("cultural-clusters", "visibility", vis);
-    if (map.getLayer("cultural-cluster-count")) map.setLayoutProperty("cultural-cluster-count", "visibility", vis);
-    if (map.getLayer("cultural-points")) map.setLayoutProperty("cultural-points", "visibility", vis);
+  /*************************************************************
+   * ANALYTICS (3): count cultural places within radius of each route
+   * - buffers each route line by radius
+   * - counts points inside buffer
+   * - also finds nearest named places within radius
+   *************************************************************/
+  function computeStats() {
+    if (!routesFC || !culturalFC) {
+      console.warn("Need routes + cultural loaded before computing stats.");
+      return;
+    }
+
+    const radiusKm = getRadiusKm();
+    const points = culturalFC.features;
+
+    routeStats.clear();
+
+    const counts = [];
+
+    routesFC.features.forEach((route, idx) => {
+      const id = featureId(route, idx);
+
+      // Buffer route line
+      let buffer;
+      try {
+        buffer = turf.buffer(route, radiusKm, { units: "kilometers" });
+      } catch (e) {
+        console.warn("Buffer failed for", id, e);
+        routeStats.set(id, { count: 0, nearest: [] });
+        counts.push({ id, count: 0 });
+        return;
+      }
+
+      // Count points within buffer + gather nearest within radius
+      let count = 0;
+      const nearest = [];
+
+      for (const p of points) {
+        // quick bbox reject
+        // (turf.booleanPointInPolygon is the main check)
+        if (!turf.booleanPointInPolygon(p, buffer)) continue;
+
+        count++;
+
+        const name = p.properties?.name || "Cultural site";
+        if (name && name !== "Cultural site") {
+          // distance from point to route line
+          const dKm = turf.pointToLineDistance(p, route, { units: "kilometers" });
+          if (dKm <= radiusKm) {
+            nearest.push({ name, m: dKm * 1000 });
+          }
+        }
+      }
+
+      nearest.sort((a,b) => a.m - b.m);
+
+      routeStats.set(id, { count, nearest: nearest.slice(0, 5) });
+      counts.push({ id, count });
+    });
+
+    // Insights
+    const n = counts.length;
+    const total = counts.reduce((s, x) => s + x.count, 0);
+    const avg = n ? (total / n) : 0;
+
+    counts.sort((a,b) => b.count - a.count);
+    const best = counts[0];
+    const worst = counts[counts.length - 1];
+
+    elInsights.innerHTML = `
+      <div><span class="k">Avg cultural within radius:</span> <b>${avg.toFixed(1)}</b></div>
+      <div><span class="k">Best route:</span> <b>${best ? escapeHtml(best.id) : "—"}</b> (${best ? best.count : "—"})</div>
+      <div><span class="k">Worst route:</span> <b>${worst ? escapeHtml(worst.id) : "—"}</b> (${worst ? worst.count : "—"})</div>
+      <div class="small" style="margin-top:6px;">Click any route to see its nearest places.</div>
+    `;
+
+    // Update status line
+    const routeCount = routesFC?.features?.length ?? 0;
+    const culturalCount = culturalFC?.features?.length ?? 0;
+    setStatus(`Routes: ${routeCount} | Cultural: ${culturalCount} | Within ${Math.round(radiusKm*1000)}m: ready`);
+
+    // If a route is selected, keep its highlight and stats usable after recompute
+    if (selectedRouteFeature) drawSelectedRoute(selectedRouteFeature);
   }
 
+  /*************************************************************
+   * UI: toggles + buttons
+   *************************************************************/
+  elToggleRoutes.addEventListener("change", () => {
+    setLayerVisibility("routes-line", elToggleRoutes.checked);
+    setLayerVisibility("routes-selected", elToggleRoutes.checked);
+  });
+
+  elToggleCultural.addEventListener("change", () => {
+    setLayerVisibility("cultural-clusters", elToggleCultural.checked);
+    setLayerVisibility("cultural-cluster-count", elToggleCultural.checked);
+    setLayerVisibility("cultural-points", elToggleCultural.checked);
+  });
+
+  elBtnRefreshCultural.addEventListener("click", async () => {
+    await loadCulturalPlaces();
+    computeStats();
+  });
+
+  elBtnRecompute.addEventListener("click", () => {
+    computeStats();
+  });
+
+  elRadiusSelect.addEventListener("change", () => {
+    // Don’t auto-recompute every change if you don’t want to; but it’s handy:
+    computeStats();
+  });
+
+  /*************************************************************
+   * BOOT
+   *************************************************************/
   map.on("load", async () => {
-    // Routes source/layer created in loadRoutes()
-
-    // Cultural source + clustered layers created once
-    map.addSource("cultural", {
-      type: "geojson",
-      data: { type: "FeatureCollection", features: [] },
-      cluster: true,
-      clusterRadius: 50,
-      clusterMaxZoom: 14
-    });
-
-    map.addLayer({
-      id: "cultural-clusters",
-      type: "circle",
-      source: "cultural",
-      filter: ["has", "point_count"],
-      paint: {
-        "circle-radius": ["step", ["get", "point_count"], 14, 50, 20, 200, 28],
-        "circle-opacity": 0.75
-      }
-    });
-
-    map.addLayer({
-      id: "cultural-cluster-count",
-      type: "symbol",
-      source: "cultural",
-      filter: ["has", "point_count"],
-      layout: {
-        "text-field": "{point_count_abbreviated}",
-        "text-size": 12
-      }
-    });
-
-    map.addLayer({
-      id: "cultural-points",
-      type: "circle",
-      source: "cultural",
-      filter: ["!", ["has", "point_count"]],
-      paint: {
-        "circle-radius": 5,
-        "circle-opacity": 0.9
-      }
-    });
-
-    // Popup on point click
-    map.on("click", "cultural-points", (e) => {
-      const f = e.features?.[0];
-      if (!f) return;
-      const name = f.properties?.name || "Cultural site";
-      new mapboxgl.Popup()
-        .setLngLat(e.lngLat)
-        .setHTML(`<b>${name}</b>`)
-        .addTo(map);
-    });
-
-    // Zoom into cluster on click
-    map.on("click", "cultural-clusters", async (e) => {
-      const features = map.queryRenderedFeatures(e.point, { layers: ["cultural-clusters"] });
-      const clusterId = features?.[0]?.properties?.cluster_id;
-      if (clusterId == null) return;
-
-      map.getSource("cultural").getClusterExpansionZoom(clusterId, (err, zoom) => {
-        if (err) return;
-        map.easeTo({ center: features[0].geometry.coordinates, zoom });
-      });
-    });
-
-    // Cursor pointer on hover
-    map.on("mouseenter", "cultural-clusters", () => map.getCanvas().style.cursor = "pointer");
-    map.on("mouseleave", "cultural-clusters", () => map.getCanvas().style.cursor = "");
-    map.on("mouseenter", "cultural-points", () => map.getCanvas().style.cursor = "pointer");
-    map.on("mouseleave", "cultural-points", () => map.getCanvas().style.cursor = "");
-
-    // Initial loads
+    setStatus("Loading routes + cultural…");
     await loadRoutes();
     await loadCulturalPlaces();
+    computeStats();
 
-    // Routes auto-refresh
-    setInterval(loadRoutes, REFRESH_MS);
-
-    // If you want cultural places to update when you move, keep this (debounced)
-    let t;
-    map.on("moveend", () => {
-      if (!showCultural) return;
-      clearTimeout(t);
-      t = setTimeout(loadCulturalPlaces, 500);
-    });
-
-    // UI wiring
-    document.getElementById("toggleRoutes").addEventListener("change", (e) => {
-      showRoutes = e.target.checked;
-      if (map.getLayer("routes-line")) {
-        map.setLayoutProperty("routes-line", "visibility", showRoutes ? "visible" : "none");
-      }
-    });
-
-    document.getElementById("toggleCultural").addEventListener("change", (e) => {
-      showCultural = e.target.checked;
-      setCulturalVisibility(showCultural);
-      if (showCultural) loadCulturalPlaces();
-    });
-
-    document.getElementById("refreshCultural").addEventListener("click", () => {
-      loadCulturalPlaces();
-    });
+    // Keep routes live
+    setInterval(async () => {
+      await loadRoutes();
+      // stats change only if routes changed; recompute lightly (optional)
+      computeStats();
+    }, REFRESH_MS);
   });
 </script>
 </body>
