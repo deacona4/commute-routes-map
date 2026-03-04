@@ -22,8 +22,10 @@
     .small { font-size: 12px; opacity: 0.8; }
   </style>
 </head>
+
 <body>
   <div id="map"></div>
+
   <div class="hud">
     <b>Live Routes</b>
     <div id="status">Loading…</div>
@@ -31,103 +33,149 @@
   </div>
 
 <script>
+  // ✅ Mapbox public token (ok on a web page)
+  mapboxgl.accessToken = "pk.eyJ1IjoiYmlnYWwxIiwiYSI6ImNtbWIzODZuaDA0cWYycXIyMXVydmx1eDkifQ.2tS6Ro5jbDlGjbR74_Ox0Q";
 
-mapboxgl.accessToken = "pk.eyJ1IjoiYmlnYWwxIiwiYSI6ImNtbWIzODZuaDA0cWYycXIyMXVydmx1eDkifQ.2tS6Ro5jbDlGjbR74_Ox0Q";
+  // ✅ Apps Script Web App endpoint (/exec)
+  const ROUTES_URL = "https://script.google.com/macros/s/AKfycbxLgr_yoMOXC1v_KY-YovZ2QklYhHuSNpQ-bJPYBZICT4ly0mST8W0XYqTJBARM17FH/exec";
 
-const ROUTES_URL = "https://script.google.com/macros/s/AKfycbxLgr_yoMOXC1v_KY-YovZ2QklYhHuSNpQ-bJPYBZICT4ly0mST8W0XYqTJBARM17FH/exec";
+  const REFRESH_MS = 5000;
 
-const REFRESH_MS = 5000;
+  const map = new mapboxgl.Map({
+    container: "map",
+    style: "mapbox://styles/mapbox/light-v11",
+    center: [-0.11, 51.51],
+    zoom: 11
+  });
 
-const map = new mapboxgl.Map({
-  container: "map",
-  style: "mapbox://styles/mapbox/light-v11",
-  center: [-0.11, 51.51],
-  zoom: 11
-});
+  map.addControl(new mapboxgl.NavigationControl(), "top-right");
 
-map.addControl(new mapboxgl.NavigationControl(), "top-right");
+  async function loadRoutes() {
+    const statusEl = document.getElementById("status");
 
-async function loadRoutes() {
+    try {
+      // Cache-buster so it actually refreshes
+      const url = ROUTES_URL + "?t=" + Date.now();
+      const fc = await (await fetch(url)).json();
 
-  const statusEl = document.getElementById("status");
+      if (!fc || fc.type !== "FeatureCollection") {
+        statusEl.textContent = "Endpoint did not return GeoJSON FeatureCollection.";
+        return;
+      }
 
-  try {
+      // Preserve cultural status if already appended
+      const existing = statusEl.textContent;
+      const culturalPart = existing.includes("| Cultural:") ? existing.split("| Cultural:")[1] : null;
 
-    const url = ROUTES_URL + "?t=" + Date.now();
-    const fc = await (await fetch(url)).json();
+      statusEl.textContent = `Routes: ${fc.features.length}`;
+      if (culturalPart !== null) statusEl.textContent += ` | Cultural:${culturalPart}`;
 
-    if (!fc || fc.type !== "FeatureCollection") {
-      statusEl.textContent = "Endpoint did not return GeoJSON.";
-      return;
+      if (!map.getSource("routes")) {
+        map.addSource("routes", { type: "geojson", data: fc });
+
+        map.addLayer({
+          id: "routes-line",
+          type: "line",
+          source: "routes",
+          paint: {
+            "line-width": 3,
+            "line-opacity": 0.85
+          }
+        });
+      } else {
+        map.getSource("routes").setData(fc);
+      }
+    } catch (err) {
+      statusEl.textContent = "Error loading routes (check deploy/public access).";
+      console.error("Routes error:", err);
     }
+  }
 
-    statusEl.textContent = `Routes: ${fc.features.length}`;
+  // ---- Cultural places (Overpass) ----
+  let culturalMarkers = [];
 
-    if (!map.getSource("routes")) {
+  async function loadCulturalPlaces() {
+    const statusEl = document.getElementById("status");
 
-      map.addSource("routes", { type: "geojson", data: fc });
+    try {
+      // Clear existing markers so they don't stack
+      culturalMarkers.forEach(m => m.remove());
+      culturalMarkers = [];
 
-      map.addLayer({
-        id: "routes-line",
-        type: "line",
-        source: "routes",
-        paint: {
-          "line-width": 3,
-          "line-opacity": 0.85
-        }
+      const bbox = map.getBounds();
+      const s = bbox.getSouth(), w = bbox.getWest(), n = bbox.getNorth(), e = bbox.getEast();
+
+      const query = `
+      [out:json][timeout:25];
+      (
+        node["tourism"~"museum|gallery|attraction"](${s},${w},${n},${e});
+        way["tourism"~"museum|gallery|attraction"](${s},${w},${n},${e});
+        relation["tourism"~"museum|gallery|attraction"](${s},${w},${n},${e});
+
+        node["historic"](${s},${w},${n},${e});
+        way["historic"](${s},${w},${n},${e});
+        relation["historic"](${s},${w},${n},${e});
+
+        node["amenity"="theatre"](${s},${w},${n},${e});
+        way["amenity"="theatre"](${s},${w},${n},${e});
+        relation["amenity"="theatre"](${s},${w},${n},${e});
+      );
+      out center;
+      `;
+
+      const url = "https://overpass-api.de/api/interpreter?data=" + encodeURIComponent(query);
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`Overpass HTTP ${res.status}`);
+
+      const data = await res.json();
+
+      let count = 0;
+
+      (data.elements || []).forEach(el => {
+        // Nodes have lon/lat; ways/relations have center.lon/center.lat
+        const lon = (typeof el.lon === "number") ? el.lon : el.center?.lon;
+        const lat = (typeof el.lat === "number") ? el.lat : el.center?.lat;
+        if (typeof lon !== "number" || typeof lat !== "number") return;
+
+        const name = el.tags?.name || "Cultural site";
+        count++;
+
+        const marker = new mapboxgl.Marker({ color: "#e63946" })
+          .setLngLat([lon, lat])
+          .setPopup(new mapboxgl.Popup().setHTML(`<b>${name}</b>`))
+          .addTo(map);
+
+        culturalMarkers.push(marker);
       });
 
-    } else {
-      map.getSource("routes").setData(fc);
+      // Append cultural count to HUD (without clobbering routes count)
+      const base = statusEl.textContent.split("| Cultural:")[0].trim();
+      statusEl.textContent = `${base} | Cultural: ${count}`;
+
+      console.log("Overpass elements:", data.elements?.length, "Markers placed:", count);
+
+    } catch (err) {
+      console.error("Cultural places error:", err);
+      const base = statusEl.textContent.split("| Cultural:")[0].trim();
+      statusEl.textContent = `${base} | Cultural: error (see console)`;
     }
-
-  } catch (err) {
-    statusEl.textContent = "Error loading routes.";
-    console.error(err);
   }
-}
 
-async function loadCulturalPlaces() {
+  // ---- Boot ----
+  map.on("load", async () => {
+    await loadRoutes();
+    await loadCulturalPlaces();
 
-  const bbox = map.getBounds();
+    // Routes refresh every 5s
+    setInterval(loadRoutes, REFRESH_MS);
 
-  const query = `
-  [out:json][timeout:25];
-  (
-    node["tourism"~"museum|gallery|attraction"](${bbox.getSouth()},${bbox.getWest()},${bbox.getNorth()},${bbox.getEast()});
-    node["historic"](${bbox.getSouth()},${bbox.getWest()},${bbox.getNorth()},${bbox.getEast()});
-    node["amenity"="theatre"](${bbox.getSouth()},${bbox.getWest()},${bbox.getNorth()},${bbox.getEast()});
-  );
-  out;
-  `;
-
-  const url = "https://overpass-api.de/api/interpreter?data=" + encodeURIComponent(query);
-
-  const res = await fetch(url);
-  const data = await res.json();
-
-  data.elements.forEach(el => {
-
-    const name = el.tags?.name || "Cultural site";
-
-    new mapboxgl.Marker({ color: "#e63946" })
-      .setLngLat([el.lon, el.lat])
-      .setPopup(
-        new mapboxgl.Popup().setHTML(`<b>${name}</b>`)
-      )
-      .addTo(map);
-
+    // Optional: reload cultural places after panning/zooming (moveend)
+    let t;
+    map.on("moveend", () => {
+      clearTimeout(t);
+      t = setTimeout(loadCulturalPlaces, 400);
+    });
   });
-}
-
-map.on("load", async () => {
-
-  await loadRoutes();
-  loadCulturalPlaces();
-
-  setInterval(loadRoutes, REFRESH_MS);
-
-});
 </script>
 </body>
 </html>
