@@ -1,0 +1,91 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Live Routes Map</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <!-- Mapbox GL JS -->
+  <link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet" />
+  <script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
+
+  <style>
+    html, body { margin: 0; padding: 0; height: 100%; }
+    #map { width: 100%; height: 100%; }
+    .hud {
+      position: absolute; top: 10px; left: 10px; z-index: 1;
+      background: rgba(255,255,255,0.9); padding: 10px 12px; border-radius: 10px;
+      font: 14px/1.3 system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+    }
+    .hud b { display:block; margin-bottom:6px; }
+    .small { font-size: 12px; opacity: 0.8; }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <div class="hud">
+    <b>Live Routes</b>
+    <div id="status">Loading…</div>
+    <div class="small">Auto-refresh every 5s</div>
+  </div>
+
+<script>
+  // ✅ Your Mapbox public token (ok to use on a web page)
+  mapboxgl.accessToken = "pk.eyJ1IjoiYmlnYWwxIiwiYSI6ImNtbWIzODZuaDA0cWYycXIyMXVydmx1eDkifQ.2tS6Ro5jbDlGjbR74_Ox0Q";
+
+  // ✅ Your Apps Script Web App endpoint (must be deployed as Web App)
+  const ROUTES_URL = "https://script.google.com/macros/s/AKfycbxLgr_yoMOXC1v_KY-YovZ2QklYhHuSNpQ-bJPYBZICT4ly0mST8W0XYqTJBARM17FH/exec";
+
+  const REFRESH_MS = 5000;
+
+  const map = new mapboxgl.Map({
+    container: "map",
+    style: "mapbox://styles/mapbox/light-v11",
+    center: [-0.11, 51.51], // London
+    zoom: 11
+  });
+
+  map.addControl(new mapboxgl.NavigationControl(), "top-right");
+
+  async function loadRoutes() {
+    const statusEl = document.getElementById("status");
+    try {
+      // Cache-buster so it actually refreshes
+      const url = ROUTES_URL + "?t=" + Date.now();
+      const fc = await (await fetch(url)).json();
+
+      if (!fc || fc.type !== "FeatureCollection") {
+        statusEl.textContent = "Endpoint did not return GeoJSON FeatureCollection.";
+        return;
+      }
+
+      statusEl.textContent = `Routes: ${fc.features.length}`;
+
+      if (!map.getSource("routes")) {
+        map.addSource("routes", { type: "geojson", data: fc });
+        map.addLayer({
+          id: "routes-line",
+          type: "line",
+          source: "routes",
+          paint: {
+            "line-width": 3,
+            "line-opacity": 0.85
+          }
+        });
+      } else {
+        map.getSource("routes").setData(fc);
+      }
+    } catch (err) {
+      statusEl.textContent = "Error loading routes (check deploy/public access).";
+      console.error(err);
+    }
+  }
+
+  map.on("load", async () => {
+    await loadRoutes();
+    setInterval(loadRoutes, REFRESH_MS);
+  });
+</script>
+</body>
+</html>
