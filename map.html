@@ -64,6 +64,43 @@
 
       if (!map.getSource("routes")) {
         map.addSource("routes", { type: "geojson", data: fc });
+        async function loadCulturalPlaces() {
+
+  const bbox = map.getBounds();
+
+  const query = `
+  [out:json][timeout:25];
+  (
+    node["tourism"~"museum|gallery|attraction"](${bbox.getSouth()},${bbox.getWest()},${bbox.getNorth()},${bbox.getEast()});
+    node["historic"](${bbox.getSouth()},${bbox.getWest()},${bbox.getNorth()},${bbox.getEast()});
+    node["amenity"="theatre"](${bbox.getSouth()},${bbox.getWest()},${bbox.getNorth()},${bbox.getEast()});
+  );
+  out;
+  `;
+
+  const url = "https://overpass-api.de/api/interpreter?data=" + encodeURIComponent(query);
+
+  const res = await fetch(url);
+  const data = await res.json();
+
+  data.elements.forEach(el => {
+
+    const name = el.tags?.name || "Cultural site";
+
+    new mapboxgl.Marker({ color: "#e63946" })
+      .setLngLat([el.lon, el.lat])
+      .setPopup(
+        new mapboxgl.Popup().setHTML(`<b>${name}</b>`)
+      )
+      .addTo(map);
+
+  });
+
+}
+
+map.on("load", () => {
+  loadCulturalPlaces();
+});
         map.addLayer({
           id: "routes-line",
           type: "line",
@@ -86,6 +123,43 @@
     await loadRoutes();
     setInterval(loadRoutes, REFRESH_MS);
   });
+  async function loadCulturalPlaces() {
+
+  const bbox = map.getBounds();
+
+  const query = `
+  [out:json][timeout:25];
+  (
+    node["tourism"~"museum|gallery|attraction"](${bbox.getSouth()},${bbox.getWest()},${bbox.getNorth()},${bbox.getEast()});
+    node["historic"](${bbox.getSouth()},${bbox.getWest()},${bbox.getNorth()},${bbox.getEast()});
+    node["amenity"="theatre"](${bbox.getSouth()},${bbox.getWest()},${bbox.getNorth()},${bbox.getEast()});
+  );
+  out;
+  `;
+
+  const url = "https://overpass-api.de/api/interpreter?data=" + encodeURIComponent(query);
+
+  const res = await fetch(url);
+  const data = await res.json();
+
+  data.elements.forEach(el => {
+
+    const name = el.tags?.name || "Cultural site";
+
+    new mapboxgl.Marker({ color: "#e63946" })
+      .setLngLat([el.lon, el.lat])
+      .setPopup(
+        new mapboxgl.Popup().setHTML(`<b>${name}</b>`)
+      )
+      .addTo(map);
+
+  });
+
+}
+
+map.on("load", () => {
+  loadCulturalPlaces();
+});
 </script>
 </body>
 </html>
