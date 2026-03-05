@@ -78,10 +78,11 @@ center:[-0.1276,51.5072],
 zoom:11
 });
 
+
 map.on("load", () => {
 
 
-// LOAD ROUTES
+// LOAD COMMUTE ROUTES
 
 fetch("https://script.google.com/macros/s/AKfycbzvBuo6pFVBbMO2JWD-YEHtftkvl5DsmCZPTRkwLLxMezVwKOlWxc0OIL1vXphQZWa0/exec")
 .then(res => res.json())
@@ -96,6 +97,10 @@ map.addLayer({
 id:"routes",
 type:"line",
 source:"routes",
+layout:{
+"line-join":"round",
+"line-cap":"round"
+},
 paint:{
 "line-color":"#2a7de1",
 "line-width":4,
@@ -103,24 +108,11 @@ paint:{
 }
 });
 
-// auto zoom to routes
-
-const bounds = new mapboxgl.LngLatBounds();
-
-data.features.forEach(feature=>{
-feature.geometry.coordinates.forEach(coord=>{
-bounds.extend(coord);
-});
-});
-
-map.fitBounds(bounds,{padding:50});
-
 });
 
 
 
-
-// LOAD CULTURAL VENUES (OVERPASS)
+// LOAD CULTURAL VENUES
 
 const query = `
 [out:json];
