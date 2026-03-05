@@ -2,20 +2,49 @@
 <html>
 <head>
 <meta charset="utf-8">
-<title>Map</title>
+<title>Commute Routes Map</title>
+
+<meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
 
 <link href="https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.css" rel="stylesheet">
 
 <style>
+
 body {
-  margin:0;
-  padding:0;
+margin:0;
+padding:0;
+font-family:Arial, sans-serif;
 }
 
 #map {
-  width:100%;
-  height:100vh;
+position:absolute;
+top:0;
+bottom:0;
+width:100%;
 }
+
+#legend {
+position:absolute;
+bottom:20px;
+left:20px;
+background:white;
+padding:10px;
+border-radius:6px;
+box-shadow:0 2px 6px rgba(0,0,0,0.2);
+font-size:14px;
+}
+
+.legend-item{
+margin-bottom:5px;
+}
+
+.legend-colour{
+display:inline-block;
+width:12px;
+height:12px;
+margin-right:6px;
+}
+
 </style>
 
 </head>
@@ -24,6 +53,13 @@ body {
 
 <div id="map"></div>
 
+<div id="legend">
+<div class="legend-item"><span class="legend-colour" style="background:#e63946"></span>Train</div>
+<div class="legend-item"><span class="legend-colour" style="background:#457b9d"></span>Bus</div>
+<div class="legend-item"><span class="legend-colour" style="background:#2a9d8f"></span>Car</div>
+<div class="legend-item"><span class="legend-colour" style="background:#f4a261"></span>Walk</div>
+</div>
+
 <script src="https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.js"></script>
 
 <script>
@@ -31,31 +67,64 @@ body {
 mapboxgl.accessToken = 'pk.eyJ1IjoiYmlnYWwxIiwiYSI6ImNtbWIzODZuaDA0cWYycXIyMXVydmx1eDkifQ.2tS6Ro5jbDlGjbR74_Ox0Q';
 
 const map = new mapboxgl.Map({
-    container: 'map',
-    style: 'mapbox://styles/mapbox/streets-v12',
-    center: [-0.1276, 51.5072],
-    zoom: 10
+container: 'map',
+style: 'mapbox://styles/mapbox/light-v11',
+center: [-0.12, 51.50],
+zoom: 9
 });
 
+map.addControl(new mapboxgl.NavigationControl());
+
 fetch("https://script.google.com/macros/s/AKfycbyH4arhO1r-cJaRXm6GqKQJHIQpHqFc6H_QOxHcFJzC381vkjqdC5sTb8JConWscqqF/exec")
-.then(res => res.json())
+.then(response => response.json())
 .then(data => {
 
-    data.forEach(place => {
+data.forEach((row, i) => {
 
-        new mapboxgl.Marker()
-        .setLngLat([place.lng, place.lat])
-        .setPopup(
-            new mapboxgl.Popup().setHTML(
-                `<h3>${place.name}</h3>`
-            )
-        )
-        .addTo(map);
+if(!row.route_geojson) return;
 
-    });
+let route;
+
+try{
+route = JSON.parse(row.route_geojson);
+}catch(e){
+console.log("Bad GeoJSON row:", i);
+return;
+}
+
+let colour = "#666";
+
+if(row["Mode of Travel"] === "Train") colour = "#e63946";
+if(row["Mode of Travel"] === "Bus") colour = "#457b9d";
+if(row["Mode of Travel"] === "Car") colour = "#2a9d8f";
+if(row["Mode of Travel"] === "Walk") colour = "#f4a261";
+
+map.addSource("route"+i, {
+type: "geojson",
+data: route
+});
+
+map.addLayer({
+id: "route"+i,
+type: "line",
+source: "route"+i,
+layout: {
+"line-join": "round",
+"line-cap": "round"
+},
+paint: {
+"line-color": colour,
+"line-width": 4,
+"line-opacity": 0.8
+}
+});
+
+});
 
 })
-.catch(err => console.error(err));
+.catch(error => {
+console.error("Data loading error:", error);
+});
 
 </script>
 
