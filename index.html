@@ -1,21 +1,49 @@
-!DOCTYPE html>
+<!DOCTYPE html>
 <html>
 <head>
 <meta charset="utf-8">
-<title>London Commute Map</title>
+<title>London Commute Routes</title>
 
 <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
 
 <link href="https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.css" rel="stylesheet">
 
 <style>
-body { margin:0; padding:0; }
-#map { position:absolute; top:0; bottom:0; width:100%; }
+
+body {
+margin:0;
+padding:0;
+font-family:Arial, sans-serif;
+}
+
+#map {
+position:absolute;
+top:0;
+bottom:0;
+width:100%;
+}
+
+.panel {
+position:absolute;
+top:20px;
+left:20px;
+background:white;
+padding:15px;
+border-radius:8px;
+box-shadow:0 2px 8px rgba(0,0,0,0.2);
+z-index:1;
+}
+
 </style>
 
 </head>
 
 <body>
+
+<div class="panel">
+<h3>London Commute Routes</h3>
+<p>Routes from survey responses</p>
+</div>
 
 <div id="map"></div>
 
@@ -23,40 +51,44 @@ body { margin:0; padding:0; }
 
 <script>
 
-// MAPBOX TOKEN
-mapboxgl.accessToken = 'PASTE YOUR TOKEN HERE';
+mapboxgl.accessToken = "pk.eyJ1IjoiYmlnYWwxIiwiYSI6ImNtbWIzODZuaDA0cWYycXIyMXVydmx1eDkifQ.2tS6Ro5jbDlGjbR74_Ox0Q";
 
 const map = new mapboxgl.Map({
-container: 'map',
-style: 'mapbox://styles/mapbox/light-v11',
-center: [-0.1276, 51.5072], // London
-zoom: 11
+container: "map",
+style: "mapbox://styles/mapbox/light-v11",
+center: [-0.1276, 51.5072],
+zoom: 10
 });
 
-map.on('load', () => {
+map.on("load", () => {
 
 fetch("https://script.google.com/macros/s/AKfycbzvBuo6pFVBbMO2JWD-YEHtftkvl5DsmCZPTRkwLLxMezVwKOlWxc0OIL1vXphQZWa0/exec")
-.then(response => response.json())
+.then(res => res.json())
 .then(data => {
 
-console.log("DATA:", data);
+console.log("Route data:", data);
 
-data.forEach(place => {
-
-new mapboxgl.Marker()
-.setLngLat([parseFloat(place.lng), parseFloat(place.lat)])
-.setPopup(
-new mapboxgl.Popup().setHTML(`<b>${place.name}</b>`)
-)
-.addTo(map);
-
+map.addSource("routes", {
+type: "geojson",
+data: data
 });
 
-})
-.catch(error => {
-console.error("Error loading data:", error);
+map.addLayer({
+id: "route-lines",
+type: "line",
+source: "routes",
+layout: {
+"line-join": "round",
+"line-cap": "round"
+},
+paint: {
+"line-color": "#0074D9",
+"line-width": 2,
+"line-opacity": 0.6
+}
 });
 
+});
 });
 
 </script>
