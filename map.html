@@ -1,228 +1,305 @@
-!doctype html>
+<!doctype html>
 <html>
 <head>
-  <meta charset="utf-8" />
-  <title>Live Routes Map</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta charset="utf-8" />
+<title>Live Routes Map</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
 
-  <link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet" />
-  <script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
+<link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet"/>
+<script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
+<script src="https://unpkg.com/@turf/turf@6/turf.min.js"></script>
 
-  <style>
-    html, body { margin: 0; padding: 0; height: 100%; }
-    #map { width: 100%; height: 100%; }
+<style>
+html,body{margin:0;height:100%}
+#map{height:100%}
 
-    .hud {
-      position: absolute; top: 10px; left: 10px; z-index: 2;
-      background: rgba(255,255,255,0.92); padding: 10px 12px; border-radius: 10px;
-      font: 14px/1.3 system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-      box-shadow: 0 4px 16px rgba(0,0,0,0.15);
-      min-width: 220px;
-    }
+.hud{
+position:absolute;
+top:12px;
+left:12px;
+z-index:5;
+background:rgba(255,255,255,0.95);
+padding:12px 14px;
+border-radius:14px;
+font:14px system-ui;
+width:320px;
+box-shadow:0 10px 30px rgba(0,0,0,.18);
+}
 
-    .row { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:8px; }
-    .small { font-size: 12px; opacity: 0.8; margin-top: 6px; }
-    label { user-select:none; cursor:pointer; }
-    input[type="checkbox"] { transform: scale(1.05); }
-  </style>
+.row{display:flex;justify-content:space-between;margin-top:8px}
+.small{font-size:12px;opacity:.8}
+.btn{border:2px solid #111;background:#fff;padding:6px 10px;border-radius:10px;cursor:pointer}
+.divider{height:1px;background:#ddd;margin:10px 0}
+</style>
 </head>
 
 <body>
-  <div id="map"></div>
 
-  <div class="hud">
-    <b>Live Routes</b>
-    <div id="status">Loading…</div>
+<div id="map"></div>
 
-    <div class="row">
-      <label>
-        <input id="toggleCulture" type="checkbox" checked />
-        Cultural places
-      </label>
-      <span id="cultureHint" class="small"></span>
-    </div>
+<div class="hud">
+<b>Live Routes</b>
 
-    <div class="small">Routes auto-refresh every 5s</div>
-  </div>
+<div id="status">Loading…</div>
+
+<div class="row">
+<label><input id="toggleRoutes" type="checkbox" checked> Show routes</label>
+</div>
+
+<div class="row">
+<label><input id="toggleCulture" type="checkbox" checked> Cultural places</label>
+</div>
+
+<div class="row">
+<label>
+Within
+<select id="radiusSelect">
+<option value="0.25">250m</option>
+<option value="0.5" selected>500m</option>
+<option value="1">1km</option>
+</select>
+of routes
+</label>
+</div>
+
+<div class="row">
+<button id="btnRecompute" class="btn">Recompute stats</button>
+<button id="btnRefreshCulture" class="btn">Refresh culture</button>
+</div>
+
+<div class="divider"></div>
+
+<div id="insights">
+<div>Avg cultural within radius: —</div>
+<div>Best route: —</div>
+<div>Worst route: —</div>
+</div>
+
+</div>
 
 <script>
-  mapboxgl.accessToken = "pk.eyJ1IjoiYmlnYWwxIiwiYSI6ImNtbWIzODZuaDA0cWYycXIyMXVydmx1eDkifQ.2tS6Ro5jbDlGjbR74_Ox0Q";
 
-  const ROUTES_URL = "https://script.google.com/macros/s/AKfycbwUf3jOG8dojpgbrEs7EosEhTvMTtPRYMj-uy70yl7bZHia7tQod13uqZa-TApG2kO3/exec";
+/* CONFIG */
 
-  const REFRESH_MS = 5000;
+mapboxgl.accessToken =
+"pk.eyJ1IjoiYmlnYWwxIiwiYSI6ImNtbWIzODZuaDA0cWYycXIyMXVydmx1eDkifQ.2tS6Ro5jbDlGjbR74_Ox0Q";
 
-  // Only load cultural POIs when zoomed in enough (big speed win)
-  const MIN_ZOOM_FOR_CULTURE = 12.5;
+const ROUTES_URL =
+"https://script.google.com/macros/s/AKfycbwUf3jOG8dojpgbrEs7EosEhTvMTtPRYMj-uy70yl7bZHia7tQod13uqZa-TApG2kO3/exec";
 
-  const map = new mapboxgl.Map({
-    container: "map",
-    style: "mapbox://styles/mapbox/light-v11",
-    center: [-0.11, 51.51],
-    zoom: 11
-  });
+const REFRESH_MS = 5000;
 
-  map.addControl(new mapboxgl.NavigationControl(), "top-right");
 
-  const statusEl = document.getElementById("status");
-  const toggleCultureEl = document.getElementById("toggleCulture");
-  const cultureHintEl = document.getElementById("cultureHint");
+/* MAP */
 
-  // ---- Routes ----
-  async function loadRoutes() {
-    try {
-      const url = ROUTES_URL + "?t=" + Date.now(); // cache buster
-      const fc = await (await fetch(url)).json();
+const map = new mapboxgl.Map({
+container:"map",
+style:"mapbox://styles/mapbox/light-v11",
+center:[-0.11,51.51],
+zoom:11
+});
 
-      if (!fc || fc.type !== "FeatureCollection") {
-        statusEl.textContent = "Endpoint did not return GeoJSON FeatureCollection.";
-        return;
-      }
+map.addControl(new mapboxgl.NavigationControl(),"top-right");
 
-      // Preserve cultural status text if present
-      const base = statusEl.textContent.split("| Cultural:")[0].trim();
-      statusEl.textContent = `Routes: ${fc.features.length}` + (base.includes("| Cultural:") ? (" | " + base.split("| ")[1]) : "");
 
-      if (!map.getSource("routes")) {
-        map.addSource("routes", { type: "geojson", data: fc });
+/* STATE */
 
-        map.addLayer({
-          id: "routes-line",
-          type: "line",
-          source: "routes",
-          paint: { "line-width": 3, "line-opacity": 0.85 }
-        });
-      } else {
-        map.getSource("routes").setData(fc);
-      }
-    } catch (err) {
-      statusEl.textContent = "Error loading routes.";
-      console.error("Routes error:", err);
-    }
-  }
+let routesFC=null
+let culturePoints=[]
+let routeStats=new Map()
 
-  // ---- Cultural places ----
-  let culturalMarkers = [];
-  let lastCultureKey = null; // simple cache key to avoid repeat fetches
 
-  function clearCulturalMarkers() {
-    culturalMarkers.forEach(m => m.remove());
-    culturalMarkers = [];
-  }
+/* UI */
 
-  function getCultureKey() {
-    const b = map.getBounds();
-    // Round bounds so tiny pans don’t trigger a new fetch
-    const r = (x) => Math.round(x * 100) / 100; // ~1km-ish precision depending on lat
-    return [
-      r(b.getSouth()), r(b.getWest()), r(b.getNorth()), r(b.getEast()),
-      Math.round(map.getZoom() * 10) / 10
-    ].join(",");
-  }
+const statusEl=document.getElementById("status")
+const insightsEl=document.getElementById("insights")
 
-  async function loadCulturalPlaces(force = false) {
-    const zoom = map.getZoom();
+const toggleRoutes=document.getElementById("toggleRoutes")
+const toggleCulture=document.getElementById("toggleCulture")
+const radiusSelect=document.getElementById("radiusSelect")
 
-    if (!toggleCultureEl.checked) {
-      cultureHintEl.textContent = "";
-      clearCulturalMarkers();
-      // Update HUD without clobbering routes count
-      const base = statusEl.textContent.split("| Cultural:")[0].trim();
-      statusEl.textContent = `${base} | Cultural: off`;
-      return;
-    }
+const btnRecompute=document.getElementById("btnRecompute")
+const btnRefreshCulture=document.getElementById("btnRefreshCulture")
 
-    if (zoom < MIN_ZOOM_FOR_CULTURE) {
-      cultureHintEl.textContent = `Zoom in to load (≥ ${MIN_ZOOM_FOR_CULTURE})`;
-      clearCulturalMarkers();
-      const base = statusEl.textContent.split("| Cultural:")[0].trim();
-      statusEl.textContent = `${base} | Cultural: zoom in`;
-      return;
-    } else {
-      cultureHintEl.textContent = "";
-    }
 
-    const key = getCultureKey();
-    if (!force && key === lastCultureKey) return; // cached
-    lastCultureKey = key;
+function setStatus(t){statusEl.textContent=t}
+function getRadius(){return Number(radiusSelect.value)}
 
-    try {
-      clearCulturalMarkers();
 
-      const bbox = map.getBounds();
-      const s = bbox.getSouth(), w = bbox.getWest(), n = bbox.getNorth(), e = bbox.getEast();
+/* ROUTES */
 
-      const query = `
-      [out:json][timeout:25];
-      (
-        node["tourism"~"museum|gallery|attraction"](${s},${w},${n},${e});
-        way["tourism"~"museum|gallery|attraction"](${s},${w},${n},${e});
-        relation["tourism"~"museum|gallery|attraction"](${s},${w},${n},${e});
+async function loadRoutes(){
 
-        node["historic"](${s},${w},${n},${e});
-        way["historic"](${s},${w},${n},${e});
-        relation["historic"](${s},${w},${n},${e});
+try{
 
-        node["amenity"="theatre"](${s},${w},${n},${e});
-        way["amenity"="theatre"](${s},${w},${n},${e});
-        relation["amenity"="theatre"](${s},${w},${n},${e});
-      );
-      out center;
-      `;
+const url=ROUTES_URL+"?t="+Date.now()
+const fc=await (await fetch(url)).json()
 
-      const url = "https://overpass-api.de/api/interpreter?data=" + encodeURIComponent(query);
-      const res = await fetch(url);
-      if (!res.ok) throw new Error(`Overpass HTTP ${res.status}`);
+routesFC=fc
 
-      const data = await res.json();
+setStatus("Routes: "+fc.features.length)
 
-      let count = 0;
+if(!map.getSource("routes")){
 
-      (data.elements || []).forEach(el => {
-        const lon = (typeof el.lon === "number") ? el.lon : el.center?.lon;
-        const lat = (typeof el.lat === "number") ? el.lat : el.center?.lat;
-        if (typeof lon !== "number" || typeof lat !== "number") return;
+map.addSource("routes",{type:"geojson",data:fc})
 
-        const name = el.tags?.name || "Cultural site";
-        count++;
+map.addLayer({
+id:"routes-line",
+type:"line",
+source:"routes",
+paint:{
+"line-width":3,
+"line-color":"#2a6df4"
+}
+})
 
-        const marker = new mapboxgl.Marker({ color: "#e63946" })
-          .setLngLat([lon, lat])
-          .setPopup(new mapboxgl.Popup().setHTML(`<b>${name}</b>`))
-          .addTo(map);
+map.on("click","routes-line",(e)=>{
 
-        culturalMarkers.push(marker);
-      });
+const route=e.features[0]
+const id=route.id||"route"
 
-      const base = statusEl.textContent.split("| Cultural:")[0].trim();
-      statusEl.textContent = `${base} | Cultural: ${count}`;
-    } catch (err) {
-      console.error("Cultural places error:", err);
-      const base = statusEl.textContent.split("| Cultural:")[0].trim();
-      statusEl.textContent = `${base} | Cultural: error`;
-    }
-  }
+const stats=routeStats.get(id)
+const count=stats?.count??0
 
-  // ---- Boot + events ----
-  map.on("load", async () => {
-    await loadRoutes();
-    setInterval(loadRoutes, REFRESH_MS);
+new mapboxgl.Popup()
+.setLngLat(e.lngLat)
+.setHTML("<b>"+id+"</b><br>"+count+" cultural places nearby")
+.addTo(map)
 
-    // initial culture attempt
-    await loadCulturalPlaces(true);
+})
 
-    // reload culture after pan/zoom (debounced)
-    let t;
-    map.on("moveend", () => {
-      clearTimeout(t);
-      t = setTimeout(() => loadCulturalPlaces(false), 450);
-    });
-  });
+}else{
 
-  toggleCultureEl.addEventListener("change", () => {
-    // Force reload when turning on; clear when turning off
-    loadCulturalPlaces(true);
-  });
+map.getSource("routes").setData(fc)
+
+}
+
+}catch(e){
+
+console.error(e)
+setStatus("Routes error")
+
+}
+
+}
+
+
+/* CULTURAL */
+
+async function loadCulture(){
+
+if(!toggleCulture.checked)return
+
+const bbox=map.getBounds()
+
+const query=`
+[out:json][timeout:25];
+(
+node["tourism"~"museum|gallery|attraction"]
+(${bbox.getSouth()},${bbox.getWest()},${bbox.getNorth()},${bbox.getEast()});
+);
+out;
+`
+
+const url="https://overpass-api.de/api/interpreter?data="+encodeURIComponent(query)
+
+const data=await (await fetch(url)).json()
+
+culturePoints=[]
+
+data.elements.forEach(el=>{
+
+if(el.lon && el.lat){
+
+const marker=new mapboxgl.Marker({color:"#e63946"})
+.setLngLat([el.lon,el.lat])
+.setPopup(new mapboxgl.Popup().setHTML(el.tags?.name||"Cultural site"))
+.addTo(map)
+
+culturePoints.push({
+type:"Feature",
+geometry:{type:"Point",coordinates:[el.lon,el.lat]}
+})
+
+}
+
+})
+
+}
+
+
+/* ANALYTICS */
+
+function computeStats(){
+
+if(!routesFC)return
+
+const radius=getRadius()
+
+routeStats.clear()
+
+let counts=[]
+
+routesFC.features.forEach((route,i)=>{
+
+let buffer=turf.buffer(route,radius,{units:"kilometers"})
+
+let count=0
+
+culturePoints.forEach(p=>{
+if(turf.booleanPointInPolygon(p,buffer))count++
+})
+
+routeStats.set(route.id||i,{count})
+
+counts.push(count)
+
+})
+
+if(!counts.length)return
+
+let avg=counts.reduce((a,b)=>a+b,0)/counts.length
+let best=Math.max(...counts)
+let worst=Math.min(...counts)
+
+insightsEl.innerHTML=
+"Avg cultural within radius: <b>"+avg.toFixed(1)+"</b><br>"+
+"Best route: "+best+"<br>"+
+"Worst route: "+worst
+
+}
+
+
+/* UI */
+
+toggleRoutes.onchange=()=>{
+map.setLayoutProperty("routes-line","visibility",
+toggleRoutes.checked?"visible":"none")
+}
+
+btnRefreshCulture.onclick=async()=>{
+await loadCulture()
+computeStats()
+}
+
+btnRecompute.onclick=computeStats
+
+radiusSelect.onchange=computeStats
+
+
+/* BOOT */
+
+map.on("load",async()=>{
+
+await loadRoutes()
+await loadCulture()
+computeStats()
+
+setInterval(loadRoutes,REFRESH_MS)
+
+})
+
 </script>
+
 </body>
 </html>
