@@ -2,20 +2,22 @@
 <html>
 <head>
 <meta charset="utf-8">
-<title>Cultural Map</title>
+<title>London Cultural Commute Map</title>
 
 <link href="https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.css" rel="stylesheet">
 
 <style>
-body {
-  margin:0;
-  padding:0;
+
+body{
+margin:0;
+padding:0;
 }
 
-#map {
-  width:100%;
-  height:100vh;
+#map{
+width:100%;
+height:100vh;
 }
+
 </style>
 
 </head>
@@ -29,111 +31,110 @@ body {
 <script>
 
 // MAPBOX TOKEN
-mapboxgl.accessToken = 'YOUR_MAPBOX_TOKEN_HERE';
+mapboxgl.accessToken = "pk.eyJ1IjoiYmlnYWwxIiwiYSI6ImNtbWIzODZuaDA0cWYycXIyMXVydmx1eDkifQ.2tS6Ro5jbDlGjbR74_Ox0Q";
 
-// Create map centred on London
 const map = new mapboxgl.Map({
-    container: 'map',
-    style: 'mapbox://styles/mapbox/streets-v12',
-    center: [-0.1276, 51.5072],
-    zoom: 12
+container:'map',
+style:'mapbox://styles/mapbox/light-v11',
+center:[-0.1276,51.5072],
+zoom:11
 });
 
 
-// Distance calculator (Haversine formula)
-function getDistance(lat1, lon1, lat2, lon2) {
+// distance function
+function distance(lat1, lon1, lat2, lon2){
 
-    const R = 6371e3;
-    const φ1 = lat1 * Math.PI/180;
-    const φ2 = lat2 * Math.PI/180;
+const R = 6371000;
 
-    const Δφ = (lat2-lat1) * Math.PI/180;
-    const Δλ = (lon2-lon1) * Math.PI/180;
+const dLat = (lat2-lat1) * Math.PI/180;
+const dLon = (lon2-lon1) * Math.PI/180;
 
-    const a =
-        Math.sin(Δφ/2) * Math.sin(Δφ/2) +
-        Math.cos(φ1) * Math.cos(φ2) *
-        Math.sin(Δλ/2) * Math.sin(Δλ/2);
+const a =
+Math.sin(dLat/2) * Math.sin(dLat/2) +
+Math.cos(lat1*Math.PI/180) *
+Math.cos(lat2*Math.PI/180) *
+Math.sin(dLon/2) *
+Math.sin(dLon/2);
 
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
 
-    return R * c;
+return R * c;
+
 }
 
 
 
-// Load Google Sheet data
+// LOAD COMMUTE ROUTES FROM GOOGLE SCRIPT
+
 fetch("https://script.google.com/macros/s/AKfycbzvBuo6pFVBbMO2JWD-YEHtftkvl5DsmCZPTRkwLLxMezVwKOlWxc0OIL1vXphQZWa0/exec")
 
-.then(res => res.json())
+.then(res=>res.json())
 
-.then(data => {
+.then(routeData=>{
 
-    const culturalPlaces = data.filter(p => p.type === "culture");
-    const mainPlaces = data.filter(p => p.type === "main");
+map.on("load",()=>{
 
+map.addSource("routes",{
+type:"geojson",
+data:routeData
+});
 
+map.addLayer({
+id:"routes",
+type:"line",
+source:"routes",
+paint:{
+"line-color":"#2a7de1",
+"line-width":4,
+"line-opacity":0.6
+}
+});
 
-    mainPlaces.forEach(main => {
+});
 
-        // BIG main marker
-        new mapboxgl.Marker({color:"red"})
-            .setLngLat([main.lng, main.lat])
-            .setPopup(new mapboxgl.Popup().setHTML(`<h3>${main.name}</h3>`))
-            .addTo(map);
-
-
-
-        culturalPlaces.forEach(place => {
-
-            const dist = getDistance(main.lat, main.lng, place.lat, place.lng);
-
-            // only show within 500m
-            if(dist <= 500){
-
-                // cultural marker
-                new mapboxgl.Marker({color:"blue"})
-                    .setLngLat([place.lng, place.lat])
-                    .setPopup(
-                        new mapboxgl.Popup().setHTML(
-                            `<b>${place.name}</b><br>${Math.round(dist)}m away`
-                        )
-                    )
-                    .addTo(map);
+});
 
 
-                // connection line
-                map.addLayer({
-                    id: main.name + "-" + place.name,
-                    type: "line",
-                    source: {
-                        type: "geojson",
-                        data: {
-                            type: "Feature",
-                            geometry: {
-                                type: "LineString",
-                                coordinates: [
-                                    [main.lng, main.lat],
-                                    [place.lng, place.lat]
-                                ]
-                            }
-                        }
-                    },
-                    paint: {
-                        "line-color": "#888",
-                        "line-width": 2
-                    }
-                });
 
-            }
+// LOAD CULTURAL PLACES FROM OVERPASS
 
-        });
+const overpassQuery = `
+[out:json];
+(
+node["tourism"="museum"](51.3,-0.3,51.7,0.2);
+node["amenity"="theatre"](51.3,-0.3,51.7,0.2);
+node["amenity"="arts_centre"](51.3,-0.3,51.7,0.2);
+node["tourism"="gallery"](51.3,-0.3,51.7,0.2);
+);
+out;
+`;
 
-    });
-
+fetch("https://overpass-api.de/api/interpreter",{
+method:"POST",
+body:overpassQuery
 })
 
-.catch(err => console.error(err));
+.then(res=>res.json())
+
+.then(data=>{
+
+data.elements.forEach(place=>{
+
+const lat = place.lat;
+const lng = place.lon;
+
+new mapboxgl.Marker({color:"red"})
+.setLngLat([lng,lat])
+.setPopup(
+new mapboxgl.Popup().setHTML(
+place.tags.name || "Cultural Venue"
+)
+)
+.addTo(map);
+
+});
+
+});
 
 </script>
 
