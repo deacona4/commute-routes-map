@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="utf-8">
-<title>Commute Routes Map</title>
+<title>London Commute Map</title>
 
 <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
 
@@ -10,28 +10,28 @@
 
 <style>
 
-body {
+body{
 margin:0;
 padding:0;
 font-family:Arial, sans-serif;
 }
 
-#map {
+#map{
 position:absolute;
 top:0;
 bottom:0;
 width:100%;
 }
 
-#legend {
+#legend{
 position:absolute;
 bottom:20px;
 left:20px;
 background:white;
-padding:10px;
+padding:12px;
 border-radius:6px;
 box-shadow:0 2px 6px rgba(0,0,0,0.2);
-font-size:14px;
+font-size:13px;
 }
 
 .legend-item{
@@ -46,7 +46,6 @@ margin-right:6px;
 }
 
 </style>
-
 </head>
 
 <body>
@@ -54,6 +53,7 @@ margin-right:6px;
 <div id="map"></div>
 
 <div id="legend">
+<b>Commute Routes</b><br><br>
 <div class="legend-item"><span class="legend-colour" style="background:#e63946"></span>Train</div>
 <div class="legend-item"><span class="legend-colour" style="background:#457b9d"></span>Bus</div>
 <div class="legend-item"><span class="legend-colour" style="background:#2a9d8f"></span>Car</div>
@@ -64,66 +64,68 @@ margin-right:6px;
 
 <script>
 
-mapboxgl.accessToken = 'pk.eyJ1IjoiYmlnYWwxIiwiYSI6ImNtbWIzODZuaDA0cWYycXIyMXVydmx1eDkifQ.2tS6Ro5jbDlGjbR74_Ox0Q';
+/* MAPBOX TOKEN */
+
+mapboxgl.accessToken = "pk.eyJ1IjoiYmlnYWwxIiwiYSI6ImNtbWIzODZuaDA0cWYycXIyMXVydmx1eDkifQ.2tS6Ro5jbDlGjbR74_Ox0Q";
+
+/* CREATE MAP */
 
 const map = new mapboxgl.Map({
-container: 'map',
-style: 'mapbox://styles/mapbox/light-v11',
-center: [-0.12, 51.50],
+container: "map",
+style: "mapbox://styles/mapbox/light-v11",
+center: [-0.12,51.50],
 zoom: 9
 });
 
 map.addControl(new mapboxgl.NavigationControl());
 
-fetch("https://script.google.com/macros/s/AKfycbyH4arhO1r-cJaRXm6GqKQJHIQpHqFc6H_QOxHcFJzC381vkjqdC5sTb8JConWscqqF/exec")
-.then(response => response.json())
+/* LOAD ROUTES FROM GOOGLE APPS SCRIPT */
+
+fetch("https://script.google.com/macros/s/AKfycbzvBuo6pFVBbMO2JWD-YEHtftkvl5DsmCZPTRkwLLxMezVwKOlWxc0OIL1vXphQZWa0/exec")
+.then(res => res.json())
 .then(data => {
 
-data.forEach((row, i) => {
+map.on("load", () => {
 
-if(!row.route_geojson) return;
-
-let route;
-
-try{
-route = JSON.parse(row.route_geojson);
-}catch(e){
-console.log("Bad GeoJSON row:", i);
-return;
-}
-
-let colour = "#666";
-
-if(row["Mode of Travel"] === "Train") colour = "#e63946";
-if(row["Mode of Travel"] === "Bus") colour = "#457b9d";
-if(row["Mode of Travel"] === "Car") colour = "#2a9d8f";
-if(row["Mode of Travel"] === "Walk") colour = "#f4a261";
-
-map.addSource("route"+i, {
-type: "geojson",
-data: route
+map.addSource("routes",{
+type:"geojson",
+data:data
 });
 
 map.addLayer({
-id: "route"+i,
-type: "line",
-source: "route"+i,
-layout: {
-"line-join": "round",
-"line-cap": "round"
+id:"routes",
+type:"line",
+source:"routes",
+layout:{
+"line-join":"round",
+"line-cap":"round"
 },
-paint: {
-"line-color": colour,
-"line-width": 4,
-"line-opacity": 0.8
+paint:{
+"line-color":"#ff4d4d",
+"line-width":3,
+"line-opacity":0.7
 }
 });
+
+/* AUTO ZOOM TO ROUTES */
+
+const bounds = new mapboxgl.LngLatBounds();
+
+data.features.forEach(feature=>{
+feature.geometry.coordinates.forEach(coord=>{
+bounds.extend(coord);
+});
+});
+
+if(!bounds.isEmpty()){
+map.fitBounds(bounds,{padding:40});
+}
 
 });
 
 })
-.catch(error => {
-console.error("Data loading error:", error);
+.catch(error=>{
+console.error("Error loading routes:",error);
 });
 
 </script>
