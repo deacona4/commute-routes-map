@@ -1,8 +1,11 @@
 <!DOCTYPE html>
+
 <html>
 <head>
 <meta charset="utf-8">
 <title>London Cultural Commute Map</title>
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <link href="https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.css" rel="stylesheet">
 
@@ -19,6 +22,35 @@ width:100%;
 height:100vh;
 }
 
+/* ROUTE INPUT */
+
+#route-input{
+position:absolute;
+top:20px;
+left:20px;
+z-index:2;
+background:white;
+padding:10px;
+border-radius:6px;
+box-shadow:0 0 6px rgba(0,0,0,0.2);
+font-size:14px;
+}
+
+#route-input input{
+display:block;
+margin-bottom:6px;
+padding:6px;
+width:170px;
+}
+
+#route-input button{
+padding:6px;
+width:100%;
+cursor:pointer;
+}
+
+/* LEGEND */
+
 .legend{
 position:absolute;
 bottom:20px;
@@ -28,6 +60,7 @@ padding:10px;
 border-radius:6px;
 box-shadow:0 0 6px rgba(0,0,0,0.2);
 font-size:14px;
+z-index:2;
 }
 
 .legend div{
@@ -38,6 +71,14 @@ margin-bottom:5px;
 width:20px;
 height:4px;
 background:#2a7de1;
+display:inline-block;
+margin-right:6px;
+}
+
+.user-route-box{
+width:20px;
+height:4px;
+background:#ff5500;
 display:inline-block;
 margin-right:6px;
 }
@@ -56,17 +97,31 @@ margin-right:6px;
 
 <body>
 
+<div id="route-input">
+
+<input id="home" placeholder="Home postcode">
+<input id="work" placeholder="Work postcode">
+
+<button onclick="createRoute()">Show My Route</button>
+
+</div>
+
 <div id="map"></div>
 
 <div class="legend">
-<div><span class="route-box"></span>Commute Routes</div>
+<div><span class="route-box"></span>Saved Commute Routes</div>
+<div><span class="user-route-box"></span>Your Route</div>
 <div><span class="culture-box"></span>Cultural Venues</div>
 </div>
 
 <script src="https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.js"></script>
+
 <script>
 
 mapboxgl.accessToken = "pk.eyJ1IjoiYmlnYWwxIiwiYSI6ImNtbWIzODZuaDA0cWYycXIyMXVydmx1eDkifQ.2tS6Ro5jbDlGjbR74_Ox0Q";
+
+const API_URL =
+"https://script.google.com/macros/s/AKfycbwJln9GQ_HgOPAXIdKJEIZE0V3nzVjvYTspwahaBqLVt7XWxBhPTrsZzdPsIsGwonY/exec";
 
 const map = new mapboxgl.Map({
 container:'map',
@@ -75,16 +130,15 @@ center:[-0.1276,51.5072],
 zoom:11
 });
 
+
 map.on('load', function () {
 
 
-// LOAD ROUTES
+// LOAD STORED ROUTES
 
-fetch("https://script.google.com/macros/s/AKfycbzvBuo6pFVBbMO2JWD-YEHtftkvl5DsmCZPTRkwLLxMezVwKOlWxc0OIL1vXphQZWa0/exec")
+fetch(API_URL + "?action=routes")
 .then(res => res.json())
 .then(data => {
-
-console.log("Route data:", data);
 
 map.addSource("routes", {
 type: "geojson",
@@ -101,8 +155,8 @@ layout: {
 },
 paint: {
 "line-color": "#2a7de1",
-"line-width": 5,
-"line-opacity": 0.9
+"line-width": 4,
+"line-opacity": 0.7
 }
 });
 
@@ -115,37 +169,4 @@ paint: {
 const query = `
 [out:json];
 (
-node["tourism"="museum"](51.3,-0.3,51.7,0.2);
-node["tourism"="gallery"](51.3,-0.3,51.7,0.2);
-node["amenity"="theatre"](51.3,-0.3,51.7,0.2);
-node["amenity"="arts_centre"](51.3,-0.3,51.7,0.2);
-);
-out;
-`;
-
-fetch("https://overpass-api.de/api/interpreter", {
-method: "POST",
-body: query
-})
-.then(res => res.json())
-.then(data => {
-
-data.elements.forEach(place => {
-
-new mapboxgl.Marker({color:"red"})
-.setLngLat([place.lon, place.lat])
-.setPopup(
-new mapboxgl.Popup().setHTML(place.tags?.name || "Cultural Venue")
-)
-.addTo(map);
-
-});
-
-});
-
-});
-
-</script>
-
-</body>
-</html>
+node["tourism"="museum"](51.3,-0.3,)
