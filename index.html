@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <title>Cultural Walk Map</title>
+
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <link href="https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.css" rel="stylesheet">
@@ -32,19 +33,8 @@ width:170px;
 }
 
 #route-input button{
-padding:6px;
 width:100%;
-cursor:pointer;
-}
-
-.legend{
-position:absolute;
-bottom:20px;
-left:20px;
-background:white;
-padding:10px;
-border-radius:6px;
-box-shadow:0 0 6px rgba(0,0,0,0.2);
+padding:6px;
 }
 
 </style>
@@ -59,11 +49,6 @@ box-shadow:0 0 6px rgba(0,0,0,0.2);
 </div>
 
 <div id="map"></div>
-
-<div class="legend">
-<div>🟧 Your Route</div>
-<div>🔴 Cultural Encounters</div>
-</div>
 
 <script src="https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.js"></script>
 <script src="https://unpkg.com/@turf/turf@6/turf.min.js"></script>
@@ -99,23 +84,13 @@ function createRoute(){
 const home=document.getElementById("home").value;
 const work=document.getElementById("work").value;
 
-const url=API_URL+
-"?action=route"+
-"&home="+encodeURIComponent(home)+
-"&work="+encodeURIComponent(work);
-
-fetch(url)
+fetch(API_URL+"?action=route&home="+encodeURIComponent(home)+"&work="+encodeURIComponent(work))
 .then(r=>r.json())
 .then(data=>{
 
-/* extract coordinates from Mapbox response */
+/* THIS MATCHES YOUR APPS SCRIPT */
 
-if(!data.routes){
-alert("Routing failed.");
-return;
-}
-
-const coords=data.routes[0].geometry.coordinates;
+const coords=data.geometry.coordinates;
 
 const geojson={
 "type":"FeatureCollection",
