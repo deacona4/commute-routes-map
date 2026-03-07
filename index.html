@@ -181,13 +181,20 @@ body:query
 
 const data=await res.json();
 
-return data.elements.map(el=>({
-name:el.tags.name || "Cultural site",
-coords:[el.lon,el.lat],
-type:el.tags.tourism || el.tags.historic || el.tags.amenity
-}));
+return data.elements.map(el=>{
 
-}
+const lon = el.lon || (el.center && el.center.lon);
+const lat = el.lat || (el.center && el.center.lat);
+
+if(!lon || !lat) return null;
+
+return {
+name: el.tags?.name || "Cultural site",
+coords: [lon, lat],
+type: el.tags?.tourism || el.tags?.historic || el.tags?.amenity || "culture"
+};
+
+}).filter(Boolean);
 loadEncounters(coords);
 
 });
