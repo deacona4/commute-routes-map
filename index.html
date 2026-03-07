@@ -103,6 +103,7 @@ mapboxgl.accessToken = "pk.eyJ1IjoiYmlnYWwxIiwiYSI6ImNtbWIzODZuaDA0cWYycXIyMXVyd
 const API_URL = "https://script.google.com/macros/s/AKfycbz0BqxLHAajt3BKJJC0P6tr8DPVOd-MV8l2UBlh90dHImV3mrrv2Qa80Q7-yHkHNHxc/exec";
 
 let encounterMarkers = [];
+let currentRoute = null;
 
 const culturalSites = [
 
@@ -129,6 +130,11 @@ function createRoute(){
 const home = document.getElementById("home").value;
 const work = document.getElementById("work").value;
 
+if(!home || !work){
+alert("Please enter both locations");
+return;
+}
+
 const url =
 API_URL +
 "?action=route" +
@@ -138,6 +144,13 @@ API_URL +
 fetch(url)
 .then(res => res.json())
 .then(route => {
+
+if(!route || !route.features){
+alert("Route could not be generated.");
+return;
+}
+
+currentRoute = route;
 
 if(map.getSource("user-route")){
 map.getSource("user-route").setData(route);
@@ -162,20 +175,30 @@ paint:{
 
 showEncounters(route);
 
+})
+.catch(err => {
+console.error(err);
+alert("There was a problem generating the route.");
 });
 
 }
 
 function showEncounters(route){
 
+if(!route || !route.features) return;
+
 encounterMarkers.forEach(marker => marker.remove());
 encounterMarkers = [];
 
-const routeLine = turf.lineString(route.features[0].geometry.coordinates);
+const routeCoords = route.features[0].geometry.coordinates;
+
+const routeLine = turf.lineString(routeCoords);
 
 const routeLength = turf.length(routeLine,{units:"kilometers"});
 
 const segments = 4;
+
+let usedSites = new Set();
 
 for(let i=1;i<=segments;i++){
 
@@ -187,6 +210,8 @@ let closest=null;
 let minDist=Infinity;
 
 culturalSites.forEach(site=>{
+
+if(usedSites.has(site.name)) return;
 
 const sitePoint = turf.point(site.coords);
 
@@ -200,6 +225,8 @@ closest=site;
 });
 
 if(closest){
+
+usedSites.add(closest.name);
 
 const marker = new mapboxgl.Marker({color:"red"})
 .setLngLat(closest.coords)
