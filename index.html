@@ -21,8 +21,6 @@ width:100%;
 height:100vh;
 }
 
-/* ROUTE INPUT */
-
 #route-input{
 position:absolute;
 top:20px;
@@ -47,8 +45,6 @@ padding:6px;
 width:100%;
 cursor:pointer;
 }
-
-/* LEGEND */
 
 .legend{
 position:absolute;
@@ -98,8 +94,8 @@ margin-right:6px;
 
 <div id="route-input">
 
-<input id="home" placeholder="Home postcode">
-<input id="work" placeholder="Work postcode">
+<input id="home" placeholder="Start location">
+<input id="work" placeholder="Destination">
 
 <button onclick="createRoute()">Show My Route</button>
 
@@ -108,18 +104,21 @@ margin-right:6px;
 <div id="map"></div>
 
 <div class="legend">
-<div><span class="route-box"></span>Saved Commute Routes</div>
 <div><span class="user-route-box"></span>Your Route</div>
-<div><span class="culture-box"></span>Cultural Venues</div>
+<div><span class="culture-box"></span>Cultural Encounters</div>
 </div>
 
 <script src="https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.js"></script>
+<script src="https://unpkg.com/@turf/turf@6/turf.min.js"></script>
 
 <script>
 
 mapboxgl.accessToken = "pk.eyJ1IjoiYmlnYWwxIiwiYSI6ImNtbWIzODZuaDA0cWYycXIyMXVydmx1eDkifQ.2tS6Ro5jbDlGjbR74_Ox0Q";
 
 const API_URL = "https://script.google.com/macros/s/AKfycbyUuMmIknHTwP3hoKYYw0-eka1wk3X8BJSOqLua4q4DIVDCGhWaa6LUTeILGjEQv33L/exec";
+
+let culturalSites = [];
+let encounterMarkers = [];
 
 const map = new mapboxgl.Map({
 container:'map',
@@ -130,40 +129,9 @@ zoom:11
 
 map.on('load', function () {
 
-loadRoutes();
 loadCulturalSites();
 
 });
-
-function loadRoutes(){
-
-fetch(API_URL + "?action=routes")
-.then(res => res.json())
-.then(data => {
-
-map.addSource("routes", {
-type: "geojson",
-data: data
-});
-
-map.addLayer({
-id: "routes",
-type: "line",
-source: "routes",
-layout: {
-"line-join": "round",
-"line-cap": "round"
-},
-paint: {
-"line-color": "#2a7de1",
-"line-width": 4,
-"line-opacity": 0.7
-}
-});
-
-});
-
-}
 
 function createRoute(){
 
@@ -171,7 +139,7 @@ const home = document.getElementById("home").value;
 const work = document.getElementById("work").value;
 
 if(!home || !work){
-alert("Please enter both postcodes");
+alert("Please enter both locations");
 return;
 }
 
@@ -187,8 +155,7 @@ fetch(url)
 
 if(map.getSource("user-route")){
 map.getSource("user-route").setData(route);
-return;
-}
+} else {
 
 map.addSource("user-route",{
 type:"geojson",
@@ -205,6 +172,10 @@ paint:{
 }
 });
 
+}
+
+showEncounters(route);
+
 });
 
 }
@@ -214,10 +185,13 @@ function loadCulturalSites(){
 const query = `
 [out:json];
 (
-node["tourism"="museum"](51.3,-0.3,51.7,0.2);
-node["tourism"="gallery"](51.3,-0.3,51.7,0.2);
-node["amenity"="theatre"](51.3,-0.3,51.7,0.2);
-node["amenity"="arts_centre"](51.3,-0.3,51.7,0.2);
+node["tourism"="museum"](51.2,-0.6,51.9,0.4);
+node["tourism"="gallery"](51.2,-0.6,51.9,0.4);
+node["tourism"="artwork"](51.2,-0.6,51.9,0.4);
+node["amenity"="theatre"](51.2,-0.6,51.9,0.4);
+node["historic"="memorial"](51.2,-0.6,51.9,0.4);
+node["historic"="monument"](51.2,-0.6,51.9,0.4);
+node["historic"="building"](51.2,-0.6,51.9,0.4);
 );
 out;
 `;
@@ -231,16 +205,78 @@ body:query
 
 data.elements.forEach(place => {
 
-new mapboxgl.Marker({color:"red"})
-.setLngLat([place.lon,place.lat])
-.setPopup(
-new mapboxgl.Popup().setHTML(place.tags?.name || "Cultural Venue")
-)
+if(place.lat && place.lon){
+
+culturalSites.push({
+type:"Feature",
+geometry:{
+type:"Point",
+coordinates:[place.lon,place.lat]
+},
+properties:{
+name:place.tags?.name || "Cultural Site"
+}
+});
+
+}
+
+});
+
+});
+
+}
+
+function showEncounters(route){
+
+encounterMarkers.forEach(marker => marker.remove());
+encounterMarkers = [];
+
+const routeLine = turf.lineString(route.features[0].geometry.coordinates);
+
+const buffer = turf.buffer(routeLine,0.5,{units:"kilometers"});
+
+const nearbySites = culturalSites.filter(site=>{
+return turf.booleanPointInPolygon(site,buffer);
+});
+
+if(nearbySites.length===0) return;
+
+const routeLength = turf.length(routeLine,{units:"kilometers"});
+
+const segments = 4;
+
+for(let i=1;i<=segments;i++){
+
+const distance = (routeLength/segments)*i;
+
+const point = turf.along(routeLine,distance,{units:"kilometers"});
+
+let closest=null;
+let minDist=Infinity;
+
+nearbySites.forEach(site=>{
+
+const dist = turf.distance(point,site,{units:"kilometers"});
+
+if(dist<minDist){
+minDist=dist;
+closest=site;
+}
+
+});
+
+if(closest){
+
+const marker = new mapboxgl.Marker({color:"red"})
+.setLngLat(closest.geometry.coordinates)
+.setPopup(new mapboxgl.Popup().setHTML(closest.properties.name))
 .addTo(map);
 
-});
+encounterMarkers.push(marker);
 
-});
+}
+
+}
 
 }
 
