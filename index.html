@@ -162,14 +162,14 @@ async function fetchCulturalSites(line){
 
 const bbox=turf.bbox(line);
 
-const query=`
+const query = `
 [out:json];
 (
-node["tourism"~"museum|artwork|gallery"](${bbox[1]},${bbox[0]},${bbox[3]},${bbox[2]});
-node["historic"](${bbox[1]},${bbox[0]},${bbox[3]},${bbox[2]});
-node["amenity"~"theatre|arts_centre|music_venue"](${bbox[1]},${bbox[0]},${bbox[3]},${bbox[2]});
+nwr["tourism"~"museum|gallery|artwork|attraction"](${bbox[1]},${bbox[0]},${bbox[3]},${bbox[2]});
+nwr["historic"~"monument|memorial|building"](${bbox[1]},${bbox[0]},${bbox[3]},${bbox[2]});
+nwr["amenity"~"theatre|arts_centre|community_centre|place_of_worship"](${bbox[1]},${bbox[0]},${bbox[3]},${bbox[2]});
 );
-out;
+out center;
 `;
 
 const url="https://overpass-api.de/api/interpreter";
