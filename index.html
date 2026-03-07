@@ -79,7 +79,6 @@ margin-right:6px;
 }
 
 </style>
-
 </head>
 
 <body>
@@ -219,6 +218,11 @@ name:place.tags?.name || "Cultural Site"
 }
 
 function showEncounters(route){
+
+if(culturalSites.length === 0){
+setTimeout(()=>showEncounters(route),500);
+return;
+}
 
 encounterMarkers.forEach(marker => marker.remove());
 encounterMarkers = [];
