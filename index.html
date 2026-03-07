@@ -135,6 +135,7 @@ markers.forEach(m=>m.remove());
 markers=[];
 
 const line=turf.lineString(coords);
+const corridor=turf.buffer(line,1,{units:"kilometers"});
 const length=turf.length(line);
 
 const segments=4;
@@ -146,8 +147,14 @@ const pt=turf.along(line,length/segments*i);
 
 let best=null;
 let min=999;
-
 culturalSites.forEach(site=>{
+
+const inside=turf.booleanPointInPolygon(
+turf.point(site.coords),
+corridor
+);
+
+if(!inside) return;
 
 if(used.has(site.name))return;
 
