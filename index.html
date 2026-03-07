@@ -3,23 +3,15 @@
 <head>
 <meta charset="utf-8">
 <title>Cultural Walk Map</title>
-
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <link href="https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.css" rel="stylesheet">
 
 <style>
 
-body{
-margin:0;
-padding:0;
-font-family:Arial, sans-serif;
-}
+body{margin:0;font-family:Arial;}
 
-#map{
-width:100%;
-height:100vh;
-}
+#map{width:100%;height:100vh;}
 
 #route-input{
 position:absolute;
@@ -53,23 +45,6 @@ background:white;
 padding:10px;
 border-radius:6px;
 box-shadow:0 0 6px rgba(0,0,0,0.2);
-font-size:14px;
-}
-
-.user-route-box{
-width:20px;
-height:4px;
-background:#ff5500;
-display:inline-block;
-margin-right:6px;
-}
-
-.culture-box{
-width:10px;
-height:10px;
-background:red;
-display:inline-block;
-margin-right:6px;
 }
 
 </style>
@@ -86,8 +61,8 @@ margin-right:6px;
 <div id="map"></div>
 
 <div class="legend">
-<div><span class="user-route-box"></span>Your Route</div>
-<div><span class="culture-box"></span>Cultural Encounters</div>
+<div>🟧 Your Route</div>
+<div>🔴 Cultural Encounters</div>
 </div>
 
 <script src="https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.js"></script>
@@ -95,23 +70,21 @@ margin-right:6px;
 
 <script>
 
-mapboxgl.accessToken = "pk.eyJ1IjoiYmlnYWwxIiwiYSI6ImNtbWIzODZuaDA0cWYycXIyMXVydmx1eDkifQ.2tS6Ro5jbDlGjbR74_Ox0Q";
+mapboxgl.accessToken="pk.eyJ1IjoiYmlnYWwxIiwiYSI6ImNtbWIzODZuaDA0cWYycXIyMXVydmx1eDkifQ.2tS6Ro5jbDlGjbR74_Ox0Q";
 
-const API_URL = "https://script.google.com/macros/s/AKfycbz0BqxLHAajt3BKJJC0P6tr8DPVOd-MV8l2UBlh90dHImV3mrrv2Qa80Q7-yHkHNHxc/exec";
+const API_URL="https://script.google.com/macros/s/AKfycbz0BqxLHAajt3BKJJC0P6tr8DPVOd-MV8l2UBlh90dHImV3mrrv2Qa80Q7-yHkHNHxc/exec";
 
-let encounterMarkers=[];
+let markers=[];
 
 const culturalSites=[
-
-{ name:"Tate Modern", coords:[-0.0994,51.5076] },
-{ name:"Globe Theatre", coords:[-0.0973,51.5081] },
-{ name:"St Pauls Cathedral", coords:[-0.0983,51.5138] },
-{ name:"Whitechapel Gallery", coords:[-0.0719,51.5162] },
-{ name:"Imperial War Museum", coords:[-0.1087,51.4966] },
-{ name:"Dennis Severs House", coords:[-0.0736,51.5235] },
-{ name:"Museum of London", coords:[-0.0956,51.5175] },
-{ name:"Guildhall Art Gallery", coords:[-0.0922,51.5155] }
-
+{name:"Tate Modern",coords:[-0.0994,51.5076]},
+{name:"Globe Theatre",coords:[-0.0973,51.5081]},
+{name:"St Pauls Cathedral",coords:[-0.0983,51.5138]},
+{name:"Whitechapel Gallery",coords:[-0.0719,51.5162]},
+{name:"Imperial War Museum",coords:[-0.1087,51.4966]},
+{name:"Dennis Severs House",coords:[-0.0736,51.5235]},
+{name:"Museum of London",coords:[-0.0956,51.5175]},
+{name:"Guildhall Art Gallery",coords:[-0.0922,51.5155]}
 ];
 
 const map=new mapboxgl.Map({
@@ -132,51 +105,41 @@ const url=API_URL+
 "&work="+encodeURIComponent(work);
 
 fetch(url)
-.then(res=>res.json())
+.then(r=>r.json())
 .then(data=>{
 
-/* Always extract Mapbox route correctly */
+/* extract coordinates from Mapbox response */
 
-let coords;
-
-if(data.routes){
-coords=data.routes[0].geometry.coordinates;
-}
-else if(data.features){
-coords=data.features[0].geometry.coordinates;
-}
-else if(data.route){
-coords=data.route.features[0].geometry.coordinates;
-}
-else{
-alert("Route could not be generated.");
+if(!data.routes){
+alert("Routing failed.");
 return;
 }
 
+const coords=data.routes[0].geometry.coordinates;
+
 const geojson={
-type:"FeatureCollection",
-features:[{
-type:"Feature",
-geometry:{
-type:"LineString",
-coordinates:coords
+"type":"FeatureCollection",
+"features":[
+{
+"type":"Feature",
+"geometry":{
+"type":"LineString",
+"coordinates":coords
 }
-}]
+}
+]
 };
 
-if(map.getSource("user-route")){
-map.getSource("user-route").setData(geojson);
+if(map.getSource("route")){
+map.getSource("route").setData(geojson);
 }else{
 
-map.addSource("user-route",{
-type:"geojson",
-data:geojson
-});
+map.addSource("route",{type:"geojson",data:geojson});
 
 map.addLayer({
-id:"user-route",
+id:"route",
 type:"line",
-source:"user-route",
+source:"route",
 paint:{
 "line-color":"#ff5500",
 "line-width":6
@@ -185,37 +148,35 @@ paint:{
 
 }
 
-showEncounters(coords);
+placeEncounters(coords);
 
 });
 
 }
 
-function showEncounters(coords){
+function placeEncounters(coords){
 
-encounterMarkers.forEach(m=>m.remove());
-encounterMarkers=[];
+markers.forEach(m=>m.remove());
+markers=[];
 
 const line=turf.lineString(coords);
-
-const length=turf.length(line,{units:"kilometers"});
+const length=turf.length(line);
 
 const segments=4;
-
 let used=new Set();
 
 for(let i=1;i<=segments;i++){
 
-const pt=turf.along(line,(length/segments)*i,{units:"kilometers"});
+const pt=turf.along(line,length/segments*i);
 
 let best=null;
-let min=Infinity;
+let min=999;
 
 culturalSites.forEach(site=>{
 
 if(used.has(site.name))return;
 
-const d=turf.distance(pt,turf.point(site.coords),{units:"kilometers"});
+const d=turf.distance(pt,turf.point(site.coords));
 
 if(d<min){
 min=d;
@@ -233,7 +194,7 @@ const marker=new mapboxgl.Marker({color:"red"})
 .setPopup(new mapboxgl.Popup().setHTML(best.name))
 .addTo(map);
 
-encounterMarkers.push(marker);
+markers.push(marker);
 
 }
 
