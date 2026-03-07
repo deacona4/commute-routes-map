@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-
 <html>
 <head>
 <meta charset="utf-8">
@@ -120,8 +119,7 @@ margin-right:6px;
 
 mapboxgl.accessToken = "pk.eyJ1IjoiYmlnYWwxIiwiYSI6ImNtbWIzODZuaDA0cWYycXIyMXVydmx1eDkifQ.2tS6Ro5jbDlGjbR74_Ox0Q";
 
-const API_URL =
-"https://script.google.com/macros/s/AKfycbwJln9GQ_HgOPAXIdKJEIZE0V3nzVjvYTspwahaBqLVt7XWxBhPTrsZzdPsIsGwonY/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbyUuMmIknHTwP3hoKYYw0-eka1wk3X8BJSOqLua4q4DIVDCGhWaa6LUTeILGjEQv33L/exec";
 
 const map = new mapboxgl.Map({
 container:'map',
@@ -130,11 +128,14 @@ center:[-0.1276,51.5072],
 zoom:11
 });
 
-
 map.on('load', function () {
 
+loadRoutes();
+loadCulturalSites();
 
-// LOAD STORED ROUTES
+});
+
+function loadRoutes(){
 
 fetch(API_URL + "?action=routes")
 .then(res => res.json())
@@ -162,11 +163,88 @@ paint: {
 
 });
 
+}
 
+function createRoute(){
 
-// LOAD CULTURAL VENUES
+const home = document.getElementById("home").value;
+const work = document.getElementById("work").value;
+
+if(!home || !work){
+alert("Please enter both postcodes");
+return;
+}
+
+const url =
+API_URL +
+"?action=route" +
+"&home=" + encodeURIComponent(home) +
+"&work=" + encodeURIComponent(work);
+
+fetch(url)
+.then(res => res.json())
+.then(route => {
+
+if(map.getSource("user-route")){
+map.getSource("user-route").setData(route);
+return;
+}
+
+map.addSource("user-route",{
+type:"geojson",
+data:route
+});
+
+map.addLayer({
+id:"user-route",
+type:"line",
+source:"user-route",
+paint:{
+"line-color":"#ff5500",
+"line-width":6
+}
+});
+
+});
+
+}
+
+function loadCulturalSites(){
 
 const query = `
 [out:json];
 (
-node["tourism"="museum"](51.3,-0.3,)
+node["tourism"="museum"](51.3,-0.3,51.7,0.2);
+node["tourism"="gallery"](51.3,-0.3,51.7,0.2);
+node["amenity"="theatre"](51.3,-0.3,51.7,0.2);
+node["amenity"="arts_centre"](51.3,-0.3,51.7,0.2);
+);
+out;
+`;
+
+fetch("https://overpass-api.de/api/interpreter",{
+method:"POST",
+body:query
+})
+.then(res => res.json())
+.then(data => {
+
+data.elements.forEach(place => {
+
+new mapboxgl.Marker({color:"red"})
+.setLngLat([place.lon,place.lat])
+.setPopup(
+new mapboxgl.Popup().setHTML(place.tags?.name || "Cultural Venue")
+)
+.addTo(map);
+
+});
+
+});
+
+}
+
+</script>
+
+</body>
+</html>
