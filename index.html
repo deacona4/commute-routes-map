@@ -80,7 +80,43 @@ zoom:11
 });
 
 function createRoute(){
+async function loadEncounters(coords){
 
+const line=turf.lineString(coords);
+
+/* create corridor around route */
+
+const corridor=turf.buffer(line,0.3,{units:"kilometers"});
+
+/* fetch cultural sites */
+
+let culturalSites=await fetchCulturalSites(line);
+
+/* filter to corridor */
+
+culturalSites=culturalSites.filter(site=>{
+
+return turf.booleanPointInPolygon(
+turf.point(site.coords),
+corridor
+);
+
+});
+
+/* fallback if none found */
+
+if(culturalSites.length===0){
+console.log("No cultural sites near route");
+return;
+}
+
+placeEncounters(coords,culturalSites);
+
+}
+
+function placeEncounters(coords,culturalSites){
+
+}
 const home=document.getElementById("home").value;
 const work=document.getElementById("work").value;
 
@@ -122,8 +158,37 @@ paint:{
 });
 
 }
+async function fetchCulturalSites(line){
 
-placeEncounters(coords);
+const bbox=turf.bbox(line);
+
+const query=`
+[out:json];
+(
+node["tourism"~"museum|artwork|gallery"](${bbox[1]},${bbox[0]},${bbox[3]},${bbox[2]});
+node["historic"](${bbox[1]},${bbox[0]},${bbox[3]},${bbox[2]});
+node["amenity"~"theatre|arts_centre|music_venue"](${bbox[1]},${bbox[0]},${bbox[3]},${bbox[2]});
+);
+out;
+`;
+
+const url="https://overpass-api.de/api/interpreter";
+
+const res=await fetch(url,{
+method:"POST",
+body:query
+});
+
+const data=await res.json();
+
+return data.elements.map(el=>({
+name:el.tags.name || "Cultural site",
+coords:[el.lon,el.lat],
+type:el.tags.tourism || el.tags.historic || el.tags.amenity
+}));
+
+}
+loadEncounters(coords);
 
 });
 
