@@ -145,20 +145,33 @@ fetch(url)
 .then(res => res.json())
 .then(route => {
 
-if(!route || !route.features){
+if(!route){
 alert("Route could not be generated.");
 return;
 }
 
-currentRoute = route;
+/* handle multiple possible response formats */
+
+let geojson;
+
+if(route.features){
+geojson = route;
+}else if(route.route){
+geojson = route.route;
+}else{
+alert("Route response format not recognised.");
+return;
+}
+
+currentRoute = geojson;
 
 if(map.getSource("user-route")){
-map.getSource("user-route").setData(route);
+map.getSource("user-route").setData(geojson);
 }else{
 
 map.addSource("user-route",{
 type:"geojson",
-data:route
+data:geojson
 });
 
 map.addLayer({
@@ -173,7 +186,7 @@ paint:{
 
 }
 
-showEncounters(route);
+showEncounters(geojson);
 
 })
 .catch(err => {
@@ -190,9 +203,9 @@ if(!route || !route.features) return;
 encounterMarkers.forEach(marker => marker.remove());
 encounterMarkers = [];
 
-const routeCoords = route.features[0].geometry.coordinates || [];
+const routeCoords = route.features[0].geometry.coordinates;
 
-if(routeCoords.length === 0){
+if(!routeCoords || routeCoords.length === 0){
 console.log("No route coordinates found");
 return;
 }
