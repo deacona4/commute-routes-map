@@ -30,7 +30,6 @@ background:white;
 padding:10px;
 border-radius:6px;
 box-shadow:0 0 6px rgba(0,0,0,0.2);
-font-size:14px;
 }
 
 #route-input input{
@@ -55,7 +54,6 @@ padding:10px;
 border-radius:6px;
 box-shadow:0 0 6px rgba(0,0,0,0.2);
 font-size:14px;
-z-index:2;
 }
 
 .user-route-box{
@@ -100,13 +98,24 @@ margin-right:6px;
 
 <script>
 
-mapboxgl.accessToken = "pk.eyJ1IjoiYmlnYWwxIiwiYSI6ImNtbWIzODZuaDA0cWYycXIyMXVydmx1eDkifQ.2tS6Ro5jbDlGjbR74_Ox0Q";
+mapboxgl.accessToken = "YOUR_MAPBOX_TOKEN_HERE";
 
-const API_URL = "https://script.google.com/macros/s/AKfycbyUuMmIknHTwP3hoKYYw0-eka1wk3X8BJSOqLua4q4DIVDCGhWaa6LUTeILGjEQv33L/exec";
+const API_URL = "YOUR_APPS_SCRIPT_URL_HERE";
 
-let culturalSites = [];
-let culturalLoaded = false;
 let encounterMarkers = [];
+
+const culturalSites = [
+
+{ name:"Tate Modern", coords:[-0.0994,51.5076] },
+{ name:"Globe Theatre", coords:[-0.0973,51.5081] },
+{ name:"St Pauls Cathedral", coords:[-0.0983,51.5138] },
+{ name:"Whitechapel Gallery", coords:[-0.0719,51.5162] },
+{ name:"Imperial War Museum", coords:[-0.1087,51.4966] },
+{ name:"Dennis Severs House", coords:[-0.0736,51.5235] },
+{ name:"Museum of London", coords:[-0.0956,51.5175] },
+{ name:"Guildhall Art Gallery", coords:[-0.0922,51.5155] }
+
+];
 
 const map = new mapboxgl.Map({
 container:'map',
@@ -115,26 +124,10 @@ center:[-0.1276,51.5072],
 zoom:11
 });
 
-map.on('load', function () {
-
-loadCulturalSites();
-
-});
-
 function createRoute(){
-
-if(!culturalLoaded){
-alert("Cultural data still loading. Please wait a few seconds.");
-return;
-}
 
 const home = document.getElementById("home").value;
 const work = document.getElementById("work").value;
-
-if(!home || !work){
-alert("Please enter both locations");
-return;
-}
 
 const url =
 API_URL +
@@ -148,7 +141,7 @@ fetch(url)
 
 if(map.getSource("user-route")){
 map.getSource("user-route").setData(route);
-} else {
+}else{
 
 map.addSource("user-route",{
 type:"geojson",
@@ -173,68 +166,12 @@ showEncounters(route);
 
 }
 
-function loadCulturalSites(){
-
-const query = `
-[out:json][timeout:25];
-(
-node["historic"="memorial"](51.2,-0.6,51.9,0.4);
-node["tourism"="artwork"](51.2,-0.6,51.9,0.4);
-node["tourism"="museum"](51.2,-0.6,51.9,0.4);
-node["tourism"="gallery"](51.2,-0.6,51.9,0.4);
-node["amenity"="theatre"](51.2,-0.6,51.9,0.4);
-);
-out body;
-`;
-
-fetch("https://overpass.kumi.systems/api/interpreter",{
-method:"POST",
-body:query
-})
-.then(res => res.json())
-.then(data => {
-
-data.elements.forEach(place => {
-
-if(place.lat && place.lon){
-
-culturalSites.push({
-type:"Feature",
-geometry:{
-type:"Point",
-coordinates:[place.lon,place.lat]
-},
-properties:{
-name:place.tags?.name || "Cultural Site"
-}
-});
-
-}
-
-});
-
-culturalLoaded = true;
-
-console.log("Cultural sites loaded:", culturalSites.length);
-
-});
-
-}
-
 function showEncounters(route){
 
 encounterMarkers.forEach(marker => marker.remove());
 encounterMarkers = [];
 
 const routeLine = turf.lineString(route.features[0].geometry.coordinates);
-
-const buffer = turf.buffer(routeLine,0.5,{units:"kilometers"});
-
-const nearbySites = culturalSites.filter(site=>{
-return turf.booleanPointInPolygon(site,buffer);
-});
-
-if(nearbySites.length===0) return;
 
 const routeLength = turf.length(routeLine,{units:"kilometers"});
 
@@ -249,9 +186,11 @@ const point = turf.along(routeLine,distance,{units:"kilometers"});
 let closest=null;
 let minDist=Infinity;
 
-nearbySites.forEach(site=>{
+culturalSites.forEach(site=>{
 
-const dist = turf.distance(point,site,{units:"kilometers"});
+const sitePoint = turf.point(site.coords);
+
+const dist = turf.distance(point,sitePoint,{units:"kilometers"});
 
 if(dist<minDist){
 minDist=dist;
@@ -263,8 +202,8 @@ closest=site;
 if(closest){
 
 const marker = new mapboxgl.Marker({color:"red"})
-.setLngLat(closest.geometry.coordinates)
-.setPopup(new mapboxgl.Popup().setHTML(closest.properties.name))
+.setLngLat(closest.coords)
+.setPopup(new mapboxgl.Popup().setHTML(closest.name))
 .addTo(map);
 
 encounterMarkers.push(marker);
