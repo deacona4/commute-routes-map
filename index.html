@@ -190,7 +190,12 @@ if(!route || !route.features) return;
 encounterMarkers.forEach(marker => marker.remove());
 encounterMarkers = [];
 
-const routeCoords = route.features[0].geometry.coordinates;
+const routeCoords = route.features[0].geometry.coordinates || [];
+
+if(routeCoords.length === 0){
+console.log("No route coordinates found");
+return;
+}
 
 const routeLine = turf.lineString(routeCoords);
 
