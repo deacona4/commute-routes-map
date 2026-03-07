@@ -78,12 +78,9 @@ margin-right:6px;
 <body>
 
 <div id="route-input">
-
 <input id="home" placeholder="Start location">
 <input id="work" placeholder="Destination">
-
 <button onclick="createRoute()">Show Route</button>
-
 </div>
 
 <div id="map"></div>
@@ -102,10 +99,9 @@ mapboxgl.accessToken = "pk.eyJ1IjoiYmlnYWwxIiwiYSI6ImNtbWIzODZuaDA0cWYycXIyMXVyd
 
 const API_URL = "https://script.google.com/macros/s/AKfycbz0BqxLHAajt3BKJJC0P6tr8DPVOd-MV8l2UBlh90dHImV3mrrv2Qa80Q7-yHkHNHxc/exec";
 
-let encounterMarkers = [];
-let currentRoute = null;
+let encounterMarkers=[];
 
-const culturalSites = [
+const culturalSites=[
 
 { name:"Tate Modern", coords:[-0.0994,51.5076] },
 { name:"Globe Theatre", coords:[-0.0973,51.5081] },
@@ -118,7 +114,7 @@ const culturalSites = [
 
 ];
 
-const map = new mapboxgl.Map({
+const map=new mapboxgl.Map({
 container:'map',
 style:'mapbox://styles/mapbox/light-v11',
 center:[-0.1276,51.5072],
@@ -127,43 +123,46 @@ zoom:11
 
 function createRoute(){
 
-const home = document.getElementById("home").value;
-const work = document.getElementById("work").value;
+const home=document.getElementById("home").value;
+const work=document.getElementById("work").value;
 
-if(!home || !work){
-alert("Please enter both locations");
-return;
-}
-
-const url =
-API_URL +
-"?action=route" +
-"&home=" + encodeURIComponent(home) +
-"&work=" + encodeURIComponent(work);
+const url=API_URL+
+"?action=route"+
+"&home="+encodeURIComponent(home)+
+"&work="+encodeURIComponent(work);
 
 fetch(url)
-.then(res => res.json())
-.then(route => {
+.then(res=>res.json())
+.then(data=>{
 
-if(!route){
+/* Always extract Mapbox route correctly */
+
+let coords;
+
+if(data.routes){
+coords=data.routes[0].geometry.coordinates;
+}
+else if(data.features){
+coords=data.features[0].geometry.coordinates;
+}
+else if(data.route){
+coords=data.route.features[0].geometry.coordinates;
+}
+else{
 alert("Route could not be generated.");
 return;
 }
 
-/* handle multiple possible response formats */
-
-let geojson;
-
-if(route.features){
-geojson = route;
-}else if(route.route){
-geojson = route.route;
-}else{
-alert("Route response format not recognised.");
-return;
+const geojson={
+type:"FeatureCollection",
+features:[{
+type:"Feature",
+geometry:{
+type:"LineString",
+coordinates:coords
 }
-
-currentRoute = geojson;
+}]
+};
 
 if(map.getSource("user-route")){
 map.getSource("user-route").setData(geojson);
@@ -186,69 +185,52 @@ paint:{
 
 }
 
-showEncounters(geojson);
+showEncounters(coords);
 
-})
-.catch(err => {
-console.error(err);
-alert("There was a problem generating the route.");
 });
 
 }
 
-function showEncounters(route){
+function showEncounters(coords){
 
-if(!route || !route.features) return;
+encounterMarkers.forEach(m=>m.remove());
+encounterMarkers=[];
 
-encounterMarkers.forEach(marker => marker.remove());
-encounterMarkers = [];
+const line=turf.lineString(coords);
 
-const routeCoords = route.features[0].geometry.coordinates;
+const length=turf.length(line,{units:"kilometers"});
 
-if(!routeCoords || routeCoords.length === 0){
-console.log("No route coordinates found");
-return;
-}
+const segments=4;
 
-const routeLine = turf.lineString(routeCoords);
-
-const routeLength = turf.length(routeLine,{units:"kilometers"});
-
-const segments = 4;
-
-let usedSites = new Set();
+let used=new Set();
 
 for(let i=1;i<=segments;i++){
 
-const distance = (routeLength/segments)*i;
+const pt=turf.along(line,(length/segments)*i,{units:"kilometers"});
 
-const point = turf.along(routeLine,distance,{units:"kilometers"});
-
-let closest=null;
-let minDist=Infinity;
+let best=null;
+let min=Infinity;
 
 culturalSites.forEach(site=>{
 
-if(usedSites.has(site.name)) return;
+if(used.has(site.name))return;
 
-const sitePoint = turf.point(site.coords);
+const d=turf.distance(pt,turf.point(site.coords),{units:"kilometers"});
 
-const dist = turf.distance(point,sitePoint,{units:"kilometers"});
-
-if(dist<minDist){
-minDist=dist;
-closest=site;
+if(d<min){
+min=d;
+best=site;
 }
 
 });
 
-if(closest){
+if(best){
 
-usedSites.add(closest.name);
+used.add(best.name);
 
-const marker = new mapboxgl.Marker({color:"red"})
-.setLngLat(closest.coords)
-.setPopup(new mapboxgl.Popup().setHTML(closest.name))
+const marker=new mapboxgl.Marker({color:"red"})
+.setLngLat(best.coords)
+.setPopup(new mapboxgl.Popup().setHTML(best.name))
 .addTo(map);
 
 encounterMarkers.push(marker);
