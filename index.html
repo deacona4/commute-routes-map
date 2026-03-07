@@ -11,7 +11,6 @@
 <style>
 
 body{margin:0;font-family:Arial;}
-
 #map{width:100%;height:100vh;}
 
 #route-input{
@@ -61,17 +60,6 @@ const API_URL="https://script.google.com/macros/s/AKfycbz0BqxLHAajt3BKJJC0P6tr8D
 
 let markers=[];
 
-const culturalSites=[
-{name:"Tate Modern",coords:[-0.0994,51.5076]},
-{name:"Globe Theatre",coords:[-0.0973,51.5081]},
-{name:"St Pauls Cathedral",coords:[-0.0983,51.5138]},
-{name:"Whitechapel Gallery",coords:[-0.0719,51.5162]},
-{name:"Imperial War Museum",coords:[-0.1087,51.4966]},
-{name:"Dennis Severs House",coords:[-0.0736,51.5235]},
-{name:"Museum of London",coords:[-0.0956,51.5175]},
-{name:"Guildhall Art Gallery",coords:[-0.0922,51.5155]}
-];
-
 const map=new mapboxgl.Map({
 container:'map',
 style:'mapbox://styles/mapbox/light-v11',
@@ -80,62 +68,24 @@ zoom:11
 });
 
 function createRoute(){
-async function loadEncounters(coords){
 
-const line=turf.lineString(coords);
-
-/* create corridor around route */
-
-const corridor=turf.buffer(line,0.3,{units:"kilometers"});
-
-/* fetch cultural sites */
-
-let culturalSites=await fetchCulturalSites(line);
-
-/* filter to corridor */
-
-culturalSites=culturalSites.filter(site=>{
-
-return turf.booleanPointInPolygon(
-turf.point(site.coords),
-corridor
-);
-
-});
-
-/* fallback if none found */
-
-if(culturalSites.length===0){
-console.log("No cultural sites near route");
-return;
-}
-
-placeEncounters(coords,culturalSites);
-
-}
-
-function placeEncounters(coords,culturalSites){
-
-}
 const home=document.getElementById("home").value;
 const work=document.getElementById("work").value;
 
 fetch(API_URL+"?action=route&home="+encodeURIComponent(home)+"&work="+encodeURIComponent(work))
 .then(r=>r.json())
-.then(data=>{
-
-/* THIS MATCHES YOUR APPS SCRIPT */
+.then(async data=>{
 
 const coords=data.geometry.coordinates;
 
 const geojson={
-"type":"FeatureCollection",
-"features":[
+type:"FeatureCollection",
+features:[
 {
-"type":"Feature",
-"geometry":{
-"type":"LineString",
-"coordinates":coords
+type:"Feature",
+geometry:{
+type:"LineString",
+coordinates:coords
 }
 }
 ]
@@ -158,11 +108,52 @@ paint:{
 });
 
 }
+
+/* load cultural encounters */
+
+loadEncounters(coords);
+
+});
+
+}
+
+async function loadEncounters(coords){
+
+const line=turf.lineString(coords);
+
+/* route corridor */
+
+const corridor=turf.buffer(line,0.3,{units:"kilometers"});
+
+/* fetch OSM cultural data */
+
+let sites=await fetchCulturalSites(line);
+
+/* filter to corridor */
+
+sites=sites.filter(site=>{
+
+return turf.booleanPointInPolygon(
+turf.point(site.coords),
+corridor
+);
+
+});
+
+if(sites.length===0){
+console.log("No cultural sites found");
+return;
+}
+
+placeEncounters(coords,sites);
+
+}
+
 async function fetchCulturalSites(line){
 
 const bbox=turf.bbox(line);
 
-const query = `
+const query=`
 [out:json];
 (
 nwr["tourism"~"museum|gallery|artwork|attraction"](${bbox[1]},${bbox[0]},${bbox[3]},${bbox[2]});
@@ -172,9 +163,7 @@ nwr["amenity"~"theatre|arts_centre|community_centre|place_of_worship"](${bbox[1]
 out center;
 `;
 
-const url="https://overpass-api.de/api/interpreter";
-
-const res=await fetch(url,{
+const res=await fetch("https://overpass-api.de/api/interpreter",{
 method:"POST",
 body:query
 });
@@ -183,31 +172,27 @@ const data=await res.json();
 
 return data.elements.map(el=>{
 
-const lon = el.lon || (el.center && el.center.lon);
-const lat = el.lat || (el.center && el.center.lat);
+const lon=el.lon || (el.center && el.center.lon);
+const lat=el.lat || (el.center && el.center.lat);
 
 if(!lon || !lat) return null;
 
-return {
-name: el.tags?.name || "Cultural site",
-coords: [lon, lat],
-type: el.tags?.tourism || el.tags?.historic || el.tags?.amenity || "culture"
+return{
+name:el.tags?.name || "Cultural site",
+coords:[lon,lat],
+type:el.tags?.tourism || el.tags?.historic || el.tags?.amenity || "culture"
 };
 
 }).filter(Boolean);
-loadEncounters(coords);
-
-});
 
 }
 
-function placeEncounters(coords){
+function placeEncounters(coords,sites){
 
 markers.forEach(m=>m.remove());
 markers=[];
 
 const line=turf.lineString(coords);
-const corridor=turf.buffer(line,0.3,{units:"kilometers"});
 const length=turf.length(line);
 
 const segments=4;
@@ -218,17 +203,11 @@ for(let i=1;i<=segments;i++){
 const pt=turf.along(line,length/segments*i);
 
 let best=null;
-let min=999;
-culturalSites.forEach(site=>{
+let min=Infinity;
 
-const inside=turf.booleanPointInPolygon(
-turf.point(site.coords),
-corridor
-);
+sites.forEach(site=>{
 
-if(!inside) return;
-
-if(used.has(site.name))return;
+if(used.has(site.name)) return;
 
 const d=turf.distance(pt,turf.point(site.coords));
 
