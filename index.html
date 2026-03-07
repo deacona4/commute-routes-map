@@ -58,10 +58,6 @@ font-size:14px;
 z-index:2;
 }
 
-.legend div{
-margin-bottom:5px;
-}
-
 .user-route-box{
 width:20px;
 height:4px;
@@ -109,6 +105,7 @@ mapboxgl.accessToken = "pk.eyJ1IjoiYmlnYWwxIiwiYSI6ImNtbWIzODZuaDA0cWYycXIyMXVyd
 const API_URL = "https://script.google.com/macros/s/AKfycbyUuMmIknHTwP3hoKYYw0-eka1wk3X8BJSOqLua4q4DIVDCGhWaa6LUTeILGjEQv33L/exec";
 
 let culturalSites = [];
+let culturalLoaded = false;
 let encounterMarkers = [];
 
 const map = new mapboxgl.Map({
@@ -125,6 +122,11 @@ loadCulturalSites();
 });
 
 function createRoute(){
+
+if(!culturalLoaded){
+alert("Cultural data still loading. Please wait a few seconds.");
+return;
+}
 
 const home = document.getElementById("home").value;
 const work = document.getElementById("work").value;
@@ -174,20 +176,18 @@ showEncounters(route);
 function loadCulturalSites(){
 
 const query = `
-[out:json];
+[out:json][timeout:25];
 (
+node["historic"="memorial"](51.2,-0.6,51.9,0.4);
+node["tourism"="artwork"](51.2,-0.6,51.9,0.4);
 node["tourism"="museum"](51.2,-0.6,51.9,0.4);
 node["tourism"="gallery"](51.2,-0.6,51.9,0.4);
-node["tourism"="artwork"](51.2,-0.6,51.9,0.4);
 node["amenity"="theatre"](51.2,-0.6,51.9,0.4);
-node["historic"="memorial"](51.2,-0.6,51.9,0.4);
-node["historic"="monument"](51.2,-0.6,51.9,0.4);
-node["historic"="building"](51.2,-0.6,51.9,0.4);
 );
-out;
+out body;
 `;
 
-fetch("https://overpass-api.de/api/interpreter",{
+fetch("https://overpass.kumi.systems/api/interpreter",{
 method:"POST",
 body:query
 })
@@ -213,16 +213,15 @@ name:place.tags?.name || "Cultural Site"
 
 });
 
+culturalLoaded = true;
+
+console.log("Cultural sites loaded:", culturalSites.length);
+
 });
 
 }
 
 function showEncounters(route){
-
-if(culturalSites.length === 0){
-setTimeout(()=>showEncounters(route),500);
-return;
-}
 
 encounterMarkers.forEach(marker => marker.remove());
 encounterMarkers = [];
