@@ -93,7 +93,7 @@ height:70px;
 
 mapboxgl.accessToken="pk.eyJ1IjoiYmlnYWwxIiwiYSI6ImNtbWIzODZuaDA0cWYycXIyMXVydmx1eDkifQ.2tS6Ro5jbDlGjbR74_Ox0Q";
 
-const API_URL="https://script.google.com/macros/s/AKfycbyF5peNK-kjk9BccG6O8FzwiW0YxelpcmCIOY7cYe2CcDu1IcRYPN_p25JIeR22yqEk/exec";
+const API_URL="https://script.google.com/macros/s/AKfycbwapBrPwZvEz9axAj2Fz_6DjwGQxvc3DXMZ90bsVBuhRZC2Be0_IhAVNjbnJSKO1J2E/exec";
 
 let markers=[];
 let archiveMarkers=[];
@@ -108,13 +108,15 @@ center:[-0.1276,51.5072],
 zoom:11
 });
 
-/* LOAD PREVIOUS ENCOUNTERS */
+
+/* LOAD ARCHIVE */
 
 map.on("load",()=>{
 
 loadEncounterArchive();
 
 });
+
 
 /* ROUTE */
 
@@ -128,13 +130,17 @@ fetch(API_URL+"?action=route&home="+encodeURIComponent(home)+"&work="+encodeURIC
 .then(async data=>{
 
 const coords=data.geometry.coordinates;
+
 currentRouteCoords=coords;
 
 const geojson={
 type:"FeatureCollection",
 features:[{
 type:"Feature",
-geometry:{type:"LineString",coordinates:coords}
+geometry:{
+type:"LineString",
+coordinates:coords
+}
 }]
 };
 
@@ -162,11 +168,13 @@ loadEncounters(coords);
 
 }
 
+
 /* CULTURE SEARCH */
 
 async function loadEncounters(coords){
 
 const line=turf.lineString(coords);
+
 const corridor=turf.buffer(line,0.6,{units:"kilometers"});
 
 let sites=await fetchCulturalSites(line);
@@ -186,7 +194,8 @@ placeEncounters(coords,sites);
 
 }
 
-/* OSM QUERY */
+
+/* FETCH OSM */
 
 async function fetchCulturalSites(line){
 
@@ -202,7 +211,10 @@ nwr["amenity"~"theatre|arts_centre|community_centre|place_of_worship"](${bbox[1]
 out center;
 `;
 
-const res=await fetch("https://overpass-api.de/api/interpreter",{method:"POST",body:query});
+const res=await fetch("https://overpass-api.de/api/interpreter",{
+method:"POST",
+body:query
+});
 
 const data=await res.json();
 
@@ -211,27 +223,32 @@ return data.elements.map(el=>{
 const lon=el.lon || el.center?.lon;
 const lat=el.lat || el.center?.lat;
 
-if(!lon||!lat)return null;
+if(!lon || !lat) return null;
 
 let score=1;
 
-if(el.tags?.tourism==="museum")score=10;
-if(el.tags?.tourism==="gallery")score=9;
-if(el.tags?.tourism==="artwork")score=8;
-if(el.tags?.historic==="memorial")score=7;
-if(el.tags?.historic==="monument")score=7;
-if(el.tags?.amenity==="theatre")score=6;
-if(el.tags?.amenity==="arts_centre")score=6;
-if(el.tags?.historic==="building")score=4;
-if(el.tags?.amenity==="place_of_worship")score=2;
+if(el.tags?.tourism==="museum") score=10;
+if(el.tags?.tourism==="gallery") score=9;
+if(el.tags?.tourism==="artwork") score=8;
+if(el.tags?.historic==="memorial") score=7;
+if(el.tags?.historic==="monument") score=7;
+if(el.tags?.amenity==="theatre") score=6;
+if(el.tags?.amenity==="arts_centre") score=6;
+if(el.tags?.historic==="building") score=4;
+if(el.tags?.amenity==="place_of_worship") score=2;
 
-return{name:el.tags?.name||"Cultural site",coords:[lon,lat],score:score};
+return{
+name:el.tags?.name || "Cultural site",
+coords:[lon,lat],
+score:score
+};
 
 }).filter(Boolean);
 
 }
 
-/* PLACE MARKERS */
+
+/* PLACE ENCOUNTERS */
 
 function placeEncounters(coords,sites){
 
@@ -242,6 +259,7 @@ const line=turf.lineString(coords);
 const length=turf.length(line);
 
 const segments=4;
+
 let used=new Set();
 
 for(let i=1;i<=segments;i++){
@@ -253,14 +271,17 @@ let min=Infinity;
 
 sites.forEach(site=>{
 
-if(used.has(site.name))return;
+if(used.has(site.name)) return;
 
 const d=turf.distance(pt,turf.point(site.coords));
+
 const weighted=d-(site.score*0.05)+Math.random()*0.1;
 
 if(weighted<min){
+
 min=weighted;
 best=site;
+
 }
 
 });
@@ -273,7 +294,11 @@ const marker=new mapboxgl.Marker({color:"red"})
 .setLngLat(best.coords)
 .addTo(map);
 
-marker.getElement().addEventListener("click",()=>openEncounter(best));
+marker.getElement().addEventListener("click",()=>{
+
+openEncounter(best);
+
+});
 
 markers.push(marker);
 
@@ -283,17 +308,19 @@ markers.push(marker);
 
 }
 
+
 /* REFRESH */
 
 function refreshEncounters(){
 
-if(!currentRouteCoords)return;
+if(!currentRouteCoords) return;
 
 const shuffled=[...currentSites].sort(()=>Math.random()-0.5);
 
 placeEncounters(currentRouteCoords,shuffled);
 
 }
+
 
 /* PANEL */
 
@@ -302,6 +329,9 @@ function openEncounter(site){
 currentEncounter=site;
 
 document.getElementById("encounter-title").innerText=site.name;
+
+document.getElementById("note-input").value="";
+document.getElementById("photo-input").value="";
 
 document.getElementById("encounter-panel").style.display="block";
 
@@ -313,11 +343,13 @@ document.getElementById("encounter-panel").style.display="none";
 
 }
 
+
 /* SAVE */
 
 async function saveEncounter(){
 
 const note=document.getElementById("note-input").value;
+
 const photo=document.getElementById("photo-input").files[0];
 
 let photoBase64="";
@@ -329,6 +361,7 @@ const reader=new FileReader();
 reader.onload=async function(){
 
 photoBase64=reader.result.split(",")[1];
+
 await sendEncounter(photoBase64);
 
 };
@@ -341,26 +374,38 @@ await sendEncounter("");
 
 }
 
+}
+
+
 async function sendEncounter(photoData){
 
 const payload={
+
 action:"encounter",
+
 site_name:currentEncounter.name,
+
 route_id:"route",
-note:note,
-photo:photoData
+
+note:document.getElementById("note-input").value,
+
+photo:photoData,
+
+lat:currentEncounter.coords[1],
+
+lng:currentEncounter.coords[0]
+
 };
 
 await fetch(API_URL,{
 method:"POST",
-headers:{"Content-Type":"application/json"},
+headers:{
+"Content-Type":"application/json"
+},
 body:JSON.stringify(payload)
 });
 
 alert("Encounter saved ✔");
-
-document.getElementById("note-input").value="";
-document.getElementById("photo-input").value="";
 
 closeEncounter();
 
@@ -368,9 +413,8 @@ loadEncounterArchive();
 
 }
 
-}
 
-/* SECOND LAYER — ENCOUNTER ARCHIVE */
+/* ARCHIVE LAYER */
 
 async function loadEncounterArchive(){
 
@@ -385,7 +429,11 @@ data.forEach(e=>{
 
 const marker=new mapboxgl.Marker({color:"blue"})
 .setLngLat([e.lng,e.lat])
-.setPopup(new mapboxgl.Popup().setHTML("<b>"+e.site_name+"</b><br>"+e.note))
+.setPopup(
+new mapboxgl.Popup().setHTML(
+"<b>"+e.site_name+"</b><br>"+(e.note||"")
+)
+)
 .addTo(map);
 
 archiveMarkers.push(marker);
