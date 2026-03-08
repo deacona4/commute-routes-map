@@ -319,16 +319,57 @@ document.getElementById("encounter-panel").style.display="none";
 
 /* SAVE */
 
-function saveEncounter(){
+async function saveEncounter(){
 
 const note=document.getElementById("note-input").value;
 const photo=document.getElementById("photo-input").files[0];
 
-console.log("Encounter:",{
-site:currentEncounter,
+let photoBase64="";
+
+/* convert photo to base64 */
+
+if(photo){
+
+const reader=new FileReader();
+
+reader.onload=async function(){
+
+photoBase64=reader.result.split(",")[1];
+
+sendEncounter(photoBase64);
+
+};
+
+reader.readAsDataURL(photo);
+
+}else{
+
+sendEncounter("");
+
+}
+
+async function sendEncounter(photoData){
+
+const payload={
+action:"encounter",
+site_name:currentEncounter.name,
+route_id:"route",
 note:note,
-photo:photo
+photo:photoData
+};
+
+await fetch(API_URL,{
+method:"POST",
+body:JSON.stringify(payload)
 });
+
+alert("Encounter saved ✔");
+
+closeEncounter();
+
+}
+
+}
 
 alert("Encounter saved!");
 
