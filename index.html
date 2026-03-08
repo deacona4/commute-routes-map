@@ -38,8 +38,6 @@ padding:6px;
 margin-top:4px;
 }
 
-/* encounter panel */
-
 #encounter-panel{
 position:absolute;
 bottom:0;
@@ -109,8 +107,6 @@ center:[-0.1276,51.5072],
 zoom:11
 });
 
-/* ROUTE GENERATION */
-
 function createRoute(){
 
 const home=document.getElementById("home").value;
@@ -157,8 +153,6 @@ loadEncounters(coords);
 
 }
 
-/* LOAD CULTURAL DATA */
-
 async function loadEncounters(coords){
 
 const line=turf.lineString(coords);
@@ -180,8 +174,6 @@ currentSites=sites;
 placeEncounters(coords,sites);
 
 }
-
-/* FETCH OSM CULTURE */
 
 async function fetchCulturalSites(line){
 
@@ -232,8 +224,6 @@ score:score
 }).filter(Boolean);
 
 }
-
-/* PLACE ENCOUNTERS */
 
 function placeEncounters(coords,sites){
 
@@ -287,8 +277,6 @@ markers.push(marker);
 
 }
 
-/* REFRESH */
-
 function refreshEncounters(){
 
 if(!currentRouteCoords) return;
@@ -298,8 +286,6 @@ const shuffled=[...currentSites].sort(()=>Math.random()-0.5);
 placeEncounters(currentRouteCoords,shuffled);
 
 }
-
-/* INTERACTION PANEL */
 
 function openEncounter(site){
 
@@ -317,16 +303,12 @@ document.getElementById("encounter-panel").style.display="none";
 
 }
 
-/* SAVE */
-
 async function saveEncounter(){
 
 const note=document.getElementById("note-input").value;
 const photo=document.getElementById("photo-input").files[0];
 
 let photoBase64="";
-
-/* convert photo to base64 */
 
 if(photo){
 
@@ -360,20 +342,20 @@ photo:photoData
 
 await fetch(API_URL,{
 method:"POST",
+headers:{
+"Content-Type":"application/json"
+},
 body:JSON.stringify(payload)
 });
 
 alert("Encounter saved ✔");
 
+document.getElementById("note-input").value="";
+document.getElementById("photo-input").value="";
+
 closeEncounter();
 
 }
-
-}
-
-alert("Encounter saved!");
-
-closeEncounter();
 
 }
 
