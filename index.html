@@ -351,27 +351,6 @@ setTimeout(loadEncounterArchive,1500);
 
 }
 
-
-/* ARCHIVE LAYER */
-
-async function loadEncounterArchive(){
-
-archiveMarkers.forEach(m=>m.remove());
-archiveMarkers=[];
-
-const res=await fetch(API_URL+"?action=encounters");
-const data=await res.json();
-
-data.forEach(e=>{
-
-if(!e.lat || !e.lng) return;
-
-let popupHTML="<b>"+e.site_name+"</b>";
-
-if(e.note){
-popupHTML+="<br>"+e.note;
-}
-
 if(e.photo){
 popupHTML+="<br><img src='"+e.photo+"' width='180'>";
 }
@@ -386,8 +365,6 @@ archiveMarkers.push(marker);
 });
 
 }
-
-</script>
 
 
 /* ARCHIVE LAYER */
@@ -418,6 +395,7 @@ archiveMarkers.push(marker);
 
 }
 
+</script>
 
 </body>
 </html>
