@@ -325,19 +325,16 @@ lng:currentEncounter.coords[0]
 
 try{
 
-const response=await fetch(API_URL,{
+await fetch(API_URL,{
 method:"POST",
-headers:{
-"Content-Type":"text/plain;charset=utf-8"
-},
+mode:"no-cors",
 body:JSON.stringify(payload)
 });
 
-const result=await response.text();
-
-console.log(result);
-
 alert("Encounter saved ✔");
+
+document.getElementById("note-input").value="";
+document.getElementById("photo-input").value="";
 
 closeEncounter();
 
@@ -349,7 +346,6 @@ alert("Save failed");
 }
 
 }
-
 </script>
 
 
