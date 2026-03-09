@@ -346,8 +346,10 @@ body:JSON.stringify(payload)
 
 alert("Encounter saved ✔");
 
-closeEncounter();
+/* remove the red marker that was clicked */
 
+markers.forEach(m => {
+if(m.getLngLat().lng
 /* reload archive markers */
 
 setTimeout(loadSavedEncounters,1500);
