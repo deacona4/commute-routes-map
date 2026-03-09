@@ -100,7 +100,8 @@ let archiveMarkers=[];
 let currentRouteCoords=null;
 let currentSites=[];
 let currentEncounter=null;
-
+let encounterArchive = [];
+  
 const map=new mapboxgl.Map({
 container:'map',
 style:'mapbox://styles/mapbox/light-v11',
@@ -283,17 +284,18 @@ currentEncounter=site;
 
 document.getElementById("encounter-title").innerText=site.name;
 
-document.getElementById("note-input").value="";
+let existing = encounterArchive.filter(e =>
+    e.site_name === site.name
+);
+
+let notes = existing.map(e=>e.note).join("\n\n");
+
+document.getElementById("note-input").value = notes || "";
 document.getElementById("photo-input").value="";
 
 document.getElementById("encounter-panel").style.display="block";
 
 }
-
-function closeEncounter(){
-document.getElementById("encounter-panel").style.display="none";
-}
-
 
 /* SAVE ENCOUNTER */
 
@@ -370,6 +372,8 @@ archiveMarkers=[];
 
 const res = await fetch(API_URL+"?action=encounters");
 const data = await res.json();
+
+encounterArchive = data;
 
 data.forEach(e=>{
 
