@@ -224,8 +224,6 @@ corridor
 
 currentSites=sites;
 
-placeEncounters(coords,sites);
-
 }
 
 
@@ -272,10 +270,12 @@ function placeEncounters(coords,sites){
 markers.forEach(m=>m.remove());
 markers=[];
 
+let usedSites = new Set();
+
 const line=turf.lineString(coords);
 const length=turf.length(line);
 
-const segments=4;
+const segments=4;;
 
 for(let i=1;i<=segments;i++){
 
@@ -288,9 +288,10 @@ sites.forEach(site=>{
 
 const d=turf.distance(pt,turf.point(site.coords));
 
-if(d<min){
-min=d;
-best=site;
+if(d < min && !usedSites.has(site.name)){
+min = d;
+best = site;
+
 }
 
 });
@@ -300,6 +301,8 @@ if(best){
 const marker=new mapboxgl.Marker(createRedMarker())
 .setLngLat(best.coords)
 .addTo(map);
+
+usedSites.add(best.name);
 
 marker.getElement().addEventListener("click",()=>{
 openEncounter(best);
@@ -391,14 +394,20 @@ markers.forEach(marker => {
 
 const pos = marker.getLngLat();
 
-if(
-pos.lng === currentEncounter.coords[0] &&
-pos.lat === currentEncounter.coords[1]
-){
+markers.forEach(marker => {
 
+const pos = marker.getLngLat();
+
+const d = turf.distance(
+turf.point([pos.lng,pos.lat]),
+turf.point(currentEncounter.coords)
+);
+
+if(d < 0.01){
 marker.setElement(createVisitedMarker());
-
 }
+
+});
 
 });
 closeEncounter();
