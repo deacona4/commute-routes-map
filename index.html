@@ -91,9 +91,9 @@ height:70px;
 
 <script>
 
-mapboxgl.accessToken="pk.eyJ1IjoiYmlnYWwxIiwiYSI6ImNtbWIzODZuaDA0cWYycXIyMXVydmx1eDkifQ.2tS6Ro5jbDlGjbR74_Ox0Q";
+mapboxgl.accessToken="YOUR_MAPBOX_TOKEN";
 
-const API_URL="https://script.google.com/macros/s/AKfycbwBb-WI18rr7QW-sM3Uu2jQekzY0yRqCwkj1SxRvrPgtwIwFMk-MobshYKrDa_3NWj7/exec";
+const API_URL="YOUR_APPS_SCRIPT_URL";
 
 let markers=[];
 let archiveMarkers=[];
@@ -108,6 +108,37 @@ style:'mapbox://styles/mapbox/light-v11',
 center:[-0.1276,51.5072],
 zoom:11
 });
+
+
+
+/* JSONP HELPER */
+
+function fetchJSONP(url){
+
+return new Promise((resolve,reject)=>{
+
+const callbackName="jsonp_"+Math.round(100000*Math.random());
+
+window[callbackName]=function(data){
+resolve(data);
+delete window[callbackName];
+script.remove();
+};
+
+const script=document.createElement("script");
+script.src=url+"&callback="+callbackName;
+
+script.onerror=reject;
+
+document.body.appendChild(script);
+
+});
+
+}
+
+
+
+/* MARKERS */
 
 function createRedMarker(){
 
@@ -147,20 +178,26 @@ return el;
 
 }
 
+
+
+/* MAP LOAD */
+
 map.on("load",()=>{
 loadEncounterArchive();
 });
 
-function createRoute(){
+
+
+/* CREATE ROUTE */
+
+async function createRoute(){
 
 const home=document.getElementById("home").value;
 const work=document.getElementById("work").value;
 
-fetch(API_URL+"?action=route&home="+encodeURIComponent(home)+"&work="+encodeURIComponent(work),{
-mode:"no-cors"
-})
-.then(r=>r.json())
-.then(data=>{
+const data=await fetchJSONP(
+API_URL+"?action=route&home="+encodeURIComponent(home)+"&work="+encodeURIComponent(work)
+);
 
 const coords=data.geometry.coordinates;
 currentRouteCoords=coords;
@@ -196,9 +233,11 @@ paint:{
 
 loadEncounters(coords);
 
-});
-
 }
+
+
+
+/* DISCOVER NEW */
 
 function refreshEncounters(){
 
@@ -207,6 +246,10 @@ loadEncounters(currentRouteCoords);
 }
 
 }
+
+
+
+/* LOAD CULTURAL SITES */
 
 async function loadEncounters(coords){
 
@@ -229,6 +272,10 @@ currentSites=sites;
 placeEncounters(coords,sites);
 
 }
+
+
+
+/* OSM QUERY */
 
 async function fetchCulturalSites(line){
 
@@ -262,6 +309,10 @@ coords:[lon,lat]
 }).filter(Boolean);
 
 }
+
+
+
+/* PLACE MARKERS */
 
 function placeEncounters(coords,sites){
 
@@ -313,6 +364,10 @@ markers.push(marker);
 
 }
 
+
+
+/* ENCOUNTER PANEL */
+
 function openEncounter(site){
 
 currentEncounter=site;
@@ -333,6 +388,10 @@ document.getElementById("encounter-panel").style.display="block";
 function closeEncounter(){
 document.getElementById("encounter-panel").style.display="none";
 }
+
+
+
+/* SAVE ENCOUNTER */
 
 async function saveEncounter(){
 
@@ -361,6 +420,8 @@ await sendEncounter("");
 
 }
 
+
+
 async function sendEncounter(photoData){
 
 const payload={
@@ -375,49 +436,29 @@ lng:currentEncounter.coords[0]
 
 await fetch(API_URL,{
 method:"POST",
-mode:"no-cors",
 body:JSON.stringify(payload)
 });
 
 alert("Encounter saved ✔");
 
-markers.forEach(marker=>{
-
-const pos=marker.getLngLat();
-
-const d=turf.distance(
-turf.point([pos.lng,pos.lat]),
-turf.point(currentEncounter.coords)
-);
-
-if(d<0.01){
-marker.setElement(createVisitedMarker());
-}
-
-});
-
 closeEncounter();
 
 setTimeout(()=>{
 loadEncounterArchive();
-
-if(currentRouteCoords){
-loadEncounters(currentRouteCoords);
-}
-
 },1000);
 
 }
+
+
+
+/* LOAD ARCHIVE */
 
 async function loadEncounterArchive(){
 
 archiveMarkers.forEach(m=>m.remove());
 archiveMarkers=[];
 
-const res = await fetch(API_URL+"?action=encounters",{
-mode:"no-cors"
-});
-const data=await res.json();
+const data=await fetchJSONP(API_URL+"?action=encounters");
 
 encounterArchive=data;
 
