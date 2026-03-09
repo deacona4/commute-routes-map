@@ -9,7 +9,7 @@
 <link href="https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.css" rel="stylesheet">
 
 <script src="https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.js"></script>
-<script src="https://unpkg.com/@turf/turf@6/turf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
 
 <style>
 
@@ -91,9 +91,25 @@ height:70px;
 
 <script>
 
-mapboxgl.accessToken="pk.eyJ1IjoiYmlnYWwxIiwiYSI6ImNtbWIzODZuaDA0cWYycXIyMXVydmx1eDkifQ.2tS6Ro5jbDlGjbR74_Ox0Q";
+mapboxgl.accessToken="YOUR_MAPBOX_TOKEN";
+const API_URL="YOUR_APPS_SCRIPT_URL";
 
-const API_URL="https://script.google.com/macros/s/AKfycbzU3w2OEqTxPCaCm7-5i6SQN-5mcN1RdQd1xkjig4Ty_AFEkm411pW3GCpFmhC4NiJc/exec";
+/* USER ID */
+
+function getUserId(){
+
+let id=localStorage.getItem("culture_user");
+
+if(!id){
+id="user_"+Math.random().toString(36).substring(2,10);
+localStorage.setItem("culture_user",id);
+}
+
+return id;
+
+}
+
+/* MAP */
 
 let markers=[];
 let archiveMarkers=[];
@@ -109,36 +125,7 @@ center:[-0.1276,51.5072],
 zoom:11
 });
 
-
-
-/* JSONP HELPER */
-
-function fetchJSONP(url){
-
-return new Promise((resolve,reject)=>{
-
-const callbackName="jsonp_"+Math.round(100000*Math.random());
-
-window[callbackName]=function(data){
-resolve(data);
-delete window[callbackName];
-script.remove();
-};
-
-const script=document.createElement("script");
-script.src=url+"&callback="+callbackName;
-
-script.onerror=reject;
-
-document.body.appendChild(script);
-
-});
-
-}
-
-
-
-/* MARKERS */
+/* MARKER STYLES */
 
 function createRedMarker(){
 
@@ -155,7 +142,6 @@ return el;
 function createVisitedMarker(){
 
 const el=document.createElement("div");
-
 el.style.width="18px";
 el.style.height="18px";
 el.style.background="red";
@@ -178,17 +164,32 @@ return el;
 
 }
 
+/* JSONP HELPER */
 
+function fetchJSONP(url){
 
-/* MAP LOAD */
+return new Promise((resolve,reject)=>{
 
-map.on("load",()=>{
-loadEncounterArchive();
+const callbackName="jsonp_"+Math.round(Math.random()*100000);
+
+window[callbackName]=function(data){
+resolve(data);
+delete window[callbackName];
+script.remove();
+};
+
+const script=document.createElement("script");
+script.src=url+"&callback="+callbackName;
+
+script.onerror=reject;
+
+document.body.appendChild(script);
+
 });
 
+}
 
-
-/* CREATE ROUTE */
+/* ROUTE */
 
 async function createRoute(){
 
@@ -232,12 +233,9 @@ paint:{
 }
 
 loadEncounters(coords);
+loadEncounterArchive();
 
 }
-
-
-
-/* DISCOVER NEW */
 
 function refreshEncounters(){
 
@@ -247,9 +245,7 @@ loadEncounters(currentRouteCoords);
 
 }
 
-
-
-/* LOAD CULTURAL SITES */
+/* CULTURAL SITES */
 
 async function loadEncounters(coords){
 
@@ -259,12 +255,10 @@ const corridor=turf.buffer(line,0.6,{units:"kilometers"});
 let sites=await fetchCulturalSites(line);
 
 sites=sites.filter(site=>{
-
 return turf.booleanPointInPolygon(
 turf.point(site.coords),
 corridor
 );
-
 });
 
 currentSites=sites;
@@ -272,10 +266,6 @@ currentSites=sites;
 placeEncounters(coords,sites);
 
 }
-
-
-
-/* OSM QUERY */
 
 async function fetchCulturalSites(line){
 
@@ -291,8 +281,24 @@ nwr["amenity"~"theatre|arts_centre"](${bbox[1]},${bbox[0]},${bbox[3]},${bbox[2]}
 out center;
 `;
 
-const res=await fetch("https://overpass-api.de/api/interpreter",{method:"POST",body:query});
-const data=await res.json();
+const res=await fetch(
+"https://overpass.kumi.systems/api/interpreter",
+{method:"POST",body:query}
+);
+
+if(!res.ok){
+console.warn("Overpass busy");
+return [];
+}
+
+const text=await res.text();
+
+if(text.startsWith("<")){
+console.warn("Overpass XML error");
+return [];
+}
+
+const data=JSON.parse(text);
 
 return data.elements.map(el=>{
 
@@ -310,9 +316,7 @@ coords:[lon,lat]
 
 }
 
-
-
-/* PLACE MARKERS */
+/* DISCOVERY LOGIC */
 
 function placeEncounters(coords,sites){
 
@@ -330,21 +334,34 @@ for(let i=1;i<=segments;i++){
 
 const pt=turf.along(line,length/segments*i);
 
-let best=null;
-let min=Infinity;
+let scoredSites=[];
 
 sites.forEach(site=>{
 
-const d=turf.distance(pt,turf.point(site.coords));
+if(usedSites.has(site.name)) return;
 
-if(d<min && !usedSites.has(site.name)){
-min=d;
-best=site;
-}
+const distToSegment=turf.distance(pt,turf.point(site.coords));
+
+const distToRoute=turf.pointToLineDistance(
+turf.point(site.coords),
+line,
+{units:"kilometers"}
+);
+
+const score=
+(distToSegment*0.7)+
+(distToRoute*0.3)+
+(Math.random()*0.1);
+
+scoredSites.push({site:site,score:score});
 
 });
 
-if(best){
+if(scoredSites.length===0) continue;
+
+scoredSites.sort((a,b)=>a.score-b.score);
+
+const best=scoredSites[0].site;
 
 const marker=new mapboxgl.Marker(createRedMarker())
 .setLngLat(best.coords)
@@ -361,10 +378,6 @@ markers.push(marker);
 }
 
 }
-
-}
-
-
 
 /* ENCOUNTER PANEL */
 
@@ -388,8 +401,6 @@ document.getElementById("encounter-panel").style.display="block";
 function closeEncounter(){
 document.getElementById("encounter-panel").style.display="none";
 }
-
-
 
 /* SAVE ENCOUNTER */
 
@@ -420,12 +431,11 @@ await sendEncounter("");
 
 }
 
-
-
 async function sendEncounter(photoData){
 
 const payload={
 action:"encounter",
+user_id:getUserId(),
 site_name:currentEncounter.name,
 route_id:"route",
 note:document.getElementById("note-input").value,
@@ -441,6 +451,21 @@ body:JSON.stringify(payload)
 
 alert("Encounter saved ✔");
 
+markers.forEach(marker=>{
+
+const pos=marker.getLngLat();
+
+const d=turf.distance(
+turf.point([pos.lng,pos.lat]),
+turf.point(currentEncounter.coords)
+);
+
+if(d<0.01){
+marker.setElement(createVisitedMarker());
+}
+
+});
+
 closeEncounter();
 
 setTimeout(()=>{
@@ -449,22 +474,31 @@ loadEncounterArchive();
 
 }
 
-
-
-/* LOAD ARCHIVE */
+/* ARCHIVE */
 
 async function loadEncounterArchive(){
 
 archiveMarkers.forEach(m=>m.remove());
 archiveMarkers=[];
 
+if(!currentRouteCoords) return;
+
 const data=await fetchJSONP(API_URL+"?action=encounters");
 
 encounterArchive=data;
 
+const line=turf.lineString(currentRouteCoords);
+const corridor=turf.buffer(line,0.6,{units:"kilometers"});
+
 data.forEach(e=>{
 
 if(!e.lat || !e.lng) return;
+
+const pt=turf.point([e.lng,e.lat]);
+
+if(!turf.booleanPointInPolygon(pt,corridor)){
+return;
+}
 
 let popupHTML="<b>"+e.site_name+"</b>";
 
