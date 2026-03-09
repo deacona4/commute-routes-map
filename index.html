@@ -365,7 +365,40 @@ archiveMarkers.push(marker);
 });
 
 }
+/* ARCHIVE LAYER */
 
+async function loadEncounterArchive(){
+
+archiveMarkers.forEach(m=>m.remove());
+archiveMarkers=[];
+
+const res = await fetch(API_URL+"?action=encounters");
+const data = await res.json();
+
+data.forEach(e=>{
+
+if(!e.lat || !e.lng) return;
+
+let popupHTML="<b>"+e.site_name+"</b>";
+
+if(e.note){
+popupHTML+="<br>"+e.note;
+}
+
+if(e.photo){
+popupHTML+="<br><img src='"+e.photo+"' width='180'>";
+}
+
+const marker=new mapboxgl.Marker({color:"blue"})
+.setLngLat([e.lng,e.lat])
+.setPopup(new mapboxgl.Popup().setHTML(popupHTML))
+.addTo(map);
+
+archiveMarkers.push(marker);
+
+});
+
+}
 </script>
 
 </body>
