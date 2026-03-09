@@ -366,35 +366,6 @@ archiveMarkers.push(marker);
 
 }
 
-
-/* ARCHIVE LAYER */
-
-async function loadEncounterArchive(){
-
-archiveMarkers.forEach(m=>m.remove());
-archiveMarkers=[];
-
-const res=await fetch(API_URL+"?action=encounters");
-
-const data=await res.json();
-
-data.forEach(e=>{
-
-const marker=new mapboxgl.Marker({color:"blue"})
-.setLngLat([e.lng,e.lat])
-.setPopup(
-new mapboxgl.Popup().setHTML(
-"<b>"+e.site_name+"</b><br>"+(e.note||"")
-)
-)
-.addTo(map);
-
-archiveMarkers.push(marker);
-
-});
-
-}
-
 </script>
 
 </body>
