@@ -232,8 +232,8 @@ paint:{
 
 }
 
-loadEncounters(coords);
-loadEncounterArchive();
+loadEncounters(coords);     // red discovery first
+setTimeout(loadEncounterArchive,1000); // archive after
 
 }
 
