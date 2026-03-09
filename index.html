@@ -7,10 +7,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <link href="https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.css" rel="stylesheet">
-  
+
 <script src="https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.js"></script>
 <script src="https://unpkg.com/@turf/turf@6/turf.min.js"></script>
-  
+
 <style>
 
 body{margin:0;font-family:Arial;}
@@ -91,17 +91,17 @@ height:70px;
 
 <script>
 
-mapboxgl.accessToken="pk.eyJ1IjoiYmlnYWwxIiwiYSI6ImNtbWIzODZuaDA0cWYycXIyMXVydmx1eDkifQ.2tS6Ro5jbDlGjbR74_Ox0Q";
+mapboxgl.accessToken="YOUR_MAPBOX_TOKEN";
 
-const API_URL="https://script.google.com/macros/s/AKfycbxS3yo_CGFOUaKuY8j3lq61ieGZpFFL_PRf_gwr4moYz-u4As4QImO7RuHU7JQovEdu/exec";
+const API_URL="YOUR_APPS_SCRIPT_URL";
 
 let markers=[];
 let archiveMarkers=[];
 let currentRouteCoords=null;
 let currentSites=[];
 let currentEncounter=null;
-let encounterArchive = [];
-  
+let encounterArchive=[];
+
 const map=new mapboxgl.Map({
 container:'map',
 style:'mapbox://styles/mapbox/light-v11',
@@ -111,12 +111,11 @@ zoom:11
 
 function createRedMarker(){
 
-const el = document.createElement("div");
-
-el.style.width = "18px";
-el.style.height = "18px";
-el.style.background = "red";
-el.style.borderRadius = "50%";
+const el=document.createElement("div");
+el.style.width="18px";
+el.style.height="18px";
+el.style.background="red";
+el.style.borderRadius="50%";
 
 return el;
 
@@ -124,38 +123,33 @@ return el;
 
 function createVisitedMarker(){
 
-const el = document.createElement("div");
+const el=document.createElement("div");
 
-el.style.width = "18px";
-el.style.height = "18px";
-el.style.background = "red";
-el.style.borderRadius = "50%";
-el.style.position = "relative";
+el.style.width="18px";
+el.style.height="18px";
+el.style.background="red";
+el.style.borderRadius="50%";
+el.style.position="relative";
 
-const dot = document.createElement("div");
+const dot=document.createElement("div");
 
-dot.style.width = "6px";
-dot.style.height = "6px";
-dot.style.background = "white";
-dot.style.borderRadius = "50%";
-dot.style.position = "absolute";
-dot.style.top = "6px";
-dot.style.left = "6px";
+dot.style.width="6px";
+dot.style.height="6px";
+dot.style.background="white";
+dot.style.borderRadius="50%";
+dot.style.position="absolute";
+dot.style.top="6px";
+dot.style.left="6px";
 
 el.appendChild(dot);
 
 return el;
 
-}  
-
-/* LOAD ARCHIVE WHEN MAP LOADS */
+}
 
 map.on("load",()=>{
 loadEncounterArchive();
 });
-
-
-/* ROUTE */
 
 function createRoute(){
 
@@ -164,7 +158,7 @@ const work=document.getElementById("work").value;
 
 fetch(API_URL+"?action=route&home="+encodeURIComponent(home)+"&work="+encodeURIComponent(work))
 .then(r=>r.json())
-.then(async data=>{
+.then(data=>{
 
 const coords=data.geometry.coordinates;
 currentRouteCoords=coords;
@@ -195,6 +189,7 @@ paint:{
 "line-width":6
 }
 });
+
 }
 
 loadEncounters(coords);
@@ -203,8 +198,13 @@ loadEncounters(coords);
 
 }
 
+function refreshEncounters(){
 
-/* LOAD CULTURAL SITES */
+if(currentRouteCoords){
+loadEncounters(currentRouteCoords);
+}
+
+}
 
 async function loadEncounters(coords){
 
@@ -224,10 +224,9 @@ corridor
 
 currentSites=sites;
 
+placeEncounters(coords,sites);
+
 }
-
-
-/* OSM QUERY */
 
 async function fetchCulturalSites(line){
 
@@ -262,20 +261,17 @@ coords:[lon,lat]
 
 }
 
-
-/* PLACE RED MARKERS */
-
 function placeEncounters(coords,sites){
 
 markers.forEach(m=>m.remove());
 markers=[];
 
-let usedSites = new Set();
+let usedSites=new Set();
 
 const line=turf.lineString(coords);
 const length=turf.length(line);
 
-const segments=4;;
+const segments=4;
 
 for(let i=1;i<=segments;i++){
 
@@ -288,10 +284,9 @@ sites.forEach(site=>{
 
 const d=turf.distance(pt,turf.point(site.coords));
 
-if(d < min && !usedSites.has(site.name)){
-min = d;
-best = site;
-
+if(d<min && !usedSites.has(site.name)){
+min=d;
+best=site;
 }
 
 });
@@ -316,33 +311,29 @@ markers.push(marker);
 
 }
 
-
-/* ENCOUNTER PANEL */
-
 function openEncounter(site){
 
 currentEncounter=site;
 
 document.getElementById("encounter-title").innerText=site.name;
 
-let existing = encounterArchive.filter(e =>
-    e.site_name === site.name
-);
+let existing=encounterArchive.filter(e=>e.site_name===site.name);
 
-let notes = existing.map(e=>e.note).join("\n\n");
+let notes=existing.map(e=>e.note).join("\n\n");
 
-document.getElementById("note-input").value = notes || "";
+document.getElementById("note-input").value=notes||"";
 document.getElementById("photo-input").value="";
 
 document.getElementById("encounter-panel").style.display="block";
 
 }
 
-/* SAVE ENCOUNTER */
+function closeEncounter(){
+document.getElementById("encounter-panel").style.display="none";
+}
 
 async function saveEncounter(){
 
-const note=document.getElementById("note-input").value;
 const photo=document.getElementById("photo-input").files[0];
 
 let photoBase64="";
@@ -368,7 +359,6 @@ await sendEncounter("");
 
 }
 
-
 async function sendEncounter(photoData){
 
 const payload={
@@ -383,33 +373,27 @@ lng:currentEncounter.coords[0]
 
 await fetch(API_URL,{
 method:"POST",
-headers:{
-"Content-Type":"application/json"
-},
+headers:{"Content-Type":"application/json"},
 body:JSON.stringify(payload)
 });
 
 alert("Encounter saved ✔");
-markers.forEach(marker => {
 
-const pos = marker.getLngLat();
+markers.forEach(marker=>{
 
-markers.forEach(marker => {
+const pos=marker.getLngLat();
 
-const pos = marker.getLngLat();
-
-const d = turf.distance(
+const d=turf.distance(
 turf.point([pos.lng,pos.lat]),
 turf.point(currentEncounter.coords)
 );
 
-if(d < 0.01){
+if(d<0.01){
 marker.setElement(createVisitedMarker());
 }
 
 });
 
-});
 closeEncounter();
 
 setTimeout(()=>{
@@ -423,17 +407,15 @@ loadEncounters(currentRouteCoords);
 
 }
 
-/* ARCHIVE LAYER */
-
 async function loadEncounterArchive(){
 
 archiveMarkers.forEach(m=>m.remove());
 archiveMarkers=[];
 
-const res = await fetch(API_URL+"?action=encounters");
-const data = await res.json();
+const res=await fetch(API_URL+"?action=encounters");
+const data=await res.json();
 
-encounterArchive = data;
+encounterArchive=data;
 
 data.forEach(e=>{
 
@@ -459,7 +441,7 @@ archiveMarkers.push(marker);
 });
 
 }
-  
+
 </script>
 
 </body>
