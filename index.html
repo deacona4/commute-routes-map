@@ -107,6 +107,11 @@ center:[-0.1276,51.5072],
 zoom:11
 });
 
+map.on("load",()=>{
+loadSavedEncounters();
+});
+
+
 /* ROUTE */
 
 function createRoute(){
@@ -155,7 +160,8 @@ loadEncounters(coords);
 
 }
 
-/* CULTURE DATA */
+
+/* LOAD CULTURAL ENCOUNTERS */
 
 async function loadEncounters(coords){
 
@@ -179,6 +185,7 @@ placeEncounters(coords,sites);
 
 }
 
+
 /* OSM QUERY */
 
 async function fetchCulturalSites(line){
@@ -195,7 +202,11 @@ nwr["amenity"~"theatre|arts_centre"](${bbox[1]},${bbox[0]},${bbox[3]},${bbox[2]}
 out center;
 `;
 
-const res=await fetch("https://overpass-api.de/api/interpreter",{method:"POST",body:query});
+const res=await fetch("https://overpass-api.de/api/interpreter",{
+method:"POST",
+body:query
+});
+
 const data=await res.json();
 
 return data.elements.map(el=>{
@@ -214,7 +225,8 @@ coords:[lon,lat]
 
 }
 
-/* PLACE MARKERS */
+
+/* PLACE SUGGESTED ENCOUNTERS */
 
 function placeEncounters(coords,sites){
 
@@ -262,7 +274,8 @@ markers.push(marker);
 
 }
 
-/* PANEL */
+
+/* ENCOUNTER PANEL */
 
 function openEncounter(site){
 
@@ -280,6 +293,7 @@ document.getElementById("encounter-panel").style.display="block";
 function closeEncounter(){
 document.getElementById("encounter-panel").style.display="none";
 }
+
 
 /* SAVE ENCOUNTER */
 
@@ -311,6 +325,7 @@ await sendEncounter("");
 
 }
 
+
 async function sendEncounter(photoData){
 
 const payload={
@@ -323,8 +338,6 @@ lat:currentEncounter.coords[1],
 lng:currentEncounter.coords[0]
 };
 
-try{
-
 await fetch(API_URL,{
 method:"POST",
 mode:"no-cors",
@@ -333,19 +346,45 @@ body:JSON.stringify(payload)
 
 alert("Encounter saved ✔");
 
-document.getElementById("note-input").value="";
-document.getElementById("photo-input").value="";
-
 closeEncounter();
 
-}catch(err){
+/* reload archive markers */
 
-console.error(err);
-alert("Save failed");
+setTimeout(loadSavedEncounters,1500);
+
+}
+
+
+/* LOAD SAVED ENCOUNTERS */
+
+async function loadSavedEncounters(){
+
+const res = await fetch(API_URL + "?action=encounters");
+const data = await res.json();
+
+data.forEach(enc => {
+
+if(!enc.lat || !enc.lng) return;
+
+let popupHTML = "<b>"+enc.site_name+"</b>";
+
+if(enc.note){
+popupHTML += "<br>"+enc.note;
+}
+
+if(enc.photo){
+popupHTML += "<br><img src='"+enc.photo+"' width='180'>";
+}
+
+new mapboxgl.Marker({color:"blue"})
+.setLngLat([enc.lng,enc.lat])
+.setPopup(new mapboxgl.Popup().setHTML(popupHTML))
+.addTo(map);
+
+});
 
 }
 
-}
 </script>
 
 
