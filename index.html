@@ -349,22 +349,6 @@ closeEncounter();
 
 setTimeout(loadEncounterArchive,1500);
 
-}
-
-if(e.photo){
-popupHTML+="<br><img src='"+e.photo+"' width='180'>";
-}
-
-const marker=new mapboxgl.Marker({color:"blue"})
-.setLngLat([e.lng,e.lat])
-.setPopup(new mapboxgl.Popup().setHTML(popupHTML))
-.addTo(map);
-
-archiveMarkers.push(marker);
-
-});
-
-}
 /* ARCHIVE LAYER */
 
 async function loadEncounterArchive(){
