@@ -86,16 +86,14 @@ height:70px;
 
 </div>
 
-<script src="https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.js"></script>
-<script src="https://unpkg.com/@turf/turf@6/turf.min.js"></script>
-
 <script>
 
 mapboxgl.accessToken="pk.eyJ1IjoiYmlnYWwxIiwiYSI6ImNtbWIzODZuaDA0cWYycXIyMXVydmx1eDkifQ.2tS6Ro5jbDlGjbR74_Ox0Q";
 
-const API_URL="https://script.google.com/macros/s/AKfycbwQQqzEuBDN5waOrbC6Obu7IbYGSlu-brc1bG9a8GULHRqyh6urJQ4q-FHNg3ks2krs/exec";
+const API_URL="https://script.google.com/macros/s/AKfycbxgmXOsAW-Gn1V0ias_vRCrg42A2oNR7DoGB3DeT1F76bRDunKz1lIhnE7_P92AKFhk/exec";
 
 let markers=[];
+let archiveMarkers=[];
 let currentRouteCoords=null;
 let currentSites=[];
 let currentEncounter=null;
@@ -107,8 +105,11 @@ center:[-0.1276,51.5072],
 zoom:11
 });
 
+
+/* LOAD ARCHIVE WHEN MAP LOADS */
+
 map.on("load",()=>{
-loadSavedEncounters();
+loadEncounterArchive();
 });
 
 
@@ -161,7 +162,7 @@ loadEncounters(coords);
 }
 
 
-/* LOAD CULTURAL ENCOUNTERS */
+/* LOAD CULTURAL SITES */
 
 async function loadEncounters(coords){
 
@@ -202,11 +203,7 @@ nwr["amenity"~"theatre|arts_centre"](${bbox[1]},${bbox[0]},${bbox[3]},${bbox[2]}
 out center;
 `;
 
-const res=await fetch("https://overpass-api.de/api/interpreter",{
-method:"POST",
-body:query
-});
-
+const res=await fetch("https://overpass-api.de/api/interpreter",{method:"POST",body:query});
 const data=await res.json();
 
 return data.elements.map(el=>{
@@ -226,7 +223,7 @@ coords:[lon,lat]
 }
 
 
-/* PLACE SUGGESTED ENCOUNTERS */
+/* PLACE RED MARKERS */
 
 function placeEncounters(coords,sites){
 
@@ -346,42 +343,45 @@ body:JSON.stringify(payload)
 
 alert("Encounter saved ✔");
 
-/* remove the red marker that was clicked */
+closeEncounter();
 
-markers.forEach(m => {
-if(m.getLngLat().lng
 /* reload archive markers */
 
-setTimeout(loadSavedEncounters,1500);
+setTimeout(loadEncounterArchive,1500);
 
 }
 
 
-/* LOAD SAVED ENCOUNTERS */
+/* ARCHIVE LAYER */
 
-async function loadSavedEncounters(){
+async function loadEncounterArchive(){
 
-const res = await fetch(API_URL + "?action=encounters");
-const data = await res.json();
+archiveMarkers.forEach(m=>m.remove());
+archiveMarkers=[];
 
-data.forEach(enc => {
+const res=await fetch(API_URL+"?action=encounters");
+const data=await res.json();
 
-if(!enc.lat || !enc.lng) return;
+data.forEach(e=>{
 
-let popupHTML = "<b>"+enc.site_name+"</b>";
+if(!e.lat || !e.lng) return;
 
-if(enc.note){
-popupHTML += "<br>"+enc.note;
+let popupHTML="<b>"+e.site_name+"</b>";
+
+if(e.note){
+popupHTML+="<br>"+e.note;
 }
 
-if(enc.photo){
-popupHTML += "<br><img src='"+enc.photo+"' width='180'>";
+if(e.photo){
+popupHTML+="<br><img src='"+e.photo+"' width='180'>";
 }
 
-new mapboxgl.Marker({color:"blue"})
-.setLngLat([enc.lng,enc.lat])
+const marker=new mapboxgl.Marker({color:"blue"})
+.setLngLat([e.lng,e.lat])
 .setPopup(new mapboxgl.Popup().setHTML(popupHTML))
 .addTo(map);
+
+archiveMarkers.push(marker);
 
 });
 
