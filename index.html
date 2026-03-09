@@ -414,7 +414,9 @@ async function loadEncounterArchive(){
 archiveMarkers.forEach(m=>m.remove());
 archiveMarkers=[];
 
-const res=await fetch(API_URL+"?action=encounters");
+const res = await fetch(API_URL+"?action=encounters",{
+mode:"no-cors"
+});
 const data=await res.json();
 
 encounterArchive=data;
