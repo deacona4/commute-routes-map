@@ -340,7 +340,9 @@ lng:currentEncounter.coords[0]
 
 await fetch(API_URL,{
 method:"POST",
-mode:"no-cors",
+headers:{
+"Content-Type":"application/json"
+},
 body:JSON.stringify(payload)
 });
 
@@ -348,10 +350,15 @@ alert("Encounter saved ✔");
 
 closeEncounter();
 
-/* reload archive markers */
+setTimeout(()=>{
+loadEncounterArchive();
 
-setTimeout(loadEncounterArchive,1500);
-  
+if(currentRouteCoords){
+loadEncounters(currentRouteCoords);
+}
+
+},1000);
+
 }
 
 /* ARCHIVE LAYER */
