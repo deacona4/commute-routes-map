@@ -156,7 +156,9 @@ function createRoute(){
 const home=document.getElementById("home").value;
 const work=document.getElementById("work").value;
 
-fetch(API_URL+"?action=route&home="+encodeURIComponent(home)+"&work="+encodeURIComponent(work))
+fetch(API_URL+"?action=route&home="+encodeURIComponent(home)+"&work="+encodeURIComponent(work),{
+mode:"no-cors"
+})
 .then(r=>r.json())
 .then(data=>{
 
