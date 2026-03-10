@@ -3,17 +3,23 @@
 <head>
 
 <meta charset="utf-8">
-<title>Cultural Walk Map</title>
+<title>Cultural Walk Explorer</title>
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <link href="https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.css" rel="stylesheet">
 <script src="https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.js"></script>
+
 <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
+
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 
 <style>
 
-body{margin:0;font-family:Arial;}
+body{
+margin:0;
+font-family:'Inter',sans-serif;
+}
 
 #map{
 width:100%;
@@ -26,34 +32,34 @@ top:20px;
 left:20px;
 z-index:2;
 background:white;
-padding:10px;
-border-radius:6px;
-box-shadow:0 0 6px rgba(0,0,0,0.2);
+padding:12px;
+border-radius:8px;
+box-shadow:0 4px 12px rgba(0,0,0,0.15);
 }
 
 #route-input input{
 display:block;
 margin-bottom:6px;
 padding:6px;
-width:170px;
+width:180px;
 }
 
 #route-input button{
 width:100%;
 padding:6px;
-margin-top:4px;
+margin-top:5px;
 }
 
 #journey-panel{
 position:absolute;
-top:140px;
+top:160px;
 left:20px;
 z-index:2;
 background:white;
 padding:10px;
 border-radius:6px;
 box-shadow:0 0 6px rgba(0,0,0,0.2);
-max-width:200px;
+max-width:220px;
 font-size:14px;
 }
 
@@ -75,16 +81,49 @@ border-radius:8px;
 margin-top:10px;
 }
 
+#welcome-panel{
+position:absolute;
+top:50%;
+left:50%;
+transform:translate(-50%,-50%);
+background:white;
+padding:30px;
+border-radius:10px;
+box-shadow:0 10px 30px rgba(0,0,0,0.2);
+max-width:420px;
+z-index:20;
+text-align:center;
+}
+
 </style>
 </head>
 
 <body>
 
+<div id="welcome-panel">
+
+<h2>Cultural Walk Explorer</h2>
+
+<p>
+Enter two postcodes to generate a walking route.
+Along the way you'll discover cultural encounters —
+artworks, historic places, and galleries.
+Pause, notice, reflect and record your encounters.
+</p>
+
+<button onclick="closeWelcome()">Start Exploring</button>
+
+</div>
+
 <div id="route-input">
+
 <input id="home" placeholder="Start postcode">
 <input id="work" placeholder="Destination postcode">
+
 <button onclick="createRoute()">Show Route</button>
-<button onclick="refreshEncounters()">Discover New Encounters</button>
+<button onclick="refreshEncounters()">Discover Encounters</button>
+<button onclick="toggleEncounters()">Toggle Encounters</button>
+
 </div>
 
 <div id="journey-panel">Enter a route to begin</div>
@@ -94,6 +133,7 @@ margin-top:10px;
 <div id="encounter-panel">
 
 <h3 id="encounter-title"></h3>
+
 <div id="encounter-link"></div>
 
 <h4>LOOK</h4>
@@ -101,6 +141,8 @@ margin-top:10px;
 
 <input type="file" id="photo-input">
 <img id="encounter-photo-preview">
+
+<button onclick="removePhoto()">Remove Photo</button>
 
 <h4>REFLECT</h4>
 <textarea id="note-input" placeholder="Write a short reflection..."></textarea>
@@ -117,14 +159,12 @@ margin-top:10px;
 
 mapboxgl.accessToken="pk.eyJ1IjoiYmlnYWwxIiwiYSI6ImNtbWIzODZuaDA0cWYycXIyMXVydmx1eDkifQ.2tS6Ro5jbDlGjbR74_Ox0Q";
 
-const API_URL="https://script.google.com/macros/s/AKfycbzxL_4SlrFWe2utLF397HZ8Thur5meX13WLQkIZDU6K6wKLd1goqkjK3DaMZKG_8Se1/exec";
-
-/* MULTIPLE OVERPASS SERVERS */
+const API_URL="https://script.google.com/macros/s/AKfycbyuH8CQMVdJe0VJuIspB1-5elrPi8rVug8gvH3V_SoMnxZuBISoLE1sLXRqqtz08Uqd/exec";
 
 const OVERPASS_SERVERS=[
 "https://overpass-api.de/api/interpreter",
-"https://overpass.kumi.systems/api/interpreter",
-"https://lz4.overpass-api.de/api/interpreter"
+"https://lz4.overpass-api.de/api/interpreter",
+"https://overpass.kumi.systems/api/interpreter"
 ];
 
 let markers=[];
@@ -132,17 +172,20 @@ let archiveMarkers=[];
 let currentRouteCoords=null;
 let currentEncounter=null;
 let encounterArchive=[];
-let encounterPrompts=[];
+let encountersVisible=true;
 
 const map=new mapboxgl.Map({
 container:'map',
-style:'mapbox://styles/mapbox/light-v11',
+style:'mapbox://styles/mapbox/navigation-day-v1',
 center:[-0.1276,51.5072],
 zoom:11
 });
 
+map.addControl(new mapboxgl.NavigationControl());
 
-/* USER ID */
+function closeWelcome(){
+document.getElementById("welcome-panel").style.display="none";
+}
 
 function getUserId(){
 
@@ -156,7 +199,6 @@ localStorage.setItem("culture_user",id);
 return id;
 
 }
-
 
 /* JSONP */
 
@@ -175,55 +217,11 @@ script.remove();
 const script=document.createElement("script");
 script.src=url+"&callback="+callbackName;
 
-script.onerror=reject;
-
 document.body.appendChild(script);
 
 });
 
 }
-
-
-/* LOAD PROMPTS */
-
-async function loadPrompts(){
-encounterPrompts=await fetchJSONP(API_URL+"?action=prompts");
-}
-
-
-/* OVERPASS FETCH WITH FALLBACK */
-
-async function fetchOverpass(query){
-
-for(const server of OVERPASS_SERVERS){
-
-try{
-
-const res=await fetch(server,{
-method:"POST",
-body:query
-});
-
-const text=await res.text();
-
-if(text.startsWith("<")){
-continue;
-}
-
-return JSON.parse(text);
-
-}catch(e){
-
-console.warn("Overpass failed:",server);
-
-}
-
-}
-
-return {elements:[]};
-
-}
-
 
 /* ROUTE */
 
@@ -239,16 +237,24 @@ API_URL+"?action=route&home="+encodeURIComponent(home)+"&work="+encodeURICompone
 );
 
 const coords=data.geometry.coordinates;
+
 currentRouteCoords=coords;
+
+drawRoute(coords);
+
+await loadEncounters(coords);
+
+loadEncounterArchive();
+
+}
+
+function drawRoute(coords){
 
 const geojson={
 type:"FeatureCollection",
 features:[{
 type:"Feature",
-geometry:{
-type:"LineString",
-coordinates:coords
-}
+geometry:{type:"LineString",coordinates:coords}
 }]
 };
 
@@ -270,45 +276,67 @@ paint:{
 
 }
 
-await loadEncounters(coords);
+}
 
-loadEncounterArchive();
+/* OVERPASS */
+
+async function fetchOverpass(query){
+
+for(const server of OVERPASS_SERVERS){
+
+try{
+
+const res=await fetch(server,{method:"POST",body:query});
+
+const text=await res.text();
+
+if(text.startsWith("<")) continue;
+
+return JSON.parse(text);
+
+}catch(e){
+
+console.warn("Overpass failed:",server);
 
 }
 
-
-/* DISCOVER */
-
-function refreshEncounters(){
-
-if(!currentRouteCoords){
-alert("Create a route first");
-return;
 }
 
-loadEncounters(currentRouteCoords);
+return {elements:[]};
 
 }
 
-
-/* CULTURAL QUERY */
+/* CULTURAL SITES */
 
 async function fetchCulturalSites(line){
 
-const bbox=turf.bbox(line);
+const length=turf.length(line);
+
+let results=[];
+
+for(let i=0;i<length;i+=0.8){
+
+const pt=turf.along(line,i);
+const [lng,lat]=pt.geometry.coordinates;
 
 const query=`
-[out:json][timeout:25];
+[out:json][timeout:20];
 (
-node["tourism"~"museum|gallery|artwork"](${bbox[1]},${bbox[0]},${bbox[3]},${bbox[2]});
-node["historic"](${bbox[1]},${bbox[0]},${bbox[3]},${bbox[2]});
+node(around:700,${lat},${lng})["tourism"~"museum|gallery|artwork"];
+node(around:700,${lat},${lng})["historic"];
 );
 out center;
 `;
 
 const data=await fetchOverpass(query);
 
-return data.elements.map(el=>{
+results=results.concat(data.elements);
+
+}
+
+const seen=new Set();
+
+return results.map(el=>{
 
 const lon=el.lon||el.center?.lon;
 const lat=el.lat||el.center?.lat;
@@ -316,99 +344,37 @@ const lat=el.lat||el.center?.lat;
 if(!lon||!lat) return null;
 if(!el.tags?.name) return null;
 
-let weight=1;
-
-if(el.tags?.tourism==="museum") weight=5;
-if(el.tags?.tourism==="gallery") weight=5;
-if(el.tags?.tourism==="artwork") weight=4;
-if(el.tags?.historic) weight=3;
+const id=lon+","+lat;
+if(seen.has(id)) return null;
+seen.add(id);
 
 return{
 name:el.tags.name,
-coords:[lon,lat],
-website:el.tags?.website||"",
-weight:weight
+coords:[lon,lat]
 };
 
 }).filter(Boolean);
 
 }
 
-
-/* LOAD ENCOUNTERS */
+/* ENCOUNTERS */
 
 async function loadEncounters(coords){
-
-const line=turf.lineString(coords);
-
-const corridor=turf.buffer(line,0.8,{units:"kilometers"});
-
-let sites=await fetchCulturalSites(line);
-
-sites=sites.filter(site=>{
-return turf.booleanPointInPolygon(
-turf.point(site.coords),
-corridor
-);
-});
-
-if(sites.length===0){
-
-document.getElementById("journey-panel").innerHTML="No cultural sites found on this route.";
-
-}
-
-placeEncounters(coords,sites);
-updateJourneyPanel(sites);
-
-}
-
-
-/* JOURNEY PANEL */
-
-function updateJourneyPanel(sites){
-
-if(sites.length===0) return;
-
-const panel=document.getElementById("journey-panel");
-
-panel.innerHTML="<b>Your Cultural Journey</b><br><br>";
-
-sites.slice(0,4).forEach((site,i)=>{
-panel.innerHTML+=`${i+1}. ${site.name}<br>`;
-});
-
-}
-
-
-/* MARKERS */
-
-function createRedMarker(){
-
-const el=document.createElement("div");
-el.style.width="18px";
-el.style.height="18px";
-el.style.background="red";
-el.style.borderRadius="50%";
-
-return el;
-
-}
-
-
-function placeEncounters(coords,sites){
 
 markers.forEach(m=>m.remove());
 markers=[];
 
 const line=turf.lineString(coords);
+
+const sites=await fetchCulturalSites(line);
+
+updateJourneyPanel(sites);
+
 const length=turf.length(line);
 
-const segments=4;
+for(let i=1;i<=4;i++){
 
-for(let i=1;i<=segments;i++){
-
-const pt=turf.along(line,length/segments*i);
+const pt=turf.along(line,length/5*i);
 
 let best=null;
 let min=Infinity;
@@ -417,12 +383,8 @@ sites.forEach(site=>{
 
 const d=turf.distance(pt,turf.point(site.coords));
 
-if(d>1.5) return;
-
-const score=d/site.weight;
-
-if(score<min){
-min=score;
+if(d<min){
+min=d;
 best=site;
 }
 
@@ -446,6 +408,33 @@ markers.push(marker);
 
 }
 
+function createRedMarker(){
+
+const el=document.createElement("div");
+
+el.style.width="26px";
+el.style.height="26px";
+el.style.background="#e63946";
+el.style.border="3px solid white";
+el.style.borderRadius="50%";
+el.style.boxShadow="0 2px 6px rgba(0,0,0,0.3)";
+el.style.cursor="pointer";
+
+return el;
+
+}
+
+function updateJourneyPanel(sites){
+
+const panel=document.getElementById("journey-panel");
+
+panel.innerHTML="<b>Your Cultural Journey</b><br><br>";
+
+sites.slice(0,4).forEach((site,i)=>{
+panel.innerHTML+=`${i+1}. ${site.name}<br>`;
+});
+
+}
 
 /* ENCOUNTER PANEL */
 
@@ -455,100 +444,18 @@ currentEncounter=site;
 
 document.getElementById("encounter-title").innerText=site.name;
 
-document.getElementById("encounter-photo-preview").src="";
-
-if(site.website){
-document.getElementById("encounter-link").innerHTML=
-"<a href='"+site.website+"' target='_blank'>Find out more ↗</a>";
-}else{
-document.getElementById("encounter-link").innerHTML="";
-}
-
-let existing=encounterArchive.filter(e=>e.site_name===site.name);
-
-let latest=existing[existing.length-1];
-
-document.getElementById("note-input").value=latest?latest.note:"";
-
-if(latest?.photo){
-document.getElementById("encounter-photo-preview").src=latest.photo;
-}
-
-if(encounterPrompts.length>0){
-const prompt=encounterPrompts[Math.floor(Math.random()*encounterPrompts.length)];
-document.getElementById("encounter-prompt").innerText=prompt;
-}
-
 document.getElementById("encounter-panel").style.display="block";
 
 }
 
-function closeEncounter(){
-document.getElementById("encounter-panel").style.display="none";
-}
-
-
-/* SHARE */
-
-function shareEncounter(){
-
-const text=encodeURIComponent(
-"I discovered "+currentEncounter.name+" on my cultural walk."
-);
-
-const url=encodeURIComponent(window.location.href);
-
-const box=`
-<div style="position:fixed;top:40%;left:40%;background:white;padding:20px;box-shadow:0 0 10px rgba(0,0,0,0.3);z-index:9999">
-
-<b>Share Encounter</b><br><br>
-
-<a href="https://twitter.com/intent/tweet?text=${text}&url=${url}" target="_blank">Twitter</a><br><br>
-
-<a href="https://wa.me/?text=${text}%20${url}" target="_blank">WhatsApp</a><br><br>
-
-<a href="mailto:?subject=Cultural Walk&body=${text}%20${url}">Email</a><br><br>
-
-<a href="https://www.facebook.com/sharer/sharer.php?u=${url}" target="_blank">Facebook</a><br><br>
-
-<button onclick="this.parentElement.remove()">Close</button>
-
-</div>
-`;
-
-document.body.insertAdjacentHTML("beforeend",box);
-
-}
-
-
 /* SAVE */
 
+function removePhoto(){
+currentEncounter.remove_photo=true;
+document.getElementById("encounter-photo-preview").src="";
+}
+
 async function saveEncounter(){
-
-const photo=document.getElementById("photo-input").files[0];
-
-let photoBase64="";
-
-if(photo){
-
-const reader=new FileReader();
-
-reader.onload=async function(){
-photoBase64=reader.result.split(",")[1];
-await sendEncounter(photoBase64);
-};
-
-reader.readAsDataURL(photo);
-
-}else{
-
-await sendEncounter("");
-
-}
-
-}
-
-async function sendEncounter(photoData){
 
 const payload={
 action:"encounter",
@@ -556,9 +463,7 @@ user_id:getUserId(),
 site_name:currentEncounter.name,
 route_id:"route",
 note:document.getElementById("note-input").value.trim(),
-photo:photoData,
-lat:currentEncounter.coords[1],
-lng:currentEncounter.coords[0]
+remove_photo:currentEncounter.remove_photo||false
 };
 
 await fetch(API_URL,{
@@ -567,10 +472,29 @@ body:JSON.stringify(payload)
 });
 
 closeEncounter();
-setTimeout(loadEncounterArchive,500);
+loadEncounterArchive();
 
 }
 
+function closeEncounter(){
+document.getElementById("encounter-panel").style.display="none";
+}
+
+/* TOGGLE */
+
+function toggleEncounters(){
+
+encountersVisible=!encountersVisible;
+
+markers.forEach(m=>{
+m.getElement().style.display=encountersVisible?"block":"none";
+});
+
+archiveMarkers.forEach(m=>{
+m.getElement().style.display=encountersVisible?"block":"none";
+});
+
+}
 
 /* ARCHIVE */
 
@@ -591,29 +515,31 @@ const marker=new mapboxgl.Marker({color:"blue"})
 .setLngLat([e.lng,e.lat])
 .addTo(map);
 
-marker.getElement().addEventListener("click",()=>{
-
-openEncounter({
-name:e.site_name,
-coords:[e.lng,e.lat]
-});
-
-});
-
 archiveMarkers.push(marker);
 
 });
 
 }
 
+/* SHARE */
 
-/* INIT */
+function shareEncounter(){
+
+const text=encodeURIComponent(
+"I discovered "+currentEncounter.name+" on my cultural walk."
+);
+
+const url=encodeURIComponent(window.location.href);
+
+window.open(
+"https://twitter.com/intent/tweet?text="+text+"&url="+url,
+"_blank"
+);
+
+}
 
 map.on("load",()=>{
-
-loadPrompts();
 loadEncounterArchive();
-
 });
 
 </script>
