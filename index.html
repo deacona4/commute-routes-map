@@ -14,7 +14,11 @@
 <style>
 
 body{margin:0;font-family:Arial;}
-#map{width:100%;height:100vh;}
+
+#map{
+width:100%;
+height:100vh;
+}
 
 #route-input{
 position:absolute;
@@ -72,7 +76,6 @@ margin-top:10px;
 }
 
 </style>
-
 </head>
 
 <body>
@@ -84,7 +87,7 @@ margin-top:10px;
 <button onclick="refreshEncounters()">Discover New Encounters</button>
 </div>
 
-<div id="journey-panel"></div>
+<div id="journey-panel">Enter a route to begin</div>
 
 <div id="map"></div>
 
@@ -115,6 +118,14 @@ margin-top:10px;
 mapboxgl.accessToken="pk.eyJ1IjoiYmlnYWwxIiwiYSI6ImNtbWIzODZuaDA0cWYycXIyMXVydmx1eDkifQ.2tS6Ro5jbDlGjbR74_Ox0Q";
 
 const API_URL="https://script.google.com/macros/s/AKfycbzxL_4SlrFWe2utLF397HZ8Thur5meX13WLQkIZDU6K6wKLd1goqkjK3DaMZKG_8Se1/exec";
+
+/* MULTIPLE OVERPASS SERVERS */
+
+const OVERPASS_SERVERS=[
+"https://overpass-api.de/api/interpreter",
+"https://overpass.kumi.systems/api/interpreter",
+"https://lz4.overpass-api.de/api/interpreter"
+];
 
 let markers=[];
 let archiveMarkers=[];
@@ -173,10 +184,44 @@ document.body.appendChild(script);
 }
 
 
-/* PROMPTS */
+/* LOAD PROMPTS */
 
 async function loadPrompts(){
 encounterPrompts=await fetchJSONP(API_URL+"?action=prompts");
+}
+
+
+/* OVERPASS FETCH WITH FALLBACK */
+
+async function fetchOverpass(query){
+
+for(const server of OVERPASS_SERVERS){
+
+try{
+
+const res=await fetch(server,{
+method:"POST",
+body:query
+});
+
+const text=await res.text();
+
+if(text.startsWith("<")){
+continue;
+}
+
+return JSON.parse(text);
+
+}catch(e){
+
+console.warn("Overpass failed:",server);
+
+}
+
+}
+
+return {elements:[]};
+
 }
 
 
@@ -226,6 +271,7 @@ paint:{
 }
 
 await loadEncounters(coords);
+
 loadEncounterArchive();
 
 }
@@ -245,7 +291,7 @@ loadEncounters(currentRouteCoords);
 }
 
 
-/* CULTURAL SITE QUERY */
+/* CULTURAL QUERY */
 
 async function fetchCulturalSites(line){
 
@@ -260,21 +306,7 @@ node["historic"](${bbox[1]},${bbox[0]},${bbox[3]},${bbox[2]});
 out center;
 `;
 
-const res=await fetch(
-"https://overpass-api.de/api/interpreter",
-{method:"POST",body:query}
-);
-
-const text=await res.text();
-
-/* handle server XML errors */
-
-if(text.startsWith("<")){
-console.warn("Overpass error returned XML");
-return [];
-}
-
-const data=JSON.parse(text);
+const data=await fetchOverpass(query);
 
 return data.elements.map(el=>{
 
@@ -309,7 +341,7 @@ async function loadEncounters(coords){
 
 const line=turf.lineString(coords);
 
-const corridor=turf.buffer(line,1.2,{units:"kilometers"});
+const corridor=turf.buffer(line,0.8,{units:"kilometers"});
 
 let sites=await fetchCulturalSites(line);
 
@@ -320,6 +352,12 @@ corridor
 );
 });
 
+if(sites.length===0){
+
+document.getElementById("journey-panel").innerHTML="No cultural sites found on this route.";
+
+}
+
 placeEncounters(coords,sites);
 updateJourneyPanel(sites);
 
@@ -329,6 +367,8 @@ updateJourneyPanel(sites);
 /* JOURNEY PANEL */
 
 function updateJourneyPanel(sites){
+
+if(sites.length===0) return;
 
 const panel=document.getElementById("journey-panel");
 
@@ -424,11 +464,9 @@ document.getElementById("encounter-link").innerHTML=
 document.getElementById("encounter-link").innerHTML="";
 }
 
-let existing=encounterArchive
-.filter(e=>e.site_name===site.name)
-.sort((a,b)=>new Date(b.timestamp)-new Date(a.timestamp));
+let existing=encounterArchive.filter(e=>e.site_name===site.name);
 
-let latest=existing[0];
+let latest=existing[existing.length-1];
 
 document.getElementById("note-input").value=latest?latest.note:"";
 
@@ -444,7 +482,6 @@ document.getElementById("encounter-prompt").innerText=prompt;
 document.getElementById("encounter-panel").style.display="block";
 
 }
-
 
 function closeEncounter(){
 document.getElementById("encounter-panel").style.display="none";
@@ -510,7 +547,6 @@ await sendEncounter("");
 }
 
 }
-
 
 async function sendEncounter(photoData){
 
