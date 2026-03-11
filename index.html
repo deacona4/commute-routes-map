@@ -61,6 +61,28 @@ box-shadow:0 0 6px rgba(0,0,0,0.2);
 font-size:14px;
 }
 
+#status-message{
+position:absolute;
+top:130px;
+left:20px;
+z-index:3;
+background:#fff6f6;
+color:#8b1e1e;
+padding:10px 12px;
+border-radius:6px;
+border:1px solid #f0c2c2;
+box-shadow:0 0 6px rgba(0,0,0,0.15);
+font-size:13px;
+display:none;
+max-width:420px;
+}
+
+#status-message.info{
+background:#f4f8ff;
+color:#1f3e74;
+border-color:#c8d8fa;
+}
+
 #welcome-panel{
 position:absolute;
 top:50%;
@@ -139,6 +161,8 @@ Pause, notice, reflect and record what you see.
 
 </div>
 
+<div id="status-message"></div>
+
 <div id="journey-panel">Enter a route to begin</div>
 
 <div id="map"></div>
@@ -171,7 +195,7 @@ Pause, notice, reflect and record what you see.
 mapboxgl.accessToken="pk.eyJ1IjoiYmlnYWwxIiwiYSI6ImNtbWIzODZuaDA0cWYycXIyMXVydmx1eDkifQ.2tS6Ro5jbDlGjbR74_Ox0Q";
 
 /* INSERT YOUR APPS SCRIPT URL HERE */
-const API_URL="https://script.google.com/macros/s/AKfycbxnH5TqQ9LsrsK6Qa7hJzT0A4u6O4Klhh7uJIHvrozvjYWnmHq1L5rL2ADcjaPuZ32k/exec";
+const API_URL="https://script.google.com/macros/s/AKfycbxkHkOyvxUB7eRRymbEBGiK-30Liu6q2gBoPGYmyd7sw8A1o7FthLoST2uEho4RAJyk/exec";
 
 let markers=[];
 let archiveMarkers=[];
@@ -195,14 +219,40 @@ document.getElementById("welcome-panel").style.display="none";
 }
 
 
+function setStatus(message,type="error"){
+const status=document.getElementById("status-message");
+status.textContent=message;
+status.className=type==="info"?"info":"";
+status.style.display="block";
+}
+
+function clearStatus(){
+document.getElementById("status-message").style.display="none";
+}
+
+function canCallApi(){
+if(!API_URL || API_URL.includes("PASTE_APPS_SCRIPT_URL_HERE")){
+setStatus("Set API_URL to your deployed Apps Script URL before fetching routes.");
+return false;
+}
+return true;
+}
+
+
 /* SIMPLE API REQUEST */
 
 async function fetchAPI(url){
 
-const res = await fetch(url,{cache:"no-cache"});
+let res;
+
+try{
+res = await fetch(url,{cache:"no-cache"});
+}catch(err){
+throw new Error("Network request failed. Check your Apps Script deployment and internet connection.");
+}
 
 if(!res.ok){
-throw new Error("API error");
+throw new Error(`API error (${res.status})`);
 }
 
 return await res.json();
@@ -230,31 +280,67 @@ return id;
 
 async function createRoute(){
 
-const home=document.getElementById("home").value;
-const work=document.getElementById("work").value;
+if(!canCallApi()) return;
 
+const home=document.getElementById("home").value.trim();
+const work=document.getElementById("work").value.trim();
+
+if(!home||!work){
+setStatus("Enter both a start and destination postcode.");
+return;
+}
+
+clearStatus();
+
+try{
 const data=await fetchAPI(
 API_URL+"?action=route&home="+encodeURIComponent(home)+"&work="+encodeURIComponent(work)
 );
 
-console.log("Route received:",data);
+if(!data?.geometry?.coordinates?.length){
+throw new Error("Route API returned no geometry.");
+}
 
 const coords=data.geometry.coordinates;
-
 currentRouteCoords=coords;
 
 drawRoute(coords);
 
 await loadEncounters(coords);
 
-loadEncounterArchive();
+await loadEncounterArchive();
+}catch(err){
+setStatus(err.message||"Failed to create route.");
+console.error(err);
+}
 
+}
+
+async function refreshEncounters(){
+if(!currentRouteCoords){
+setStatus("Create a route before discovering encounters.","info");
+return;
+}
+
+clearStatus();
+
+try{
+await loadEncounters(currentRouteCoords);
+}catch(err){
+setStatus(err.message||"Failed to refresh encounters.");
+console.error(err);
+}
 }
 
 
 /* DRAW ROUTE */
 
 function drawRoute(coords){
+
+if(!map.isStyleLoaded()){
+map.once("load",()=>drawRoute(coords));
+return;
+}
 
 const geojson={
 type:"FeatureCollection",
@@ -316,7 +402,7 @@ return data.elements.map(el=>{
 const lon=el.lon||el.center?.lon;
 const lat=el.lat||el.center?.lat;
 
-if(!lon||!lat) return null;
+if(lon==null||lat==null) return null;
 if(!el.tags?.name) return null;
 
 return{
@@ -393,8 +479,15 @@ const panel=document.getElementById("journey-panel");
 
 panel.innerHTML="<b>Your Cultural Journey</b><br><br>";
 
+if(!sites.length){
+panel.innerHTML+="No cultural sites found on this route yet.";
+return;
+}
+
 sites.slice(0,4).forEach((site,i)=>{
-panel.innerHTML+=`${i+1}. ${site.name}<br>`;
+const row=document.createElement("div");
+row.textContent=`${i+1}. ${site.name}`;
+panel.appendChild(row);
 });
 
 }
@@ -404,7 +497,7 @@ panel.innerHTML+=`${i+1}. ${site.name}<br>`;
 
 function openEncounter(site){
 
-currentEncounter=site;
+currentEncounter={...site,remove_photo:false};
 
 document.getElementById("encounter-title").innerText=site.name;
 
@@ -420,6 +513,10 @@ document.getElementById("encounter-panel").style.display="none";
 /* REMOVE PHOTO */
 
 function removePhoto(){
+if(!currentEncounter){
+setStatus("Open an encounter before removing a photo.","info");
+return;
+}
 
 document.getElementById("encounter-photo-preview").src="";
 currentEncounter.remove_photo=true;
@@ -430,6 +527,11 @@ currentEncounter.remove_photo=true;
 /* SAVE ENCOUNTER */
 
 async function saveEncounter(){
+if(!canCallApi()) return;
+if(!currentEncounter){
+setStatus("Select an encounter marker before saving.","info");
+return;
+}
 
 const payload={
 action:"encounter",
@@ -440,13 +542,23 @@ note:document.getElementById("note-input").value,
 remove_photo:currentEncounter.remove_photo||false
 };
 
-await fetch(API_URL,{
+try{
+const res=await fetch(API_URL,{
 method:"POST",
+headers:{"Content-Type":"application/json"},
 body:JSON.stringify(payload)
 });
 
+if(!res.ok){
+throw new Error(`Save failed (${res.status})`);
+}
+
 closeEncounter();
-loadEncounterArchive();
+await loadEncounterArchive();
+}catch(err){
+setStatus(err.message||"Failed to save encounter.");
+console.error(err);
+}
 
 }
 
@@ -454,15 +566,18 @@ loadEncounterArchive();
 /* ARCHIVE */
 
 async function loadEncounterArchive(){
+if(!canCallApi()) return;
 
 archiveMarkers.forEach(m=>m.remove());
 archiveMarkers=[];
 
+try{
 const data=await fetchAPI(API_URL+"?action=encounters");
 
 encounterArchive=data;
 
 data.forEach(e=>{
+if(e?.lng==null||e?.lat==null) return;
 
 const marker=new mapboxgl.Marker({color:"blue"})
 .setLngLat([e.lng,e.lat])
@@ -471,6 +586,10 @@ const marker=new mapboxgl.Marker({color:"blue"})
 archiveMarkers.push(marker);
 
 });
+}catch(err){
+setStatus(err.message||"Failed to load archive.");
+console.error(err);
+}
 
 }
 
@@ -478,6 +597,10 @@ archiveMarkers.push(marker);
 /* SHARE */
 
 function shareEncounter(){
+if(!currentEncounter){
+setStatus("Select an encounter marker before sharing.","info");
+return;
+}
 
 const text=encodeURIComponent(
 "I discovered "+currentEncounter.name+" on my cultural walk."
