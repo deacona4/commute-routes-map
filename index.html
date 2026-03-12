@@ -599,64 +599,59 @@ currentEncounter.remove_photo=true;
 /* SAVE ENCOUNTER */
 
 async function saveEncounter(){
-  if(!canCallApi()) return;
-  if(!currentEncounter){
-    setStatus("Select an encounter marker before saving.","info");
-    return;
-  }
-
-  // Convert selected file to base64 (without data URL prefix)
-  let photoBase64 = "";
-  const fileInput = document.getElementById("photo-input");
-  const file = fileInput?.files?.[0];
-
-  if(file){
-    photoBase64 = await new Promise((resolve,reject)=>{
-      const reader = new FileReader();
-      reader.onload = () => {
-        const result = String(reader.result || "");
-        // result looks like: data:image/jpeg;base64,XXXX
-        const b64 = result.includes(",") ? result.split(",")[1] : "";
-        resolve(b64);
-      };
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    });
-  }
-
-  const payload={
-    action:"encounter",
-    user_id:getUserId(),
-    site_name:currentEncounter.name,
-    route_id:"route",
-    note:document.getElementById("note-input").value,
-    remove_photo:currentEncounter.remove_photo||false,
-
-    // ✅ backend-compatible fields
-    lat: currentEncounter.coords?.[1] ?? null,
-    lng: currentEncounter.coords?.[0] ?? null,
-    photo: photoBase64
-  };
-
-  try{
-    const res=await fetch(API_URL,{
-      method:"POST",
-      headers:{"Content-Type":"application/json"},
-      body:JSON.stringify(payload)
-    });
-
-    if(!res.ok){
-      throw new Error(`Save failed (${res.status})`);
-    }
-
-    closeEncounter();
-    await loadEncounterArchive();
-  }catch(err){
-    setStatus(err.message||"Failed to save encounter.");
-    console.error(err);
-  }
+if(!canCallApi()) return;
+if(!currentEncounter){
+setStatus("Select an encounter marker before saving.","info");
+return;
 }
 
+let photoBase64="";
+const fileInput=document.getElementById("photo-input");
+const file=fileInput?.files?.[0];
+
+if(file){
+photoBase64=await new Promise((resolve,reject)=>{
+const reader=new FileReader();
+reader.onload=()=>{
+const result=String(reader.result||"");
+resolve(result.includes(",")?result.split(",")[1]:"");
+};
+reader.onerror=reject;
+reader.readAsDataURL(file);
+});
+}
+
+const payload={
+action:"encounter",
+user_id:getUserId(),
+site_name:currentEncounter.name,
+route_id:"route",
+note:document.getElementById("note-input").value,
+remove_photo:currentEncounter.remove_photo||false,
+lat:currentEncounter.coords?.[1]??null,
+lng:currentEncounter.coords?.[0]??null,
+photo:photoBase64
+};
+
+try{
+const res=await fetch(API_URL,{
+method:"POST",
+// Keep this a simple request so Apps Script doesn't fail CORS preflight.
+body:JSON.stringify(payload)
+});
+
+if(!res.ok){
+throw new Error(`Save failed (${res.status})`);
+}
+
+closeEncounter();
+await loadEncounterArchive();
+}catch(err){
+setStatus(err.message||"Failed to save encounter.");
+console.error(err);
+}
+
+}
 /* ARCHIVE */
 
 async function loadEncounterArchive(){
