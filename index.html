@@ -1,20 +1,25 @@
 <!DOCTYPE html>
 <html>
+
 <head>
 
 <meta charset="utf-8">
-<title>Cultural Walk Explorer</title>
-
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hot Girl Walks</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
 
 <link href="https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.css" rel="stylesheet">
 <script src="https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.js"></script>
-
 <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
 
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 
 <style>
+
+:root{
+--pink:#ff7fa5;
+--soft-pink:#fde8f1;
+--blue:#8fb6ff;
+}
 
 body{
 margin:0;
@@ -22,219 +27,201 @@ font-family:'Inter',sans-serif;
 }
 
 #map{
+position:absolute;
+top:0;
+bottom:0;
 width:100%;
-height:100vh;
 }
 
-#route-input{
-position:absolute;
-top:20px;
-left:20px;
-z-index:2;
+/* NAV */
+
+#top-nav{
+position:fixed;
+top:0;
+left:0;
+right:0;
+height:60px;
 background:white;
-padding:12px;
-border-radius:8px;
-box-shadow:0 4px 12px rgba(0,0,0,0.15);
+display:flex;
+justify-content:space-between;
+align-items:center;
+padding:0 16px;
+z-index:100;
+box-shadow:0 2px 10px rgba(0,0,0,0.1);
 }
 
-#route-input input{
-display:block;
-margin-bottom:6px;
-padding:6px;
-width:200px;
+.brand{
+font-family:'Playfair Display',serif;
 }
 
-#route-input button{
-width:100%;
-padding:6px;
-margin-top:5px;
-}
+/* PLANNER */
 
-#journey-panel{
-position:absolute;
-top:220px;
-left:20px;
-background:white;
-padding:10px;
-border-radius:6px;
-box-shadow:0 0 6px rgba(0,0,0,0.2);
-font-size:14px;
-max-width:260px;
-}
-
-#encounter-panel{
-position:absolute;
+#planner-card{
+position:fixed;
 bottom:0;
 left:0;
 right:0;
 background:white;
-padding:16px;
-box-shadow:0 -4px 12px rgba(0,0,0,0.3);
-display:none;
-z-index:5;
+padding:20px;
+border-radius:20px 20px 0 0;
+z-index:50;
+box-shadow:0 -4px 20px rgba(0,0,0,0.2);
 }
 
+#planner-card input,
+#planner-card select{
+width:100%;
+padding:8px;
+margin-bottom:10px;
+border-radius:8px;
+border:1px solid #ddd;
+}
+
+#planner-card button{
+width:100%;
+padding:10px;
+border:none;
+background:var(--pink);
+color:white;
+border-radius:20px;
+margin-top:6px;
+}
+
+/* MARKERS */
+
 .marker-number{
+width:30px;
+height:30px;
 display:flex;
 align-items:center;
 justify-content:center;
-width:28px;
-height:28px;
-background:#e63946;
-border:3px solid white;
-border-radius:50%;
+background:#ff7fa5;
 color:white;
-font-weight:600;
-font-size:14px;
+border-radius:50%;
+border:3px solid white;
 }
 
 .marker-memory{
-width:16px;
-height:16px;
-background:#2a7fff;
-border:3px solid white;
+width:34px;
+height:34px;
 border-radius:50%;
-box-shadow:0 0 6px rgba(0,0,0,0.3);
+border:3px solid white;
+background-size:cover;
+background-position:center;
 }
+
+/* USER MARKER */
+
+.user-marker{
+width:18px;
+height:18px;
+border-radius:50%;
+background:#8fb6ff;
+border:3px solid white;
+box-shadow:0 0 0 4px rgba(143,182,255,0.3);
+}
+
+/* ENCOUNTER CARD */
+
+#encounter-card{
+position:fixed;
+bottom:-400px;
+left:0;
+right:0;
+background:white;
+padding:20px;
+border-radius:20px 20px 0 0;
+transition:bottom .3s;
+z-index:200;
+}
+
+#encounter-card.active{
+bottom:0;
+}
+
+textarea{
+width:100%;
+border-radius:8px;
+padding:8px;
+border:1px solid #ddd;
+}
+
+#encounter-photo-preview{
+max-width:100%;
+margin-top:10px;
+border-radius:10px;
+}
+
+/* PROGRESS */
 
 #walk-progress{
-position:absolute;
-top:20px;
-right:20px;
-z-index:3;
-background:white;
-border-radius:50%;
-width:80px;
-height:80px;
-display:flex;
-align-items:center;
-justify-content:center;
-flex-direction:column;
-box-shadow:0 4px 10px rgba(0,0,0,0.15);
-font-size:12px;
-}
-
-#next-encounter{
-position:absolute;
-bottom:120px;
-left:20px;
-background:white;
-padding:10px;
-border-radius:6px;
-box-shadow:0 2px 6px rgba(0,0,0,0.2);
-font-size:13px;
-display:none;
-}
-
-#map-legend{
-position:absolute;
-bottom:20px;
+position:fixed;
+top:70px;
 right:20px;
 background:white;
 padding:10px;
-border-radius:6px;
-font-size:12px;
-box-shadow:0 2px 8px rgba(0,0,0,0.15);
-}
-
-.legend-row{
-display:flex;
-align-items:center;
-margin-bottom:4px;
-}
-
-.legend-dot{
-width:10px;
-height:10px;
 border-radius:50%;
-margin-right:6px;
-}
-
-.legend-route{ background:#e63946 }
-.legend-memory{ background:#2a7fff }
-
-#wikimedia-photo{
-max-width:100%;
-border-radius:8px;
-margin-top:10px;
+z-index:200;
 }
 
 </style>
+
 </head>
 
 <body>
 
-<div id="route-input">
+<div id="top-nav">
+<div class="brand">Hot Girl Walks ✨</div>
+</div>
+
+<div id="map"></div>
+
+<div id="planner-card">
+
+<h3>Plan your walk</h3>
 
 <input id="home" placeholder="Start postcode">
 <input id="work" placeholder="Destination postcode">
 
-<label>Discovery style</label>
 <select id="discovery-type">
-<option value="mixed">Surprise walk</option>
+<option value="mixed">Surprise</option>
 <option value="street_art">Street art</option>
 <option value="historic">Historic</option>
-<option value="galleries">Galleries</option>
-<option value="views">Viewpoints</option>
 </select>
 
-<button onclick="createRoute()">Show Route</button>
-<button onclick="refreshEncounters()">Discover Encounters</button>
-
-<button onclick="startWalk()">Start Walk</button>
-<button onclick="endWalk()">End Walk</button>
-
-<button onclick="toggleFollow()">Toggle Follow</button>
-<button onclick="toggleRotation()">Toggle Rotation</button>
-
-<button onclick="toggleEncounters()">Toggle Encounters</button>
+<button id="route-btn">Create Route</button>
+<button id="start-walk-btn">Start Walk</button>
 
 </div>
-
-<div id="journey-panel">Enter a route to begin</div>
 
 <div id="walk-progress">
 
 <svg width="70" height="70">
-<circle cx="35" cy="35" r="30" stroke="#eee" stroke-width="6" fill="none"/>
+
+<circle cx="35" cy="35" r="30"
+stroke="#eee"
+stroke-width="6"
+fill="none"/>
+
 <circle id="progress-ring"
 cx="35"
 cy="35"
 r="30"
-stroke="#ff5500"
+stroke="#ff7fa5"
 stroke-width="6"
 fill="none"
 stroke-dasharray="188"
 stroke-dashoffset="188"/>
+
 </svg>
 
 <div id="progress-text">0%</div>
 
 </div>
 
-<div id="next-encounter"></div>
-
-<div id="map"></div>
-
-<div id="map-legend">
-
-<div class="legend-row">
-<div class="legend-dot legend-route"></div> Route encounter
-</div>
-
-<div class="legend-row">
-<div class="legend-dot legend-memory"></div> Your memories
-</div>
-
-</div>
-
-<div id="encounter-panel">
+<div id="encounter-card">
 
 <h3 id="encounter-title"></h3>
-
-<p id="encounter-prompt"></p>
-
-<img id="wikimedia-photo">
 
 <input type="file" id="photo-input">
 
@@ -244,780 +231,417 @@ stroke-dashoffset="188"/>
 
 <br><br>
 
-<button onclick="saveEncounter()">Save</button>
-<button onclick="shareEncounter()">Share</button>
-
-<h4>Explore this place</h4>
-
-<button onclick="openWikipedia()">Wikipedia</button>
-<button onclick="openWikidata()">Wikidata</button>
-<button onclick="openOSM()">OpenStreetMap</button>
-
-<br><br>
-
-<button onclick="closeEncounter()">Close</button>
+<button id="save-btn">Save Encounter</button>
+<button onclick="App.Encounter.close()">Close</button>
 
 </div>
+
 <script>
 
-/* ======================================
-MAPBOX + API CONFIG
-====================================== */
+/* CONFIG */
 
-mapboxgl.accessToken="pk.eyJ1IjoiYmlnYWwxIiwiYSI6ImNtbWIzODZuaDA0cWYycXIyMXVydmx1eDkifQ.2tS6Ro5jbDlGjbR74_Ox0Q";
+const CONFIG={
+MAPBOX_TOKEN:"pk.eyJ1IjoiYmlnYWwxIiwiYSI6ImNtbWIzODZuaDA0cWYycXIyMXVydmx1eDkifQ.2tS6Ro5jbDlGjbR74_Ox0Q",
+API_URL:"https://script.google.com/macros/s/AKfycbzkPMvQSrdRlIKB2EMpnY8UYtfp3TfeMntCz10D9ZNmfOPcv3iYJ9RMZCgKZ4Omshs/exec",
+OVERPASS_ENDPOINTS:[
+"https://overpass-api.de/api/interpreter",
+"https://overpass.kumi.systems/api/interpreter"
+]
+}
 
-const API_URL="https://script.google.com/macros/s/AKfycbycrLMvgJPpsVXjahl1PmDiMGATgG51UhoMxYqAlrQLmWV1tastZFSEQZFvFi7TcuT3/exec";
+/* STATE */
 
+const App={}
 
-/* ======================================
-GLOBAL STATE
-====================================== */
+App.state={
+map:null,
+routeCoords:null,
+markers:[],
+archiveMarkers:[],
+currentEncounter:null,
+routeCache:new Map(),
+walking:false,
+userMarker:null,
+watchId:null,
+revealedEncounters:new Set()
+}
 
-let markers=[];
-let archiveMarkers=[];
+/* MAP */
 
-let currentEncounter=null;
-let encounterArchive=[];
+App.Map={}
 
-let currentRouteCoords=null;
-let routeLine=null;
-let routeLength=0;
+App.Map.init=function(){
 
-let encountersVisible=true;
-
-let userMarker=null;
-let watchId=null;
-
-let followUser=true;
-let rotateMap=false;
-
-let revealedEncounters=new Set();
-
-let lastHeading=0;
-
-
-/* ======================================
-MAP INITIALISATION
-====================================== */
+mapboxgl.accessToken=CONFIG.MAPBOX_TOKEN
 
 const map=new mapboxgl.Map({
-container:'map',
-style:'mapbox://styles/mapbox/streets-v12',
+container:"map",
+style:"mapbox://styles/mapbox/streets-v12",
 center:[-0.1276,51.5072],
 zoom:11
-});
+})
 
-map.addControl(new mapboxgl.NavigationControl());
+map.addControl(new mapboxgl.NavigationControl())
 
-map.on("dragstart",()=>{
-followUser=false;
-});
-
-
-/* ======================================
-USER ID
-====================================== */
-
-function getUserId(){
-
-let id=localStorage.getItem("culture_user");
-
-if(!id){
-id="user_"+Math.random().toString(36).substring(2,10);
-localStorage.setItem("culture_user",id);
-}
-
-return id;
+App.state.map=map
 
 }
 
-
-/* ======================================
-API REQUEST
-====================================== */
-
-async function fetchAPI(url){
-
-const res=await fetch(url,{cache:"no-cache"});
-
-if(!res.ok){
-throw new Error("API error "+res.status);
-}
-
-return await res.json();
-
-}
-
-
-/* ======================================
-CREATE ROUTE
-====================================== */
-
-async function createRoute(){
-
-const home=document.getElementById("home").value.trim();
-const work=document.getElementById("work").value.trim();
-
-if(!home || !work){
-alert("Enter start and destination postcode");
-return;
-}
-
-try{
-
-const data=await fetchAPI(
-API_URL+"?action=route&home="+encodeURIComponent(home)+"&work="+encodeURIComponent(work)
-);
-
-const coords=data.geometry.coordinates;
-
-currentRouteCoords=coords;
-
-drawRoute(coords);
-
-await loadEncounters(coords);
-
-await loadEncounterArchive();
-
-}catch(err){
-
-console.error(err);
-alert("Route failed");
-
-}
-
-}
-
-
-/* ======================================
-DRAW ROUTE
-====================================== */
-
-function drawRoute(coords){
-
-routeLine=turf.lineString(coords);
-routeLength=turf.length(routeLine);
+App.Map.drawRoute=function(coords){
 
 const geojson={
 type:"FeatureCollection",
 features:[{
 type:"Feature",
-geometry:{
-type:"LineString",
-coordinates:coords
-}
+geometry:{type:"LineString",coordinates:coords}
 }]
-};
+}
+
+const map=App.state.map
 
 if(map.getSource("route")){
-map.getSource("route").setData(geojson);
+map.getSource("route").setData(geojson)
 }else{
 
-map.addSource("route",{type:"geojson",data:geojson});
+map.addSource("route",{type:"geojson",data:geojson})
 
 map.addLayer({
 id:"route",
 type:"line",
 source:"route",
 paint:{
-"line-color":"#ff5500",
+"line-color":"#ff7fa5",
 "line-width":6
 }
-});
+})
 
 }
 
-const bounds=new mapboxgl.LngLatBounds();
-
-coords.forEach(c=>bounds.extend(c));
-
-map.fitBounds(bounds,{padding:60});
+App.state.routeCoords=coords
 
 }
 
+App.Map.clearMarkers=function(){
+App.state.markers.forEach(m=>m.remove())
+App.state.markers=[]
+}
 
-/* ======================================
-CULTURAL SITE DISCOVERY
-====================================== */
+/* API */
 
-async function fetchCulturalSites(line){
+App.API={}
 
-const corridor=turf.buffer(line,0.2,{units:"kilometers"});
-const bbox=turf.bbox(corridor);
+App.API.fetchJSON=async function(url){
+const res=await fetch(url)
+return await res.json()
+}
+
+/* ROUTE */
+
+App.Route={}
+
+App.Route.create=async function(){
+
+const home=document.getElementById("home").value.trim()
+const work=document.getElementById("work").value.trim()
+
+const data=await App.API.fetchJSON(
+CONFIG.API_URL+
+"?action=route&home="+encodeURIComponent(home)+
+"&work="+encodeURIComponent(work)
+)
+
+const coords=data.geometry.coordinates
+
+App.Map.drawRoute(coords)
+
+App.Route.previewEncounters(coords)
+
+}
+
+/* DISCOVERY */
+
+App.Discovery={}
+
+App.Discovery.fetchSites=async function(line){
+
+const corridor=turf.buffer(line,0.2,{units:"kilometers"})
+const bbox=turf.bbox(corridor)
 
 const query=`
-[out:json][timeout:25];
-(
-node["tourism"~"artwork|gallery|museum|viewpoint"](${bbox[1]},${bbox[0]},${bbox[3]},${bbox[2]});
-node["historic"~"monument|memorial|statue"](${bbox[1]},${bbox[0]},${bbox[3]},${bbox[2]});
-node["amenity"="place_of_worship"](${bbox[1]},${bbox[0]},${bbox[3]},${bbox[2]});
-);
-out tags center;
-`;
+[out:json];
+node["tourism"]( ${bbox[1]},${bbox[0]},${bbox[3]},${bbox[2]} );
+out;
+`
 
-const res=await fetch(
-"https://overpass-api.de/api/interpreter",
-{
-method:"POST",
-body:query
-});
+for(const endpoint of CONFIG.OVERPASS_ENDPOINTS){
 
-const data=await res.json();
+try{
 
-return data.elements
-.map(el=>{
+const res=await fetch(endpoint,{method:"POST",body:query})
+const text=await res.text()
 
-const lon=el.lon||el.center?.lon;
-const lat=el.lat||el.center?.lat;
+if(text.startsWith("<")) continue
 
-if(!lon || !lat) return null;
-if(!el.tags?.name) return null;
+const data=JSON.parse(text)
 
-return{
-name:el.tags.name,
-coords:[lon,lat],
-wikipedia:el.tags.wikipedia||null,
-wikidata:el.tags.wikidata||null
-};
+return data.elements.map(el=>({
+name:el.tags?.name,
+coords:[el.lon,el.lat]
+})).filter(Boolean)
 
-})
-.filter(Boolean);
+}catch(e){}
 
 }
 
+return[]
 
-/* ======================================
-LOAD ENCOUNTERS
-====================================== */
+}
 
-async function loadEncounters(coords){
+/* ENCOUNTERS */
 
-markers.forEach(m=>m.remove());
-markers=[];
+App.Route.previewEncounters=async function(coords){
 
-const line=turf.lineString(coords);
+App.Map.clearMarkers()
 
-const sites=await fetchCulturalSites(line);
+const line=turf.lineString(coords)
+const length=turf.length(line)
 
-const selected=[];
+const sites=await App.Discovery.fetchSites(line)
 
-const length=turf.length(line);
+const selected=[]
 
 for(let i=1;i<=4;i++){
 
-const pt=turf.along(line,length/5*i);
+const pt=turf.along(line,length/5*i)
 
-let best=null;
-let min=Infinity;
+let best=null
+let min=Infinity
 
 sites.forEach(site=>{
+const d=turf.distance(pt,turf.point(site.coords))
+if(d<min){min=d;best=site}
+})
 
-const d=turf.distance(
-pt,
-turf.point(site.coords)
-);
-
-if(d<min){
-min=d;
-best=site;
-}
-
-});
-
-if(best){
-selected.push(best);
-}else{
-
-selected.push({
-name:"Route waypoint "+i,
+selected.push(best||{
+name:"Waypoint",
 coords:pt.geometry.coordinates
-});
+})
 
 }
 
-}
-
-updateJourneyPanel(selected);
-
-selected.forEach((site,i)=>{
-
-const el=document.createElement("div");
-el.className="marker-number";
-el.innerText=i+1;
-
-const marker=new mapboxgl.Marker(el)
-.setLngLat(site.coords)
-.addTo(map);
-
-marker.getElement().addEventListener("click",()=>{
-openEncounter(site);
-});
-
-markers.push(marker);
-
-});
+App.Route.renderMarkers(selected)
 
 }
 
-
-/* ======================================
-JOURNEY PANEL
-====================================== */
-
-function updateJourneyPanel(sites){
-
-const panel=document.getElementById("journey-panel");
-
-panel.innerHTML="<b>Your Cultural Journey</b><br><br>";
+App.Route.renderMarkers=function(sites){
 
 sites.forEach((site,i)=>{
 
-const row=document.createElement("div");
+const el=document.createElement("div")
+el.className="marker-number"
+el.innerText=i+1
 
-row.textContent=(i+1)+". "+site.name;
+const marker=new mapboxgl.Marker(el)
+.setLngLat(site.coords)
+.addTo(App.state.map)
 
-panel.appendChild(row);
+marker.getElement().addEventListener("click",()=>{
+App.Encounter.open(site)
+})
 
-});
+App.state.markers.push(marker)
 
-}
-
-
-/* ======================================
-ENCOUNTER PANEL
-====================================== */
-
-function openEncounter(site){
-
-currentEncounter=site;
-
-document.getElementById("encounter-title").innerText=site.name;
-
-document.getElementById("encounter-panel").style.display="block";
-
-loadWikimediaPhoto();
+})
 
 }
 
-function closeEncounter(){
+/* ENCOUNTER */
 
-document.getElementById("encounter-panel").style.display="none";
+App.Encounter={}
 
-}
+App.Encounter.open=function(site){
 
+App.state.currentEncounter=site
 
-/* ======================================
-TOGGLE MARKERS
-====================================== */
+document.getElementById("encounter-title").innerText=site.name
 
-function toggleEncounters(){
-
-encountersVisible=!encountersVisible;
-
-markers.forEach(m=>{
-m.getElement().style.display=
-encountersVisible?"block":"none";
-});
-
-archiveMarkers.forEach(m=>{
-m.getElement().style.display=
-encountersVisible?"block":"none";
-});
+document.getElementById("encounter-card")
+.classList.add("active")
 
 }
 
-</script>
-<script>
-
-/* ======================================
-FOLLOW + ROTATION CONTROLS
-====================================== */
-
-function toggleFollow(){
-followUser=!followUser;
+App.Encounter.close=function(){
+document.getElementById("encounter-card")
+.classList.remove("active")
 }
 
-function toggleRotation(){
-rotateMap=!rotateMap;
-}
+App.Encounter.save=async function(){
 
+const site=App.state.currentEncounter
+const note=document.getElementById("note-input").value
 
-/* ======================================
-START WALK
-====================================== */
+const file=document.getElementById("photo-input").files[0]
 
-function startWalk(){
+let photoBase64=""
 
-if(!currentRouteCoords){
-alert("Create a route first");
-return;
-}
+if(file){
 
-revealedEncounters.clear();
-
-watchId=navigator.geolocation.watchPosition(pos=>{
-
-const lng=pos.coords.longitude;
-const lat=pos.coords.latitude;
-
-const heading=pos.coords.heading||0;
-
-const coords=[lng,lat];
-
-updateUserMarker(coords);
-
-updateProgress(coords);
-
-checkEncounters(coords);
-
-updateNextEncounter(coords);
-
-followMap(coords,heading);
-
-});
-
-walkStartTime=Date.now();
+photoBase64=await new Promise(resolve=>{
+const reader=new FileReader()
+reader.onload=()=>resolve(reader.result.split(",")[1])
+reader.readAsDataURL(file)
+})
 
 }
 
+await fetch(CONFIG.API_URL,{
+method:"POST",
+body:JSON.stringify({
+action:"encounter",
+user_id:"demo_user",
+site_name:site.name,
+route_id:"route",
+note:note,
+lat:site.coords[1],
+lng:site.coords[0],
+photo:photoBase64
+})
+})
 
-/* ======================================
-END WALK
-====================================== */
-
-let walkStartTime=null;
-
-function endWalk(){
-
-if(watchId){
-navigator.geolocation.clearWatch(watchId);
-watchId=null;
-}
-
-if(walkStartTime){
-
-saveWalkMemory();
-
-walkStartTime=null;
+App.Encounter.close()
 
 }
 
+/* WALK SYSTEM */
+
+App.Walk={}
+
+App.Walk.start=function(){
+
+if(!App.state.routeCoords){
+alert("Create route first")
+return
 }
 
+App.state.walking=true
 
-/* ======================================
-USER LOCATION MARKER
-====================================== */
+App.state.watchId=
+navigator.geolocation.watchPosition(
+App.Walk.update
+)
 
-function updateUserMarker(coords){
+}
 
-if(!userMarker){
+App.Walk.update=function(position){
 
-userMarker=new mapboxgl.Marker({color:"blue"})
+const coords=[
+position.coords.longitude,
+position.coords.latitude
+]
+
+App.Walk.updateUserMarker(coords)
+
+App.Walk.updateProgress(coords)
+
+App.Walk.checkEncounters(coords)
+
+}
+
+App.Walk.updateUserMarker=function(coords){
+
+if(!App.state.userMarker){
+
+const el=document.createElement("div")
+el.className="user-marker"
+
+App.state.userMarker=new mapboxgl.Marker(el)
 .setLngLat(coords)
-.addTo(map);
+.addTo(App.state.map)
 
 }else{
 
-userMarker.setLngLat(coords);
+App.state.userMarker.setLngLat(coords)
 
 }
 
-}
-
-
-/* ======================================
-MAP FOLLOW + ROTATION
-====================================== */
-
-function followMap(coords,heading){
-
-if(!followUser) return;
-
-lastHeading=lastHeading*0.7+heading*0.3;
-
-map.easeTo({
-center:coords,
-zoom:17,
-bearing:rotateMap?lastHeading:0,
-offset:[0,-120],
-duration:800
-});
+App.state.map.easeTo({center:coords})
 
 }
 
+App.Walk.updateProgress=function(coords){
 
-/* ======================================
-ROUTE PROGRESS
-====================================== */
-
-function updateProgress(userCoords){
-
-if(!routeLine) return;
+const line=turf.lineString(App.state.routeCoords)
 
 const snapped=turf.nearestPointOnLine(
-routeLine,
-turf.point(userCoords)
-);
+line,
+turf.point(coords)
+)
 
-const walked=snapped.properties.location;
+const dist=snapped.properties.location
+const total=turf.length(line)
 
-const percent=walked/routeLength;
+const percent=dist/total
 
-updateRing(percent);
+const circumference=188
+const offset=circumference-(percent*circumference)
 
-}
+document.getElementById("progress-ring")
+.style.strokeDashoffset=offset
 
-
-/* ======================================
-PROGRESS RING
-====================================== */
-
-function updateRing(percent){
-
-const ring=document.getElementById("progress-ring");
-const text=document.getElementById("progress-text");
-
-const circumference=188;
-
-const offset=circumference-percent*circumference;
-
-ring.style.strokeDashoffset=offset;
-
-text.innerText=Math.round(percent*100)+"%";
+document.getElementById("progress-text")
+.innerText=Math.round(percent*100)+"%"
 
 }
 
+App.Walk.checkEncounters=function(coords){
 
-/* ======================================
-ENCOUNTER PROXIMITY DETECTION
-====================================== */
+const user=turf.point(coords)
 
-function checkEncounters(userCoords){
+App.state.markers.forEach((marker,i)=>{
 
-markers.forEach((marker,i)=>{
+if(App.state.revealedEncounters.has(i)) return
 
-if(revealedEncounters.has(i)) return;
+const m=marker.getLngLat()
 
-const pt=marker.getLngLat();
+const pt=turf.point([m.lng,m.lat])
 
-const dist=turf.distance(
-turf.point(userCoords),
-turf.point([pt.lng,pt.lat])
-);
+const dist=turf.distance(user,pt)
 
-if(dist<0.15){
+if(dist<0.08){
 
-revealedEncounters.add(i);
+App.state.revealedEncounters.add(i)
 
-openEncounter({
-name:"Nearby encounter",
-coords:[pt.lng,pt.lat]
-});
+App.Encounter.open({
+name:"Discovery",
+coords:[m.lng,m.lat]
+})
 
 }
 
-});
+})
 
 }
 
+/* EVENTS */
 
-/* ======================================
-NEXT ENCOUNTER INDICATOR
-====================================== */
+document.getElementById("route-btn")
+.addEventListener("click",App.Route.create)
 
-function updateNextEncounter(userCoords){
+document.getElementById("save-btn")
+.addEventListener("click",App.Encounter.save)
 
-let closest=null;
-let min=Infinity;
+document.getElementById("start-walk-btn")
+.addEventListener("click",App.Walk.start)
 
-markers.forEach(marker=>{
+/* INIT */
 
-const pt=marker.getLngLat();
-
-const dist=turf.distance(
-turf.point(userCoords),
-turf.point([pt.lng,pt.lat])
-);
-
-if(dist<min){
-min=dist;
-closest=marker;
+App.init=function(){
+App.Map.init()
 }
 
-});
-
-if(!closest) return;
-
-const pt=closest.getLngLat();
-
-document.getElementById("next-encounter").style.display="block";
-
-document.getElementById("next-encounter").innerText=
-"Next encounter ahead";
-
-}
-
-
-/* ======================================
-KNOWLEDGE LINKS
-====================================== */
-
-function openWikipedia(){
-
-if(!currentEncounter) return;
-
-if(currentEncounter.wikipedia){
-
-const page=currentEncounter.wikipedia.replace("en:","");
-
-window.open(
-"https://en.wikipedia.org/wiki/"+page
-);
-
-}else{
-
-window.open(
-"https://en.wikipedia.org/wiki/Special:Search?search="+
-encodeURIComponent(currentEncounter.name)
-);
-
-}
-
-}
-
-
-function openWikidata(){
-
-if(!currentEncounter?.wikidata) return;
-
-window.open(
-"https://www.wikidata.org/wiki/"+currentEncounter.wikidata
-);
-
-}
-
-
-function openOSM(){
-
-if(!currentEncounter) return;
-
-const lat=currentEncounter.coords[1];
-const lng=currentEncounter.coords[0];
-
-window.open(
-"https://www.openstreetmap.org/?mlat="+lat+
-"&mlon="+lng+
-"#map=17/"+lat+"/"+lng
-);
-
-}
-
-
-/* ======================================
-WIKIMEDIA PHOTO
-====================================== */
-
-async function loadWikimediaPhoto(){
-
-if(!currentEncounter?.wikidata) return;
-
-try{
-
-const url=
-"https://www.wikidata.org/wiki/Special:EntityData/"+currentEncounter.wikidata+".json";
-
-const res=await fetch(url);
-
-const data=await res.json();
-
-const entity=data.entities[currentEncounter.wikidata];
-
-const image=entity.claims?.P18?.[0]?.mainsnak?.datavalue?.value;
-
-if(image){
-
-const file=image.replace(/ /g,"_");
-
-document.getElementById("wikimedia-photo").src=
-"https://commons.wikimedia.org/wiki/Special:FilePath/"+file;
-
-}
-
-}catch(e){
-
-console.log("No Wikimedia image available");
-
-}
-
-}
-
-
-/* ======================================
-SHARE ENCOUNTER
-====================================== */
-
-function shareEncounter(){
-
-if(!currentEncounter) return;
-
-const text=
-"I discovered "+currentEncounter.name+
-" on my cultural walk.";
-
-const url=window.location.href;
-
-if(navigator.share){
-
-navigator.share({
-title:"Cultural Walk",
-text:text,
-url:url
-});
-
-}else{
-
-window.open(
-"https://twitter.com/intent/tweet?text="+
-encodeURIComponent(text)+"&url="+encodeURIComponent(url)
-);
-
-}
-
-}
-
-
-/* ======================================
-SAVE WALK MEMORY
-====================================== */
-
-async function saveWalkMemory(){
-
-if(!API_URL) return;
-
-const payload={
-
-action:"walk",
-user_id:getUserId(),
-route_id:"route",
-start_time:walkStartTime,
-end_time:Date.now()
-
-};
-
-try{
-
-await fetch(API_URL,{
-method:"POST",
-body:JSON.stringify(payload)
-});
-
-}catch(err){
-
-console.error("Walk save failed");
-
-}
-
-}
+document.addEventListener("DOMContentLoaded",App.init)
 
 </script>
+
+</body>
+</html>
