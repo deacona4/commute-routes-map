@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html>
+
 <head>
 
 <meta charset="utf-8">
@@ -16,6 +17,7 @@
 body{
 margin:0;
 font-family:Inter, sans-serif;
+overflow:hidden;
 }
 
 #map{
@@ -25,9 +27,11 @@ bottom:0;
 width:100%;
 }
 
-/* INTRO */
+/* ===============================
+BRAT INTRO
+=============================== */
 
-#intro{
+#intro-overlay{
 
 position:fixed;
 top:0;
@@ -35,36 +39,110 @@ left:0;
 right:0;
 bottom:0;
 
-background:#ff7fa5;
-color:white;
-
 display:flex;
-flex-direction:column;
 align-items:center;
 justify-content:center;
 
-z-index:999;
-text-align:center;
+z-index:1000;
 
 }
 
-#intro h1{
-font-size:64px;
-line-height:0.9;
-margin:0;
+#intro-card{
+
+width:60vw;
+max-width:520px;
+aspect-ratio:1/1;
+
+background:#fff8f4;
+
+border-radius:24px;
+
+box-shadow:0 20px 60px rgba(0,0,0,0.35);
+
+display:flex;
+flex-direction:column;
+justify-content:center;
+
+gap:16px;
+
+padding:36px;
+
 }
 
-#intro button{
-margin-top:20px;
-padding:12px 20px;
+.intro-bar{
+
+font-size:52px;
+font-weight:900;
+
+padding:10px 18px;
+
+color:white;
+
+transform:translateX(-120%);
+opacity:0;
+
+letter-spacing:2px;
+
+border-radius:8px;
+
+}
+
+.hot{
+background:#ff2fa3;
+animation:slideIn 0.7s forwards;
+}
+
+.girls{
+background:#ff7fa5;
+animation:slideIn 0.7s forwards;
+animation-delay:0.2s;
+}
+
+.walk{
+background:#4f7cff;
+animation:slideIn 0.7s forwards;
+animation-delay:0.4s;
+}
+
+#intro-start{
+
+margin-top:16px;
+padding:14px;
+
 border:none;
 border-radius:20px;
-background:white;
-color:#ff7fa5;
-font-weight:bold;
+
+background:black;
+color:white;
+
+font-size:15px;
+font-weight:600;
+
+cursor:pointer;
+
 }
 
-/* NAV */
+@keyframes slideIn{
+
+0%{
+transform:translateX(-120%);
+opacity:0;
+}
+
+80%{
+transform:translateX(10px);
+}
+
+100%{
+transform:translateX(0);
+opacity:1;
+}
+
+}
+
+/* ===============================
+NAV
+=============================== */
 
 #top-nav{
 
@@ -80,6 +158,7 @@ background:white;
 display:flex;
 align-items:center;
 justify-content:center;
+
 gap:20px;
 
 z-index:200;
@@ -95,7 +174,9 @@ font-weight:bold;
 cursor:pointer;
 }
 
-/* PLANNER */
+/* ===============================
+PLANNER
+=============================== */
 
 #planner{
 
@@ -148,7 +229,9 @@ margin-top:5px;
 
 }
 
-/* WALK CONTROLS */
+/* ===============================
+WALK CONTROLS
+=============================== */
 
 #walk-controls{
 
@@ -170,55 +253,166 @@ z-index:300;
 padding:10px 14px;
 border:none;
 border-radius:20px;
+
 background:white;
+
 box-shadow:0 2px 8px rgba(0,0,0,0.2);
 
 }
 
-/* ENCOUNTER */
+/* ===============================
+TOP TRUMPS CARD
+=============================== */
 
 #encounter{
 
 position:fixed;
-left:0;
-right:0;
 
-bottom:-450px;
+top:50%;
+left:50%;
 
-background:white;
+transform:translate(-50%,-50%) rotate(-2deg);
+
+width:320px;
+
+background:#fff8f4;
+
+border-radius:22px;
+
+border:4px solid #ff2fa3;
+
+box-shadow:0 20px 50px rgba(0,0,0,0.35);
 
 padding:16px;
 
-border-radius:20px 20px 0 0;
+display:none;
 
-box-shadow:0 -5px 20px rgba(0,0,0,0.3);
-
-transition:bottom .3s;
-
-z-index:400;
+z-index:600;
 
 }
 
-#encounter.active{
-bottom:0;
+#encounter-photo{
+
+width:100%;
+height:180px;
+
+object-fit:cover;
+
+border-radius:12px;
+
+margin-bottom:10px;
+
+}
+
+#encounter-title{
+
+font-size:22px;
+font-weight:700;
+
+margin-bottom:10px;
+
+}
+
+.stat{
+
+display:flex;
+justify-content:space-between;
+
+margin-bottom:6px;
+
+font-weight:600;
+
 }
 
 .star{
-font-size:22px;
+
+font-size:20px;
 cursor:pointer;
+
 color:#ccc;
+
 }
 
 .star.active{
-color:#ffcc00;
+color:#ffd000;
 }
 
-textarea{
+#note{
+
+margin-top:10px;
+
 width:100%;
 padding:8px;
-border-radius:8px;
-border:1px solid #ccc;
-margin-top:8px;
+
+border-radius:10px;
+
+border:1px solid #ddd;
+
+}
+
+.card-buttons{
+
+display:flex;
+gap:10px;
+
+margin-top:10px;
+
+}
+
+.card-buttons button{
+
+flex:1;
+
+padding:8px;
+
+border:none;
+
+border-radius:12px;
+
+background:#ff2fa3;
+
+color:white;
+
+font-weight:600;
+
+}
+
+/* ===============================
+CARD DECK (EXPLORE)
+=============================== */
+
+#card-deck{
+
+position:fixed;
+
+bottom:40px;
+left:50%;
+
+transform:translateX(-50%);
+
+display:none;
+
+z-index:500;
+
+}
+
+.deck-card{
+
+width:220px;
+height:300px;
+
+background:white;
+
+border-radius:20px;
+
+border:3px solid #ff2fa3;
+
+box-shadow:0 10px 30px rgba(0,0,0,0.3);
+
+position:absolute;
+
+cursor:pointer;
+
 }
 
 </style>
@@ -227,9 +421,18 @@ margin-top:8px;
 
 <body>
 
-<div id="intro">
-<h1>HOT<br>GIRLS<br>WALK</h1>
-<button onclick="startApp()">Start Exploring</button>
+<div id="intro-overlay">
+
+<div id="intro-card">
+
+<div class="intro-bar hot">HOT</div>
+<div class="intro-bar girls">GIRLS</div>
+<div class="intro-bar walk">WALK</div>
+
+<button id="intro-start" onclick="startApp()">start exploring ✨</button>
+
+</div>
+
 </div>
 
 <div id="top-nav">
@@ -247,74 +450,52 @@ margin-top:8px;
 <input id="home" placeholder="Start postcode">
 <input id="work" placeholder="Destination postcode">
 
-<select id="type">
-<option value="curated">✨ Your curated Hot Girl Walk</option>
-<option value="street_art">Street art</option>
-<option value="historic">Historic</option>
-<option value="galleries">Galleries</option>
-</select>
-
 <button onclick="createRoute()">Generate Walk</button>
-<button onclick="refreshWalk()">Refresh discoveries</button>
 <button onclick="startWalk()">Start Walk</button>
 
 </div>
 
 <div id="walk-controls">
-
 <button onclick="pauseWalk()">Pause</button>
 <button onclick="resumeWalk()">Resume</button>
 <button onclick="endWalk()">End Walk</button>
-
 </div>
 
 <div id="encounter">
 
+<img id="encounter-photo">
+
 <h3 id="encounter-title"></h3>
 
-<div>
-
-Beauty:
-<span class="star" data-cat="beauty">★</span>
-<span class="star" data-cat="beauty">★</span>
-<span class="star" data-cat="beauty">★</span>
-<span class="star" data-cat="beauty">★</span>
-<span class="star" data-cat="beauty">★</span>
-
+<div class="stat">
+<span>Beauty</span>
+<span class="star">★ ★ ★ ★ ★</span>
 </div>
 
-<div>
-
-History:
-<span class="star" data-cat="history">★</span>
-<span class="star" data-cat="history">★</span>
-<span class="star" data-cat="history">★</span>
-<span class="star" data-cat="history">★</span>
-<span class="star" data-cat="history">★</span>
-
+<div class="stat">
+<span>History</span>
+<span class="star">★ ★ ★ ★ ★</span>
 </div>
 
-<div>
-
-Hidden Gem:
-<span class="star" data-cat="hidden">★</span>
-<span class="star" data-cat="hidden">★</span>
-<span class="star" data-cat="hidden">★</span>
-<span class="star" data-cat="hidden">★</span>
-<span class="star" data-cat="hidden">★</span>
-
+<div class="stat">
+<span>Hidden Gem</span>
+<span class="star">★ ★ ★ ★ ★</span>
 </div>
 
 <textarea id="note" placeholder="What did you notice?"></textarea>
 
 <input type="file" id="photo">
 
-<br><br>
+<div class="card-buttons">
 
 <button onclick="saveEncounter()">Save</button>
 <button onclick="closeEncounter()">Close</button>
 
 </div>
+
+</div>
+
+<div id="card-deck"></div>
 
 <script>
 
@@ -329,13 +510,26 @@ const LONDON_BOUNDS=[[-0.563,51.261],[0.280,51.686]]
 let map
 let routeCoords=null
 let markers=[]
-let userMarker=null
 let watchId=null
+let userMarker=null
 let currentSite=null
 
 function startApp(){
 
-document.getElementById("intro").style.display="none"
+const intro=document.getElementById("intro-overlay")
+
+intro.style.transition="opacity .4s"
+intro.style.opacity="0"
+
+setTimeout(()=>{
+intro.style.display="none"
+},400)
+
+initMap()
+
+}
+
+function initMap(){
 
 map=new mapboxgl.Map({
 container:"map",
@@ -373,7 +567,6 @@ const data=await res.json()
 routeCoords=data.geometry.coordinates
 
 drawRoute()
-generateStops()
 
 }
 
@@ -383,10 +576,7 @@ const geo={
 type:"FeatureCollection",
 features:[{
 type:"Feature",
-geometry:{
-type:"LineString",
-coordinates:routeCoords
-}
+geometry:{type:"LineString",coordinates:routeCoords}
 }]
 }
 
@@ -401,110 +591,12 @@ id:"route",
 type:"line",
 source:"route",
 paint:{
-"line-color":"#ff7fa5",
+"line-color":"#ff2fa3",
 "line-width":6
 }
 })
 
 }
-
-}
-
-async function generateStops(){
-
-markers.forEach(m=>m.remove())
-markers=[]
-
-const line=turf.lineString(routeCoords)
-const length=turf.length(line)
-
-for(let i=1;i<=4;i++){
-
-const pt=turf.along(line,length/5*i)
-
-const el=document.createElement("div")
-
-el.style.width="30px"
-el.style.height="30px"
-el.style.borderRadius="50%"
-el.style.background="#ff7fa5"
-el.style.color="white"
-el.style.display="flex"
-el.style.alignItems="center"
-el.style.justifyContent="center"
-
-el.innerText=i
-
-const marker=new mapboxgl.Marker(el)
-.setLngLat(pt.geometry.coordinates)
-.addTo(map)
-
-marker.getElement().onclick=()=>openEncounter({
-name:"Discovery "+i,
-coords:pt.geometry.coordinates
-})
-
-markers.push(marker)
-
-}
-
-}
-
-function refreshWalk(){
-if(routeCoords) generateStops()
-}
-
-function startWalk(){
-
-document.getElementById("planner").classList.add("collapsed")
-document.getElementById("walk-controls").style.display="flex"
-
-watchId=navigator.geolocation.watchPosition(updateWalk)
-
-}
-
-function pauseWalk(){
-navigator.geolocation.clearWatch(watchId)
-}
-
-function resumeWalk(){
-watchId=navigator.geolocation.watchPosition(updateWalk)
-}
-
-function endWalk(){
-
-navigator.geolocation.clearWatch(watchId)
-
-document.getElementById("planner").classList.remove("collapsed")
-document.getElementById("walk-controls").style.display="none"
-
-}
-
-function updateWalk(pos){
-
-const coords=[pos.coords.longitude,pos.coords.latitude]
-
-if(!userMarker){
-
-const el=document.createElement("div")
-
-el.style.width="18px"
-el.style.height="18px"
-el.style.background="#8fb6ff"
-el.style.borderRadius="50%"
-el.style.border="3px solid white"
-
-userMarker=new mapboxgl.Marker(el)
-.setLngLat(coords)
-.addTo(map)
-
-}else{
-
-userMarker.setLngLat(coords)
-
-}
-
-map.easeTo({center:coords})
 
 }
 
@@ -514,13 +606,13 @@ currentSite=site
 
 document.getElementById("encounter-title").innerText=site.name
 
-document.getElementById("encounter").classList.add("active")
+document.getElementById("encounter").style.display="block"
 
 }
 
 function closeEncounter(){
 
-document.getElementById("encounter").classList.remove("active")
+document.getElementById("encounter").style.display="none"
 
 }
 
@@ -549,20 +641,26 @@ alert("Saved!")
 
 async function loadArchive(){
 
+const deck=document.getElementById("card-deck")
+
+deck.innerHTML=""
+deck.style.display="block"
+
 const data=await fetch(API_URL+"?action=encounters").then(r=>r.json())
 
-data.forEach(e=>{
+data.forEach((e,i)=>{
 
-if(!e.lng||!e.lat) return
+const card=document.createElement("div")
+card.className="deck-card"
 
-const marker=new mapboxgl.Marker()
-.setLngLat([e.lng,e.lat])
-.addTo(map)
+card.style.transform=`rotate(${i*5-10}deg) translateX(${i*30}px)`
 
-marker.getElement().onclick=()=>openEncounter({
+card.onclick=()=>openEncounter({
 name:e.site_name,
 coords:[e.lng,e.lat]
 })
+
+deck.appendChild(card)
 
 })
 
