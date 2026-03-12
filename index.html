@@ -5,6 +5,7 @@
 
 <meta charset="utf-8">
 <title>Hot Girl Walks</title>
+
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
 <link href="https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.css" rel="stylesheet">
@@ -43,8 +44,8 @@ right:0;
 height:60px;
 background:white;
 display:flex;
-justify-content:space-between;
 align-items:center;
+justify-content:space-between;
 padding:0 16px;
 z-index:100;
 box-shadow:0 2px 10px rgba(0,0,0,0.1);
@@ -242,9 +243,8 @@ stroke-dashoffset="188"/>
 
 const CONFIG={
 MAPBOX_TOKEN:"pk.eyJ1IjoiYmlnYWwxIiwiYSI6ImNtbWIzODZuaDA0cWYycXIyMXVydmx1eDkifQ.2tS6Ro5jbDlGjbR74_Ox0Q",
-API_URL:"https://script.google.com/macros/s/AKfycbzkPMvQSrdRlIKB2EMpnY8UYtfp3TfeMntCz10D9ZNmfOPcv3iYJ9RMZCgKZ4Omshs/exec",
+API_URL:"https://script.google.com/macros/s/AKfycbx51xg0SrgL6FLOwKbFlzV_2MaRWz6hCm4B5STsL5WNlnLt3xq_VgHBvJwP76Xrsfzi/exec",
 OVERPASS_ENDPOINTS:[
-"https://overpass-api.de/api/interpreter",
 "https://overpass.kumi.systems/api/interpreter"
 ]
 }
@@ -364,13 +364,18 @@ App.Discovery={}
 
 App.Discovery.fetchSites=async function(line){
 
+await new Promise(r=>setTimeout(r,500))
+
 const corridor=turf.buffer(line,0.2,{units:"kilometers"})
 const bbox=turf.bbox(corridor)
 
 const query=`
-[out:json];
-node["tourism"]( ${bbox[1]},${bbox[0]},${bbox[3]},${bbox[2]} );
-out;
+[out:json][timeout:25];
+(
+node["tourism"~"artwork|gallery|museum|viewpoint"](${bbox[1]},${bbox[0]},${bbox[3]},${bbox[2]});
+node["historic"~"monument|memorial|statue"](${bbox[1]},${bbox[0]},${bbox[3]},${bbox[2]});
+);
+out tags center;
 `
 
 for(const endpoint of CONFIG.OVERPASS_ENDPOINTS){
@@ -385,11 +390,19 @@ if(text.startsWith("<")) continue
 const data=JSON.parse(text)
 
 return data.elements.map(el=>({
-name:el.tags?.name,
-coords:[el.lon,el.lat]
+
+name:el.tags?.name || "Local discovery",
+
+coords:[
+el.lon || el.center?.lon,
+el.lat || el.center?.lat
+]
+
 })).filter(Boolean)
 
-}catch(e){}
+}catch(e){
+console.log("Overpass failed")
+}
 
 }
 
@@ -423,7 +436,7 @@ if(d<min){min=d;best=site}
 })
 
 selected.push(best||{
-name:"Waypoint",
+name:"Route waypoint",
 coords:pt.geometry.coordinates
 })
 
@@ -449,7 +462,10 @@ marker.getElement().addEventListener("click",()=>{
 App.Encounter.open(site)
 })
 
-App.state.markers.push(marker)
+App.state.markers.push({
+marker:marker,
+site:site
+})
 
 })
 
@@ -597,11 +613,11 @@ App.Walk.checkEncounters=function(coords){
 
 const user=turf.point(coords)
 
-App.state.markers.forEach((marker,i)=>{
+App.state.markers.forEach((obj,i)=>{
 
 if(App.state.revealedEncounters.has(i)) return
 
-const m=marker.getLngLat()
+const m=obj.marker.getLngLat()
 
 const pt=turf.point([m.lng,m.lat])
 
@@ -611,10 +627,7 @@ if(dist<0.08){
 
 App.state.revealedEncounters.add(i)
 
-App.Encounter.open({
-name:"Discovery",
-coords:[m.lng,m.lat]
-})
+App.Encounter.open(obj.site)
 
 }
 
