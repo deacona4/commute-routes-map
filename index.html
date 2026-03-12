@@ -195,7 +195,7 @@ Pause, notice, reflect and record what you see.
 mapboxgl.accessToken="pk.eyJ1IjoiYmlnYWwxIiwiYSI6ImNtbWIzODZuaDA0cWYycXIyMXVydmx1eDkifQ.2tS6Ro5jbDlGjbR74_Ox0Q";
 
 /* INSERT YOUR APPS SCRIPT URL HERE */
-const API_URL="https://script.google.com/macros/s/AKfycbxkHkOyvxUB7eRRymbEBGiK-30Liu6q2gBoPGYmyd7sw8A1o7FthLoST2uEho4RAJyk/exec";
+const API_URL="https://script.google.com/macros/s/AKfycbxKPWPkmnwUmFRdFDade5nC6wi2lUpmC4lWx5Qj4Gbo6D5hQXKpNTN3gTnwcAjbORp9/exec";
 
 let markers=[];
 let archiveMarkers=[];
@@ -203,6 +203,9 @@ let currentEncounter=null;
 let currentRouteCoords=null;
 let encounterArchive=[];
 let encountersVisible=true;
+let overpassFailed=false;
+let encountersLoading=false;
+const siteCache=new Map();
 
 const map=new mapboxgl.Map({
 container:'map',
@@ -236,6 +239,14 @@ setStatus("Set API_URL to your deployed Apps Script URL before fetching routes."
 return false;
 }
 return true;
+}
+
+
+function routeCacheKey(coords){
+return coords
+.slice(0,40)
+.map(pt=>`${pt[0].toFixed(4)},${pt[1].toFixed(4)}`)
+.join("|");
 }
 
 
@@ -325,7 +336,7 @@ return;
 clearStatus();
 
 try{
-await loadEncounters(currentRouteCoords);
+await loadEncounters(currentRouteCoords,true);
 }catch(err){
 setStatus(err.message||"Failed to refresh encounters.");
 console.error(err);
@@ -376,12 +387,17 @@ paint:{
 
 /* CULTURAL DISCOVERY */
 
-async function fetchCulturalSites(line){
+async function fetchCulturalSites(line,cacheKey,forceRefresh=false){
+
+if(!forceRefresh && siteCache.has(cacheKey)){
+overpassFailed=false;
+return siteCache.get(cacheKey);
+}
 
 const bbox=turf.bbox(line);
 
 const query=`
-[out:json];
+[out:json][timeout:25];
 (
 node["tourism"~"museum|gallery|artwork"](${bbox[1]},${bbox[0]},${bbox[3]},${bbox[2]});
 node["historic"~"monument|memorial"](${bbox[1]},${bbox[0]},${bbox[3]},${bbox[2]});
@@ -389,16 +405,34 @@ node["historic"~"monument|memorial"](${bbox[1]},${bbox[0]},${bbox[3]},${bbox[2]}
 out center;
 `;
 
-const res=await fetch("https://overpass-api.de/api/interpreter",{method:"POST",body:query});
+const endpoints=[
+"https://overpass-api.de/api/interpreter",
+"https://overpass.kumi.systems/api/interpreter"
+];
+
+for(const endpoint of endpoints){
+const controller=new AbortController();
+const timer=setTimeout(()=>controller.abort(),20000);
+
+try{
+const res=await fetch(endpoint,{
+method:"POST",
+body:query,
+signal:controller.signal
+});
+
+if(!res.ok){
+throw new Error(`Overpass error (${res.status})`);
+}
 
 const text=await res.text();
 
-if(text.startsWith("<")) return [];
+if(text.startsWith("<")){
+throw new Error("Overpass returned HTML error");
+}
 
 const data=JSON.parse(text);
-
-return data.elements.map(el=>{
-
+const cleaned=data.elements.map(el=>{
 const lon=el.lon||el.center?.lon;
 const lat=el.lat||el.center?.lat;
 
@@ -407,37 +441,57 @@ if(!el.tags?.name) return null;
 
 return{
 name:el.tags.name,
-coords:[lon,lat]
+coords:[lon,lat],
+source:"overpass"
 };
 
 }).filter(Boolean);
+
+overpassFailed=false;
+siteCache.set(cacheKey,cleaned);
+clearStatus();
+return cleaned;
+}catch(err){
+console.error(`Overpass failed via ${endpoint}:`,err);
+}finally{
+clearTimeout(timer);
+}
+}
+
+overpassFailed=true;
+setStatus("Cultural data provider is rate-limited right now. Showing route waypoints instead.","info");
+return [];
 
 }
 
 
 /* ENCOUNTER MARKERS */
 
-async function loadEncounters(coords){
+async function loadEncounters(coords,forceRefresh=false){
+
+if(encountersLoading) return;
+encountersLoading=true;
 
 markers.forEach(m=>m.remove());
 markers=[];
 
 const line=turf.lineString(coords);
+const key=routeCacheKey(coords);
+const sites=await fetchCulturalSites(line,key,forceRefresh);
 
-const sites=await fetchCulturalSites(line);
-
-updateJourneyPanel(sites);
-
+try{
 const length=turf.length(line);
+const selectedSites=[];
 
 for(let i=1;i<=4;i++){
-
 const pt=turf.along(line,length/5*i);
 
+if(sites.length){
 let best=null;
 let min=Infinity;
 
 sites.forEach(site=>{
+if(selectedSites.some(chosen=>chosen.name===site.name&&chosen.coords[0]===site.coords[0]&&chosen.coords[1]===site.coords[1])) return;
 
 const d=turf.distance(pt,turf.point(site.coords));
 
@@ -449,23 +503,37 @@ best=site;
 });
 
 if(best){
+selectedSites.push(best);
+continue;
+}
+}
 
+selectedSites.push({
+name:`Route waypoint ${i}`,
+coords:pt.geometry.coordinates,
+source:"fallback"
+});
+}
+
+updateJourneyPanel(selectedSites);
+
+selectedSites.forEach((site,i)=>{
 const el=document.createElement("div");
 el.className="marker-number";
-el.innerText=i;
+el.innerText=i+1;
 
 const marker=new mapboxgl.Marker(el)
-.setLngLat(best.coords)
+.setLngLat(site.coords)
 .addTo(map);
 
 marker.getElement().addEventListener("click",()=>{
-openEncounter(best);
+openEncounter(site);
 });
 
 markers.push(marker);
-
-}
-
+});
+}finally{
+encountersLoading=false;
 }
 
 }
@@ -482,6 +550,10 @@ panel.innerHTML="<b>Your Cultural Journey</b><br><br>";
 if(!sites.length){
 panel.innerHTML+="No cultural sites found on this route yet.";
 return;
+}
+
+if(overpassFailed){
+panel.innerHTML+="Showing route waypoints while cultural data reloads.";
 }
 
 sites.slice(0,4).forEach((site,i)=>{
@@ -582,6 +654,14 @@ if(e?.lng==null||e?.lat==null) return;
 const marker=new mapboxgl.Marker({color:"blue"})
 .setLngLat([e.lng,e.lat])
 .addTo(map);
+
+marker.getElement().addEventListener("click",()=>{
+openEncounter({
+name:e.site_name||"Saved encounter",
+coords:[e.lng,e.lat],
+source:"archive"
+});
+});
 
 archiveMarkers.push(marker);
 
