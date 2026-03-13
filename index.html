@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html>
-
 <head>
 
 <meta charset="utf-8">
@@ -30,7 +29,7 @@ width:100%;
 height:100vh;
 }
 
-/* HOME SCREEN */
+/* HOME */
 
 #home-screen{
 position:absolute;
@@ -71,7 +70,7 @@ font-weight:700;
 cursor:pointer;
 }
 
-/* SEARCH PANEL */
+/* SEARCH */
 
 #search-panel{
 position:absolute;
@@ -218,7 +217,7 @@ margin-top:10px;
 
 mapboxgl.accessToken="pk.eyJ1IjoiYmlnYWwxIiwiYSI6ImNtbWIzODZuaDA0cWYycXIyMXVydmx1eDkifQ.2tS6Ro5jbDlGjbR74_Ox0Q"
 
-const API_URL="https://script.google.com/macros/s/AKfycbytcHzDE7iNIPkQs0PlZf4ZsSrm9YYu5BntFENOyYDd6W3ZIWn0A6GLiPSNzFw9k8uj/exec"
+const API_URL="https://script.google.com/macros/s/AKfycbxlmFbmYwjAqW5ucQXlU9tG6sEQV6JIa_H1rs1DT0y03dwdO2SB-EN8aAgWYbx5WfrM/exec"
 
 let map
 let routeCoords=null
@@ -239,11 +238,8 @@ localStorage.setItem("hg_user",USER_ID)
 }
 
 function startApp(){
-
 document.getElementById("home-screen").style.display="none"
-
 initMap()
-
 }
 
 function initMap(){
@@ -262,523 +258,14 @@ startGPS()
 initSearch()
 
 }
-<!DOCTYPE html>
-<html>
 
-<head>
+/* GPS */
 
-<meta charset="utf-8">
-<title>Hot Girl Walk</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+function startGPS(){
 
-<link href="https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.css" rel="stylesheet">
-<script src="https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.js"></script>
+navigator.geolocation.watchPosition(
 
-<link href="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v5.0.0/mapbox-gl-geocoder.css" rel="stylesheet">
-<script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v5.0.0/mapbox-gl-geocoder.min.js"></script>
-
-<script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
-<script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
-
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
-
-<style>
-
-body{
-margin:0;
-font-family:'Inter',sans-serif;
-}
-
-#map{
-width:100%;
-height:100vh;
-}
-
-/* HOME SCREEN */
-
-#home-screen{
-position:absolute;
-top:0;
-left:0;
-width:100%;
-height:100%;
-background:#ff2fa3;
-display:flex;
-flex-direction:column;
-justify-content:center;
-align-items:center;
-z-index:20;
-}
-
-.home-title{
-font-size:64px;
-font-weight:800;
-color:white;
-}
-
-.home-sub{
-color:white;
-margin-top:10px;
-}
-
-.home-buttons{
-margin-top:30px;
-}
-
-.home-buttons button{
-padding:14px 24px;
-border:none;
-border-radius:10px;
-background:white;
-color:#ff2fa3;
-font-weight:700;
-cursor:pointer;
-}
-
-/* SEARCH PANEL */
-
-#search-panel{
-position:absolute;
-top:20px;
-right:20px;
-background:white;
-padding:12px;
-border-radius:12px;
-box-shadow:0 4px 16px rgba(0,0,0,0.2);
-z-index:5;
-width:340px;
-display:flex;
-flex-direction:column;
-gap:8px;
-}
-
-#route-button{
-padding:10px;
-border:none;
-background:#ff2fa3;
-color:white;
-font-weight:700;
-border-radius:8px;
-cursor:pointer;
-}
-
-#gps-btn{
-padding:8px;
-border:none;
-background:#eee;
-border-radius:8px;
-cursor:pointer;
-}
-
-/* NAV */
-
-#nav{
-position:absolute;
-bottom:20px;
-left:50%;
-transform:translateX(-50%);
-background:white;
-padding:8px 14px;
-border-radius:20px;
-box-shadow:0 4px 16px rgba(0,0,0,.2);
-z-index:5;
-}
-
-#nav button{
-border:none;
-background:none;
-margin:0 6px;
-font-weight:600;
-cursor:pointer;
-}
-
-/* ENCOUNTER CARD */
-
-#encounter{
-position:absolute;
-top:50%;
-left:50%;
-transform:translate(-50%,-50%);
-width:320px;
-background:white;
-padding:16px;
-border-radius:16px;
-box-shadow:0 20px 40px rgba(0,0,0,.4);
-display:none;
-z-index:10;
-}
-
-#encounter img{
-width:100%;
-height:160px;
-object-fit:cover;
-border-radius:8px;
-}
-
-textarea{
-width:100%;
-margin-top:10px;
-}
-
-</style>
-
-</head>
-
-<body>
-
-<div id="home-screen">
-<div class="home-title">Hot Girl Walk</div>
-<div class="home-sub">Turn everyday routes into cultural discovery</div>
-<div class="home-buttons">
-<button onclick="startApp()">Start Walk</button>
-</div>
-</div>
-
-<div id="search-panel">
-
-<div id="start-search"></div>
-<button id="gps-btn">Use my GPS</button>
-
-<div id="dest-search"></div>
-
-<button id="route-button">Generate Route</button>
-
-</div>
-
-<div id="nav">
-<button onclick="previewJourney()">Preview</button>
-<button onclick="startWalk()">Start</button>
-<button onclick="pauseWalk()">Pause</button>
-<button onclick="resumeWalk()">Resume</button>
-<button onclick="endWalk()">End</button>
-<button onclick="toggleMemories()">Memories</button>
-<button onclick="shareJourney()">Share</button>
-</div>
-
-<div id="map"></div>
-
-<div id="encounter">
-
-<img id="encounter-photo">
-
-<h3 id="encounter-title"></h3>
-
-<div id="prompt"></div>
-
-<div>Beauty <input id="rating-beauty" type="number" min="1" max="5" value="3"></div>
-<div>History <input id="rating-history" type="number" min="1" max="5" value="3"></div>
-<div>Hidden Gem <input id="rating-hidden" type="number" min="1" max="5" value="3"></div>
-
-<textarea id="note" placeholder="Write reflection..."></textarea>
-
-<br><br>
-
-<button onclick="saveEncounter()">Save</button>
-<button onclick="closeEncounter()">Close</button>
-
-</div>
-
-<script>
-
-mapboxgl.accessToken="YOUR_MAPBOX_TOKEN"
-
-const API_URL="YOUR_APPS_SCRIPT_URL"
-
-let map
-let routeCoords=null
-let markers=[]
-let archiveMarkers=[]
-
-let destinationCoords=null
-let startCoords=null
-
-let userMarker=null
-let watchId=null
-
-let USER_ID=localStorage.getItem("hg_user")
-
-if(!USER_ID){
-USER_ID=crypto.randomUUID()
-localStorage.setItem("hg_user",USER_ID)
-}
-
-function startApp(){
-
-document.getElementById("home-screen").style.display="none"
-
-initMap()
-
-}
-
-function initMap(){
-
-map=new mapboxgl.Map({
-container:"map",
-style:"mapbox://styles/mapbox/streets-v12",
-center:[-0.1276,51.5072],
-zoom:12
-})
-
-map.addControl(new mapboxgl.NavigationControl())
-
-startGPS()
-
-initSearch()
-
-}
-/* ----------------------------------------------------
-WIKIPEDIA IMAGE LOOKUP
----------------------------------------------------- */
-
-let wikiCache=new Map()
-
-async function fetchWiki(siteName){
-
-if(wikiCache.has(siteName)){
-return wikiCache.get(siteName)
-}
-
-try{
-
-const searchURL=
-`https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(siteName)}&format=json&origin=*`
-
-const searchRes=await fetch(searchURL)
-const searchData=await searchRes.json()
-
-if(!searchData.query.search.length){
-return null
-}
-
-const pageTitle=searchData.query.search[0].title
-
-const summaryURL=
-`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(pageTitle)}`
-
-const res=await fetch(summaryURL)
-const data=await res.json()
-
-wikiCache.set(siteName,data)
-
-return data
-
-}catch{
-
-return null
-
-}
-
-}
-
-/* ----------------------------------------------------
-REFLECTION PROMPTS
----------------------------------------------------- */
-
-async function fetchPrompt(){
-
-const prompts=await fetch(API_URL+"?action=prompts")
-.then(r=>r.json())
-
-return prompts[Math.floor(Math.random()*prompts.length)]
-
-}
-
-/* ----------------------------------------------------
-OPEN ENCOUNTER CARD
----------------------------------------------------- */
-
-let currentEncounter=null
-
-async function openEncounter(site){
-
-currentEncounter=site
-
-document.getElementById("encounter-title")
-.innerText=site.name
-
-const wiki=await fetchWiki(site.name)
-
-if(wiki?.thumbnail){
-
-document.getElementById("encounter-photo")
-.src=wiki.thumbnail.source
-
-}
-
-const prompt=await fetchPrompt()
-
-document.getElementById("prompt")
-.innerText=prompt
-
-document.getElementById("encounter")
-.style.display="block"
-
-}
-
-/* ----------------------------------------------------
-CLOSE ENCOUNTER
----------------------------------------------------- */
-
-function closeEncounter(){
-
-document.getElementById("encounter")
-.style.display="none"
-
-}
-
-/* ----------------------------------------------------
-SAVE ENCOUNTER → GOOGLE SHEETS
----------------------------------------------------- */
-
-async function saveEncounter(){
-
-if(!currentEncounter) return
-
-const payload={
-
-action:"encounter",
-
-user_id:USER_ID,
-
-site_name:currentEncounter.name,
-
-note:document.getElementById("note").value,
-
-lat:currentEncounter.coords[1],
-lng:currentEncounter.coords[0],
-
-beauty:document.getElementById("rating-beauty").value,
-history:document.getElementById("rating-history").value,
-hidden_gem:document.getElementById("rating-hidden").value
-
-}
-
-await fetch(API_URL,{
-method:"POST",
-body:JSON.stringify(payload)
-})
-
-addMemoryMarker(currentEncounter)
-
-closeEncounter()
-
-alert("Memory saved!")
-
-}
-
-/* ----------------------------------------------------
-MEMORY MARKERS
----------------------------------------------------- */
-
-function addMemoryMarker(site){
-
-const marker=new mapboxgl.Marker({color:"blue"})
-.setLngLat(site.coords)
-.addTo(map)
-
-archiveMarkers.push(marker)
-
-}
-
-/* ----------------------------------------------------
-TOGGLE MEMORIES
----------------------------------------------------- */
-
-async function toggleMemories(){
-
-archiveMarkers.forEach(m=>m.remove())
-archiveMarkers=[]
-
-const data=await fetch(API_URL+"?action=encounters")
-.then(r=>r.json())
-
-data.forEach(e=>{
-
-if(!e.lng||!e.lat) return
-
-const marker=new mapboxgl.Marker({color:"blue"})
-.setLngLat([e.lng,e.lat])
-.addTo(map)
-
-archiveMarkers.push(marker)
-
-})
-
-}
-
-/* ----------------------------------------------------
-START WALK
----------------------------------------------------- */
-
-function startWalk(){
-
-if(!routeCoords){
-
-alert("Generate a route first")
-
-return
-
-}
-
-if(watchId) return
-
-watchId=navigator.geolocation.watchPosition(updateWalk)
-
-}
-
-/* ----------------------------------------------------
-PAUSE WALK
----------------------------------------------------- */
-
-function pauseWalk(){
-
-if(!watchId) return
-
-navigator.geolocation.clearWatch(watchId)
-
-watchId=null
-
-}
-
-/* ----------------------------------------------------
-RESUME WALK
----------------------------------------------------- */
-
-function resumeWalk(){
-
-if(watchId) return
-
-watchId=navigator.geolocation.watchPosition(updateWalk)
-
-}
-
-/* ----------------------------------------------------
-END WALK
----------------------------------------------------- */
-
-function endWalk(){
-
-if(!watchId) return
-
-navigator.geolocation.clearWatch(watchId)
-
-watchId=null
-
-map.easeTo({
-pitch:0,
-bearing:0,
-zoom:14
-})
-
-}
-
-/* ----------------------------------------------------
-LIVE WALK CAMERA
----------------------------------------------------- */
-
-let lastPosition=null
-
-function updateWalk(pos){
+pos=>{
 
 const coords=[pos.coords.longitude,pos.coords.latitude]
 
@@ -788,105 +275,215 @@ userMarker=new mapboxgl.Marker({color:"#2b7cff"})
 .setLngLat(coords)
 .addTo(map)
 
+map.setCenter(coords)
+
 }else{
 
 userMarker.setLngLat(coords)
 
 }
 
-let bearing=0
-
-if(lastPosition){
-
-bearing=turf.bearing(
-turf.point(lastPosition),
-turf.point(coords)
-)
-
-}
-
-lastPosition=coords
-
-map.easeTo({
-
-center:coords,
-zoom:17,
-pitch:60,
-bearing:bearing,
-duration:800
-
-})
-
-checkNearbySites(coords)
-
-}
-
-/* ----------------------------------------------------
-AUTO ENCOUNTER TRIGGER
----------------------------------------------------- */
-
-function checkNearbySites(userCoords){
-
-markers.forEach(marker=>{
-
-const site=marker.site
-
-const dist=turf.distance(
-turf.point(userCoords),
-turf.point(site.coords),
-{units:"meters"}
-)
-
-if(dist<40){
-
-openEncounter(site)
-
-}
+startCoords=coords
 
 })
 
 }
 
-/* ----------------------------------------------------
-SHARE WALK CARD
----------------------------------------------------- */
+document.getElementById("gps-btn").onclick=()=>{
 
-async function shareJourney(){
+navigator.geolocation.getCurrentPosition(pos=>{
 
-const canvas=await html2canvas(document.body)
+startCoords=[pos.coords.longitude,pos.coords.latitude]
 
-canvas.toBlob(async blob=>{
+map.flyTo({center:startCoords,zoom:14})
 
-const file=new File([blob],"hot-girl-walk.png",{type:"image/png"})
-
-if(navigator.share){
-
-await navigator.share({
-title:"Hot Girl Walk",
-text:"Look what I discovered on my walk ✨",
-files:[file]
 })
+
+}
+
+/* SEARCH */
+
+function initSearch(){
+
+const startGeo=new MapboxGeocoder({
+accessToken:mapboxgl.accessToken,
+mapboxgl:mapboxgl,
+placeholder:"Start location"
+})
+
+document.getElementById("start-search")
+.appendChild(startGeo.onAdd(map))
+
+startGeo.on("result",e=>{startCoords=e.result.center})
+
+const destGeo=new MapboxGeocoder({
+accessToken:mapboxgl.accessToken,
+mapboxgl:mapboxgl,
+placeholder:"Destination"
+})
+
+document.getElementById("dest-search")
+.appendChild(destGeo.onAdd(map))
+
+destGeo.on("result",e=>{destinationCoords=e.result.center})
+
+document.getElementById("route-button").onclick=generateRouteFromSearch
+
+}
+
+function generateRouteFromSearch(){
+
+if(!destinationCoords){
+alert("Choose destination")
+return
+}
+
+generateRoute(startCoords)
+
+}
+
+async function generateRoute(start){
+
+const url=
+API_URL+
+"?action=routeFromCoords"+
+"&lat="+start[1]+
+"&lng="+start[0]+
+"&destLng="+destinationCoords[0]+
+"&destLat="+destinationCoords[1]
+
+const res=await fetch(url)
+
+const data=await res.json()
+
+routeCoords=data.geometry.coordinates
+
+drawRoute(routeCoords)
+
+loadEncounters(routeCoords)
+
+}
+
+/* DRAW ROUTE */
+
+function drawRoute(coords){
+
+const geojson={
+type:"FeatureCollection",
+features:[{
+type:"Feature",
+geometry:{type:"LineString",coordinates:coords}
+}]
+}
+
+if(map.getSource("route")){
+
+map.getSource("route").setData(geojson)
 
 }else{
 
-const link=document.createElement("a")
+map.addSource("route",{type:"geojson",data:geojson})
 
-link.href=URL.createObjectURL(blob)
-
-link.download="hot-girl-walk.png"
-
-link.click()
+map.addLayer({
+id:"route",
+type:"line",
+source:"route",
+paint:{
+"line-color":"#ff2fa3",
+"line-width":6
+}
+})
 
 }
+
+}
+
+/* CULTURE */
+
+async function loadEncounters(coords){
+
+markers.forEach(m=>m.remove())
+markers=[]
+
+const line=turf.lineString(coords)
+const bbox=turf.bbox(line)
+
+const query=`
+[out:json];
+(
+node["tourism"="museum"](${bbox[1]},${bbox[0]},${bbox[3]},${bbox[2]});
+node["tourism"="artwork"](${bbox[1]},${bbox[0]},${bbox[3]},${bbox[2]});
+node["historic"~"monument|memorial"](${bbox[1]},${bbox[0]},${bbox[3]},${bbox[2]});
+);
+out center;
+`
+
+const res=await fetch("https://overpass-api.de/api/interpreter",{method:"POST",body:query})
+
+const data=await res.json()
+
+const sites=data.elements.map(el=>{
+
+const lon=el.lon||el.center?.lon
+const lat=el.lat||el.center?.lat
+
+if(!lon||!lat||!el.tags?.name) return null
+
+return{
+name:el.tags.name,
+coords:[lon,lat]
+}
+
+}).filter(Boolean)
+
+sites.slice(0,4).forEach((site,i)=>{
+
+const el=document.createElement("div")
+
+el.style.width="30px"
+el.style.height="30px"
+el.style.borderRadius="50%"
+el.style.background="#ff2fa3"
+el.style.color="white"
+el.style.display="flex"
+el.style.alignItems="center"
+el.style.justifyContent="center"
+
+el.innerText=i+1
+
+const marker=new mapboxgl.Marker(el)
+.setLngLat(site.coords)
+.addTo(map)
+
+marker.site=site
+
+marker.getElement().onclick=()=>openEncounter(site)
+
+markers.push(marker)
 
 })
 
 }
 
-/* ----------------------------------------------------
-END SCRIPT
----------------------------------------------------- */
+/* ENCOUNTER CARD */
+
+let currentEncounter=null
+
+async function openEncounter(site){
+
+currentEncounter=site
+
+document.getElementById("encounter-title").innerText=site.name
+
+document.getElementById("encounter").style.display="block"
+
+}
+
+function closeEncounter(){
+document.getElementById("encounter").style.display="none"
+}
 
 </script>
+
 </body>
 </html>
