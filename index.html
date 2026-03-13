@@ -31,7 +31,7 @@ width:100%;
 height:100vh;
 }
 
-/* HOMEPAGE */
+/* HOME */
 
 #home-screen{
 
@@ -72,49 +72,105 @@ margin-top:30px;
 padding:14px 24px;
 border:none;
 border-radius:10px;
+
 background:white;
 color:#ff2fa3;
+
 font-weight:700;
 cursor:pointer;
 
 }
 
+
 /* SEARCH BAR */
 
-#search-bar{
+#search-container{
 
 position:absolute;
-top:70px;
-left:50%;
-transform:translateX(-50%);
 
-width:380px;
+top:20px;
+right:20px;
+
+background:white;
+
+padding:10px;
+
+border-radius:12px;
+
+box-shadow:0 4px 16px rgba(0,0,0,0.2);
 
 z-index:5;
 
+width:320px;
+
 }
+
+#culture-filter{
+
+margin-top:6px;
+font-size:13px;
+
+display:flex;
+flex-wrap:wrap;
+gap:6px;
+
+}
+
+.filter-chip{
+
+padding:4px 8px;
+
+border-radius:8px;
+
+background:#eee;
+
+cursor:pointer;
+
+}
+
+.filter-chip.active{
+
+background:#ff2fa3;
+color:white;
+
+}
+
 
 /* NAV */
 
 #top-nav{
+
 position:absolute;
-top:10px;
+
+bottom:20px;
 left:50%;
+
 transform:translateX(-50%);
+
 background:white;
-padding:6px 12px;
+
+padding:8px 12px;
+
 border-radius:20px;
-box-shadow:0 3px 8px rgba(0,0,0,.2);
+
+box-shadow:0 4px 16px rgba(0,0,0,.2);
+
 z-index:5;
+
 }
 
 #top-nav button{
+
 border:none;
 background:none;
+
 margin:0 6px;
+
 font-weight:600;
 cursor:pointer;
+
 }
+
 
 /* JOURNEY */
 
@@ -140,13 +196,15 @@ display:none;
 
 }
 
+
 /* WALK CONTROLS */
 
 #walk-controls{
 
 position:absolute;
-bottom:20px;
+bottom:80px;
 left:50%;
+
 transform:translateX(-50%);
 
 display:none;
@@ -160,49 +218,37 @@ z-index:3;
 #walk-controls button{
 
 padding:8px 14px;
+
 border:none;
+
 border-radius:8px;
+
 background:#ff2fa3;
+
 color:white;
+
 cursor:pointer;
 
 }
 
-/* ENCOUNTER CARD */
 
-#encounter{
+/* MOBILE */
 
-position:absolute;
-top:50%;
+@media(max-width:700px){
+
+#search-container{
+
 left:50%;
-transform:translate(-50%,-50%);
+transform:translateX(-50%);
 
-width:320px;
-background:white;
-padding:16px;
-border-radius:16px;
+right:auto;
 
-box-shadow:0 20px 40px rgba(0,0,0,.4);
-
-display:none;
-
-z-index:10;
+width:90%;
 
 }
 
-#encounter img{
-
-width:100%;
-height:160px;
-object-fit:cover;
-border-radius:8px;
-
 }
 
-textarea{
-width:100%;
-margin-top:10px;
-}
 
 /* MARKERS */
 
@@ -211,15 +257,18 @@ margin-top:10px;
 display:flex;
 align-items:center;
 justify-content:center;
+
 width:28px;
 height:28px;
 
 background:#e63946;
 
 border:3px solid white;
+
 border-radius:50%;
 
 color:white;
+
 font-weight:600;
 
 }
@@ -230,7 +279,8 @@ font-weight:600;
 
 <body>
 
-<!-- HOME -->
+
+<!-- HOME SCREEN -->
 
 <div id="home-screen">
 
@@ -241,14 +291,22 @@ Turn your everyday walk into cultural discovery
 </div>
 
 <div class="home-buttons">
-<button onclick="startApp()">Start Walk From Here</button>
+<button onclick="startApp()">Start Walk</button>
 </div>
 
 </div>
+
 
 <!-- SEARCH -->
 
+<div id="search-container">
+
 <div id="search-bar"></div>
+
+<div id="culture-filter"></div>
+
+</div>
+
 
 <!-- NAV -->
 
@@ -260,7 +318,8 @@ Turn your everyday walk into cultural discovery
 
 </div>
 
-<!-- JOURNEY -->
+
+<!-- JOURNEY PANEL -->
 
 <div id="journey-panel">
 
@@ -269,6 +328,7 @@ Turn your everyday walk into cultural discovery
 Encounters will appear here.
 
 </div>
+
 
 <!-- WALK CONTROLS -->
 
@@ -280,46 +340,42 @@ Encounters will appear here.
 
 </div>
 
-<!-- ENCOUNTER CARD -->
-
-<div id="encounter">
-
-<img id="encounter-photo">
-
-<h3 id="encounter-title"></h3>
-
-<div id="prompt"></div>
-
-<textarea id="note" placeholder="Write reflection..."></textarea>
-
-<br><br>
-
-<button onclick="saveEncounter()">Save</button>
-<button onclick="closeEncounter()">Close</button>
-
-</div>
 
 <div id="map"></div>
 
+
 <script>
+
+
+/* CONFIG */
 
 mapboxgl.accessToken="pk.eyJ1IjoiYmlnYWwxIiwiYSI6ImNtbWIzODZuaDA0cWYycXIyMXVydmx1eDkifQ.2tS6Ro5jbDlGjbR74_Ox0Q"
 
-const API_URL="https://script.google.com/macros/s/AKfycbyTSX4rYwP5A8ScTUnmphdKRS7AlGWwdcLkDSNC-6HJTG4vEZeNFmMZLoUL0DXzKMAV/exec"
+const API_URL="https://script.google.com/macros/s/AKfycbzTVvAMThy9vWQJIPYFe286T-N0zGSO4DHUASSWkX_6o6PCsxrP0x5y4rnBzNvy2fJI/exec"
+
+
+/* STATE */
 
 let map
 let routeCoords=null
 let markers=[]
 let archiveMarkers=[]
+
 let siteCache=new Map()
 let wikiCache=new Map()
 
-let watchId=null
-let walkActive=false
-let lastPosition=null
-let userMarker=null
-
 let destinationCoords=null
+
+let watchId=null
+let userMarker=null
+let lastPosition=null
+
+let walkActive=false
+
+let selectedCulture=[]
+
+
+/* USER */
 
 let USER_ID = localStorage.getItem("hg_user")
 
@@ -331,6 +387,9 @@ localStorage.setItem("hg_user",USER_ID)
 
 }
 
+
+/* START APP */
+
 function startApp(){
 
 document.getElementById("home-screen").style.display="none"
@@ -338,35 +397,40 @@ document.getElementById("home-screen").style.display="none"
 initMap()
 
 }
-/* ----------------------------------------------------
-MAP INITIALIZATION
----------------------------------------------------- */
+
+
+/* INIT MAP */
 
 function initMap(){
 
 if(map) return
 
 map=new mapboxgl.Map({
+
 container:"map",
+
 style:"mapbox://styles/mapbox/streets-v12",
+
 center:[-0.1276,51.5072],
+
 zoom:12
+
 })
 
 map.addControl(new mapboxgl.NavigationControl())
 
 initDestinationSearch()
 
-startGPSDot()
+loadCultureFilters()
+
+startGPS()
 
 }
 
 
-/* ----------------------------------------------------
-GPS BLUE DOT (SHOWS USER LOCATION)
----------------------------------------------------- */
+/* GPS BLUE DOT */
 
-function startGPSDot(){
+function startGPS(){
 
 navigator.geolocation.watchPosition(pos=>{
 
@@ -389,8 +453,6 @@ userMarker.setLngLat(coords)
 })
 
 }
-
-
 /* ----------------------------------------------------
 DESTINATION SEARCH
 ---------------------------------------------------- */
@@ -403,7 +465,7 @@ accessToken:mapboxgl.accessToken,
 
 mapboxgl:mapboxgl,
 
-placeholder:"Enter destination (museum, gallery, address...)"
+placeholder:"Where are you walking to?"
 
 })
 
@@ -414,9 +476,75 @@ geocoder.on("result",async e=>{
 
 destinationCoords=e.result.center
 
+resetJourney()
+
 await routeFromHere()
 
 })
+
+}
+
+
+/* ----------------------------------------------------
+CULTURE FILTER UI
+---------------------------------------------------- */
+
+async function loadCultureFilters(){
+
+const types=await fetch(API_URL+"?action=cultureTypes").then(r=>r.json())
+
+const container=document.getElementById("culture-filter")
+
+types.forEach(type=>{
+
+const chip=document.createElement("div")
+
+chip.className="filter-chip"
+
+chip.innerText=type
+
+chip.onclick=()=>{
+
+chip.classList.toggle("active")
+
+if(selectedCulture.includes(type)){
+
+selectedCulture=selectedCulture.filter(t=>t!==type)
+
+}else{
+
+selectedCulture.push(type)
+
+}
+
+}
+
+container.appendChild(chip)
+
+})
+
+}
+
+
+/* ----------------------------------------------------
+RESET ROUTE
+---------------------------------------------------- */
+
+function resetJourney(){
+
+routeCoords=null
+
+markers.forEach(m=>m.remove())
+markers=[]
+
+if(map.getSource("route")){
+
+map.removeLayer("route")
+map.removeSource("route")
+
+}
+
+document.getElementById("journey-panel").style.display="none"
 
 }
 
@@ -435,24 +563,34 @@ const startLng=pos.coords.longitude
 const destLng=destinationCoords[0]
 const destLat=destinationCoords[1]
 
-const res=await fetch(
+const url =
 API_URL+
 "?action=routeFromCoords"+
 "&lat="+startLat+
 "&lng="+startLng+
 "&destLng="+destLng+
 "&destLat="+destLat
-)
+
+const res=await fetch(url)
 
 const data=await res.json()
+
+if(!data.geometry){
+
+alert("Route error")
+return
+
+}
 
 routeCoords=data.geometry.coordinates
 
 drawRoute(routeCoords)
 
-await loadEncounters(routeCoords)
-
 zoomToRoute()
+
+/* load cultural sites in background */
+
+loadEncounters(routeCoords)
 
 })
 
@@ -466,11 +604,20 @@ DRAW ROUTE
 function drawRoute(coords){
 
 const geojson={
+
 type:"FeatureCollection",
+
 features:[{
+
 type:"Feature",
-geometry:{type:"LineString",coordinates:coords}
+
+geometry:{
+type:"LineString",
+coordinates:coords
+}
+
 }]
+
 }
 
 if(map.getSource("route")){
@@ -482,13 +629,16 @@ map.getSource("route").setData(geojson)
 map.addSource("route",{type:"geojson",data:geojson})
 
 map.addLayer({
+
 id:"route",
 type:"line",
 source:"route",
+
 paint:{
 "line-color":"#ff2fa3",
 "line-width":6
 }
+
 })
 
 }
@@ -510,51 +660,47 @@ map.fitBounds(bounds,{padding:60})
 
 
 /* ----------------------------------------------------
-ROUTE PREVIEW
+PREVIEW TOUR
 ---------------------------------------------------- */
 
 async function previewJourney(){
 
 if(!routeCoords) return
 
-const stops=[
+const start=routeCoords[0]
 
-routeCoords[0],
+map.flyTo({center:start,zoom:15})
 
-...markers.map(m=>m.getLngLat().toArray()),
+await new Promise(r=>setTimeout(r,1500))
 
-routeCoords[routeCoords.length-1]
-
-]
-
-for(const point of stops){
+for(const marker of markers){
 
 map.flyTo({
-center:point,
-zoom:16,
-pitch:50,
-bearing:map.getBearing()+30,
-duration:2500
+
+center:marker.getLngLat(),
+zoom:16
+
 })
 
-await new Promise(r=>setTimeout(r,2200))
+openEncounter(marker.site)
+
+await new Promise(r=>setTimeout(r,2500))
 
 }
+
+map.flyTo({center:start,zoom:14})
 
 }
 
 
 /* ----------------------------------------------------
-CULTURAL DISCOVERY (UPGRADED QUERY)
+FETCH CULTURAL SITES (OVERPASS + WIKIDATA)
 ---------------------------------------------------- */
 
 async function fetchCulturalSites(coords){
 
-const key=coords.slice(0,40).join("|")
-
-if(siteCache.has(key)) return siteCache.get(key)
-
 const line=turf.lineString(coords)
+
 const bbox=turf.bbox(line)
 
 const query=`
@@ -571,13 +717,9 @@ node["tourism"="artwork"](${bbox[1]},${bbox[0]},${bbox[3]},${bbox[2]});
 
 node["historic"="plaque"](${bbox[1]},${bbox[0]},${bbox[3]},${bbox[2]});
 
-node["artwork_type"](${bbox[1]},${bbox[0]},${bbox[3]},${bbox[2]});
-
 node["amenity"="arts_centre"](${bbox[1]},${bbox[0]},${bbox[3]},${bbox[2]});
 
 node["amenity"="theatre"](${bbox[1]},${bbox[0]},${bbox[3]},${bbox[2]});
-
-node["tourism"="attraction"](${bbox[1]},${bbox[0]},${bbox[3]},${bbox[2]});
 
 node["historic"="house"](${bbox[1]},${bbox[0]},${bbox[3]},${bbox[2]});
 
@@ -605,38 +747,16 @@ if(!lon||!lat) return null
 if(!el.tags?.name) return null
 
 return{
+
 name:el.tags.name,
 coords:[lon,lat],
 tags:el.tags
+
 }
 
 }).filter(Boolean)
 
-siteCache.set(key,sites)
-
 return sites
-
-}
-
-
-/* ----------------------------------------------------
-FILTER SITES ALONG ROUTE
----------------------------------------------------- */
-
-function filterSitesAlongRoute(sites,coords){
-
-const line=turf.lineString(coords)
-
-const corridor=turf.buffer(line,0.25,{units:"kilometers"})
-
-return sites.filter(site=>
-
-turf.booleanPointInPolygon(
-turf.point(site.coords),
-corridor
-)
-
-)
 
 }
 
@@ -645,7 +765,7 @@ corridor
 RANK CULTURAL SITES
 ---------------------------------------------------- */
 
-function rankCulturalSites(sites,coords){
+function rankSites(sites,coords){
 
 const line=turf.lineString(coords)
 
@@ -667,8 +787,10 @@ if(site.tags?.historic) importance=3
 if(site.tags?.tourism==="artwork") importance=2
 
 return{
+
 site:site,
 score:(4-dist)+importance
+
 }
 
 })
@@ -681,21 +803,15 @@ score:(4-dist)+importance
 
 
 /* ----------------------------------------------------
-SPREAD ENCOUNTERS ALONG ROUTE
+SPREAD ENCOUNTERS
 ---------------------------------------------------- */
 
-function spaceEncounters(sites,coords){
+function spreadEncounters(sites){
 
 const spaced=[]
 const used=[]
 
-const line=turf.lineString(coords)
-
 sites.forEach(site=>{
-
-const pt=turf.point(site.coords)
-
-const dist=turf.pointToLineDistance(pt,line,{units:"kilometers"})
 
 let tooClose=false
 
@@ -703,7 +819,7 @@ used.forEach(u=>{
 
 const d=turf.distance(
 turf.point(u.coords),
-pt,
+turf.point(site.coords),
 {units:"kilometers"}
 )
 
@@ -731,22 +847,16 @@ LOAD ENCOUNTERS
 
 async function loadEncounters(coords){
 
-markers.forEach(m=>m.remove())
-markers=[]
-
 const sites=await fetchCulturalSites(coords)
 
-const filtered=filterSitesAlongRoute(sites,coords)
+const ranked=rankSites(sites,coords)
 
-const ranked=rankCulturalSites(filtered,coords)
-
-const selected=spaceEncounters(ranked,coords)
-
-updateJourneyPanel(selected)
+const selected=spreadEncounters(ranked)
 
 selected.forEach((site,i)=>{
 
 const el=document.createElement("div")
+
 el.className="marker-number"
 el.innerText=i+1
 
@@ -765,172 +875,62 @@ markers.push(marker)
 document.getElementById("journey-panel").style.display="block"
 
 }
-
-
 /* ----------------------------------------------------
-JOURNEY PANEL
+ENCOUNTER CARD HTML
 ---------------------------------------------------- */
 
-function updateJourneyPanel(sites){
-
-const panel=document.getElementById("journey-panel")
-
-panel.innerHTML="<b>Your Hot Girl Walk</b><br><br>"
-
-sites.forEach((site,i)=>{
-
-const row=document.createElement("div")
-
-row.style.padding="6px"
-row.style.cursor="pointer"
-
-row.innerHTML=i+1+". "+site.name
-
-row.onclick=()=>{
-
-map.flyTo({
-center:site.coords,
-zoom:16
-})
-
-openEncounter(site)
-
-}
-
-panel.appendChild(row)
-
-})
-
-}
-/* ----------------------------------------------------
-WALK MODE
----------------------------------------------------- */
-
-function startWalk(){
-
-if(!routeCoords){
-alert("Choose a destination first")
-return
-}
-
-if(walkActive) return
-
-walkActive=true
-
-watchId=navigator.geolocation.watchPosition(updateWalk)
-
-document.getElementById("walk-controls").style.display="flex"
-
-}
-
-function pauseWalk(){
-
-if(!walkActive) return
-
-navigator.geolocation.clearWatch(watchId)
-
-walkActive=false
-
-}
-
-function resumeWalk(){
-
-if(walkActive) return
-
-watchId=navigator.geolocation.watchPosition(updateWalk)
-
-walkActive=true
-
-}
-
-function endWalk(){
-
-navigator.geolocation.clearWatch(watchId)
-
-walkActive=false
-
-document.getElementById("walk-controls").style.display="none"
-
-map.easeTo({
-pitch:0,
-bearing:0,
-zoom:14
-})
-
-}
-
-
-/* ----------------------------------------------------
-GPS WALK CAMERA
----------------------------------------------------- */
-
-function updateWalk(pos){
-
-const coords=[pos.coords.longitude,pos.coords.latitude]
-
-if(!userMarker){
-
-userMarker=new mapboxgl.Marker({color:"#2b7cff"})
-.setLngLat(coords)
-.addTo(map)
-
-}else{
-
-userMarker.setLngLat(coords)
-
-}
-
-let bearing=0
-
-if(lastPosition){
-
-bearing=turf.bearing(
-turf.point(lastPosition),
-turf.point(coords)
-)
-
-}
-
-lastPosition=coords
-
-map.easeTo({
-center:coords,
-zoom:17,
-pitch:60,
-bearing:bearing,
-duration:800
-})
-
-checkNearbySites(coords)
-
-}
-
-
-/* ----------------------------------------------------
-AUTO ENCOUNTER TRIGGER
----------------------------------------------------- */
-
-function checkNearbySites(userCoords){
-
-markers.forEach(marker=>{
-
-const site=marker.site
-
-const dist=turf.distance(
-turf.point(userCoords),
-turf.point(site.coords),
-{units:"meters"}
-)
-
-if(dist<40){
-
-openEncounter(site)
-
-}
-
-})
-
-}
+const encounterHTML = `
+<div id="encounter" style="
+position:absolute;
+top:50%;
+left:50%;
+transform:translate(-50%,-50%);
+width:320px;
+background:white;
+padding:16px;
+border-radius:16px;
+box-shadow:0 20px 40px rgba(0,0,0,.4);
+display:none;
+z-index:10;
+">
+
+<img id="encounter-photo" style="
+width:100%;
+height:160px;
+object-fit:cover;
+border-radius:8px
+">
+
+<h3 id="encounter-title"></h3>
+
+<div id="prompt" style="font-style:italic;margin-bottom:8px"></div>
+
+<div class="rating">
+Beauty
+<input id="rating-beauty" type="number" min="1" max="5" value="3">
+</div>
+
+<div class="rating">
+History
+<input id="rating-history" type="number" min="1" max="5" value="3">
+</div>
+
+<div class="rating">
+Hidden Gem
+<input id="rating-hidden" type="number" min="1" max="5" value="3">
+</div>
+
+<textarea id="note" placeholder="Write reflection..."></textarea>
+
+<br><br>
+
+<button onclick="saveEncounter()">Save</button>
+<button onclick="closeEncounter()">Close</button>
+
+</div>
+`
+
+document.body.insertAdjacentHTML("beforeend", encounterHTML)
 
 
 /* ----------------------------------------------------
@@ -980,7 +980,6 @@ return summaryData
 }catch(err){
 
 wikiCache.set(siteName,null)
-
 return null
 
 }
@@ -1002,7 +1001,7 @@ return prompts[Math.floor(Math.random()*prompts.length)]
 
 
 /* ----------------------------------------------------
-OPEN ENCOUNTER CARD
+OPEN ENCOUNTER
 ---------------------------------------------------- */
 
 let currentEncounter=null
@@ -1042,7 +1041,7 @@ document.getElementById("encounter").style.display="none"
 
 
 /* ----------------------------------------------------
-SAVE ENCOUNTER
+SAVE ENCOUNTER → GOOGLE SHEETS
 ---------------------------------------------------- */
 
 async function saveEncounter(){
@@ -1052,11 +1051,24 @@ if(!currentEncounter) return
 const payload={
 
 action:"encounter",
+
 user_id:USER_ID,
+
 site_name:currentEncounter.name,
+
 note:document.getElementById("note").value,
+
 lat:currentEncounter.coords[1],
-lng:currentEncounter.coords[0]
+
+lng:currentEncounter.coords[0],
+
+beauty:document.getElementById("rating-beauty").value,
+
+history:document.getElementById("rating-history").value,
+
+hidden_gem:document.getElementById("rating-hidden").value,
+
+category:"culture"
 
 }
 
@@ -1065,7 +1077,9 @@ method:"POST",
 body:JSON.stringify(payload)
 })
 
-alert("Encounter saved!")
+alert("Saved as memory!")
+
+addMemoryMarker(currentEncounter)
 
 closeEncounter()
 
@@ -1073,7 +1087,30 @@ closeEncounter()
 
 
 /* ----------------------------------------------------
-LOAD MEMORY MARKERS
+MEMORY MARKERS (PHOTO STYLE)
+---------------------------------------------------- */
+
+function addMemoryMarker(site){
+
+const el=document.createElement("div")
+
+el.style.width="32px"
+el.style.height="32px"
+el.style.background="#2b7cff"
+el.style.borderRadius="50%"
+el.style.border="3px solid white"
+
+const marker=new mapboxgl.Marker(el)
+.setLngLat(site.coords)
+.addTo(map)
+
+archiveMarkers.push(marker)
+
+}
+
+
+/* ----------------------------------------------------
+LOAD SAVED MEMORIES
 ---------------------------------------------------- */
 
 async function loadEncounterArchive(){
@@ -1094,13 +1131,13 @@ archiveMarkers.push(marker)
 
 }
 
-async function toggleMemories(){
+
+function toggleMemories(){
 
 if(archiveMarkers.length){
 
 archiveMarkers.forEach(m=>m.remove())
 archiveMarkers=[]
-
 return
 
 }
@@ -1111,14 +1148,111 @@ loadEncounterArchive()
 
 
 /* ----------------------------------------------------
-SHARE CARD
+WALK MODE
 ---------------------------------------------------- */
 
-async function shareEncounter(){
+function startWalk(){
 
-const card=document.getElementById("share-card")
+if(!routeCoords){
 
-const canvas=await html2canvas(card)
+alert("Generate route first")
+return
+
+}
+
+if(walkActive) return
+
+walkActive=true
+
+watchId=navigator.geolocation.watchPosition(updateWalk)
+
+document.getElementById("walk-controls").style.display="flex"
+
+}
+
+
+/* ----------------------------------------------------
+GPS WALK CAMERA
+---------------------------------------------------- */
+
+function updateWalk(pos){
+
+const coords=[pos.coords.longitude,pos.coords.latitude]
+
+if(!userMarker){
+
+userMarker=new mapboxgl.Marker({color:"#2b7cff"})
+.setLngLat(coords)
+.addTo(map)
+
+}else{
+
+userMarker.setLngLat(coords)
+
+}
+
+let bearing=0
+
+if(lastPosition){
+
+bearing=turf.bearing(
+turf.point(lastPosition),
+turf.point(coords)
+)
+
+}
+
+lastPosition=coords
+
+map.easeTo({
+
+center:coords,
+zoom:17,
+pitch:60,
+bearing:bearing,
+duration:800
+
+})
+
+checkNearbySites(coords)
+
+}
+
+
+/* ----------------------------------------------------
+AUTO ENCOUNTER TRIGGER
+---------------------------------------------------- */
+
+function checkNearbySites(userCoords){
+
+markers.forEach(marker=>{
+
+const site=marker.site
+
+const dist=turf.distance(
+turf.point(userCoords),
+turf.point(site.coords),
+{units:"meters"}
+)
+
+if(dist<40){
+
+openEncounter(site)
+
+}
+
+})
+
+}
+
+
+/* ----------------------------------------------------
+SHARE JOURNEY
+---------------------------------------------------- */
+
+async function shareJourney(){
+
+const canvas=await html2canvas(document.body)
 
 canvas.toBlob(async blob=>{
 
@@ -1127,16 +1261,23 @@ const file=new File([blob],"hot-girl-walk.png",{type:"image/png"})
 if(navigator.share){
 
 await navigator.share({
+
 title:"Hot Girl Walk",
+
 text:"Look what I discovered on my walk ✨",
+
 files:[file]
+
 })
 
 }else{
 
 const link=document.createElement("a")
+
 link.href=URL.createObjectURL(blob)
+
 link.download="hot-girl-walk.png"
+
 link.click()
 
 }
