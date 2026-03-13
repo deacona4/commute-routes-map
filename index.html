@@ -168,6 +168,44 @@ cursor:pointer;
 
 }
 
+/* ENCOUNTER CARD */
+
+#encounter{
+
+position:absolute;
+top:50%;
+left:50%;
+transform:translate(-50%,-50%);
+
+width:320px;
+background:white;
+padding:16px;
+border-radius:16px;
+
+box-shadow:0 20px 40px rgba(0,0,0,.4);
+
+display:none;
+
+z-index:10;
+
+}
+
+#encounter img{
+
+width:100%;
+height:160px;
+object-fit:cover;
+border-radius:8px;
+
+}
+
+textarea{
+width:100%;
+margin-top:10px;
+}
+
+/* MARKERS */
+
 .marker-number{
 
 display:flex;
@@ -175,9 +213,12 @@ align-items:center;
 justify-content:center;
 width:28px;
 height:28px;
+
 background:#e63946;
+
 border:3px solid white;
 border-radius:50%;
+
 color:white;
 font-weight:600;
 
@@ -200,9 +241,7 @@ Turn your everyday walk into cultural discovery
 </div>
 
 <div class="home-buttons">
-
 <button onclick="startApp()">Start Walk From Here</button>
-
 </div>
 
 </div>
@@ -216,9 +255,7 @@ Turn your everyday walk into cultural discovery
 <div id="top-nav">
 
 <button onclick="previewJourney()">Preview</button>
-
 <button onclick="startWalk()">Start Walk</button>
-
 <button onclick="toggleMemories()">Memories</button>
 
 </div>
@@ -243,6 +280,25 @@ Encounters will appear here.
 
 </div>
 
+<!-- ENCOUNTER CARD -->
+
+<div id="encounter">
+
+<img id="encounter-photo">
+
+<h3 id="encounter-title"></h3>
+
+<div id="prompt"></div>
+
+<textarea id="note" placeholder="Write reflection..."></textarea>
+
+<br><br>
+
+<button onclick="saveEncounter()">Save</button>
+<button onclick="closeEncounter()">Close</button>
+
+</div>
+
 <div id="map"></div>
 
 <script>
@@ -257,17 +313,22 @@ let markers=[]
 let archiveMarkers=[]
 let siteCache=new Map()
 let wikiCache=new Map()
+
 let watchId=null
 let walkActive=false
 let lastPosition=null
 let userMarker=null
+
 let destinationCoords=null
 
 let USER_ID = localStorage.getItem("hg_user")
 
 if(!USER_ID){
+
 USER_ID = crypto.randomUUID()
+
 localStorage.setItem("hg_user",USER_ID)
+
 }
 
 function startApp(){
@@ -296,6 +357,37 @@ map.addControl(new mapboxgl.NavigationControl())
 
 initDestinationSearch()
 
+startGPSDot()
+
+}
+
+
+/* ----------------------------------------------------
+GPS BLUE DOT (SHOWS USER LOCATION)
+---------------------------------------------------- */
+
+function startGPSDot(){
+
+navigator.geolocation.watchPosition(pos=>{
+
+const coords=[pos.coords.longitude,pos.coords.latitude]
+
+if(!userMarker){
+
+userMarker=new mapboxgl.Marker({color:"#2b7cff"})
+.setLngLat(coords)
+.addTo(map)
+
+map.setCenter(coords)
+
+}else{
+
+userMarker.setLngLat(coords)
+
+}
+
+})
+
 }
 
 
@@ -305,11 +397,11 @@ DESTINATION SEARCH
 
 function initDestinationSearch(){
 
-const geocoder = new MapboxGeocoder({
+const geocoder=new MapboxGeocoder({
 
-accessToken: mapboxgl.accessToken,
+accessToken:mapboxgl.accessToken,
 
-mapboxgl: mapboxgl,
+mapboxgl:mapboxgl,
 
 placeholder:"Enter destination (museum, gallery, address...)"
 
@@ -318,9 +410,9 @@ placeholder:"Enter destination (museum, gallery, address...)"
 document.getElementById("search-bar")
 .appendChild(geocoder.onAdd(map))
 
-geocoder.on("result", async e => {
+geocoder.on("result",async e=>{
 
-destinationCoords = e.result.center
+destinationCoords=e.result.center
 
 await routeFromHere()
 
@@ -377,10 +469,7 @@ const geojson={
 type:"FeatureCollection",
 features:[{
 type:"Feature",
-geometry:{
-type:"LineString",
-coordinates:coords
-}
+geometry:{type:"LineString",coordinates:coords}
 }]
 }
 
@@ -408,16 +497,14 @@ paint:{
 
 
 /* ----------------------------------------------------
-ZOOM MAP TO ROUTE
+ZOOM TO ROUTE
 ---------------------------------------------------- */
 
 function zoomToRoute(){
 
 const bounds=turf.bbox(turf.lineString(routeCoords))
 
-map.fitBounds(bounds,{
-padding:60
-})
+map.fitBounds(bounds,{padding:60})
 
 }
 
@@ -458,7 +545,7 @@ await new Promise(r=>setTimeout(r,2200))
 
 
 /* ----------------------------------------------------
-CULTURAL DISCOVERY
+CULTURAL DISCOVERY (UPGRADED QUERY)
 ---------------------------------------------------- */
 
 async function fetchCulturalSites(coords){
@@ -468,7 +555,6 @@ const key=coords.slice(0,40).join("|")
 if(siteCache.has(key)) return siteCache.get(key)
 
 const line=turf.lineString(coords)
-
 const bbox=turf.bbox(line)
 
 const query=`
@@ -479,19 +565,23 @@ const query=`
 
 node["tourism"~"museum|gallery"](${bbox[1]},${bbox[0]},${bbox[3]},${bbox[2]});
 
-node["historic"~"monument|memorial|building"](${bbox[1]},${bbox[0]},${bbox[3]},${bbox[2]});
+node["historic"~"monument|memorial|building|archaeological_site"](${bbox[1]},${bbox[0]},${bbox[3]},${bbox[2]});
 
 node["tourism"="artwork"](${bbox[1]},${bbox[0]},${bbox[3]},${bbox[2]});
 
-node["artwork_type"](${bbox[1]},${bbox[0]},${bbox[3]},${bbox[2]});
-
 node["historic"="plaque"](${bbox[1]},${bbox[0]},${bbox[3]},${bbox[2]});
+
+node["artwork_type"](${bbox[1]},${bbox[0]},${bbox[3]},${bbox[2]});
 
 node["amenity"="arts_centre"](${bbox[1]},${bbox[0]},${bbox[3]},${bbox[2]});
 
 node["amenity"="theatre"](${bbox[1]},${bbox[0]},${bbox[3]},${bbox[2]});
 
 node["tourism"="attraction"](${bbox[1]},${bbox[0]},${bbox[3]},${bbox[2]});
+
+node["historic"="house"](${bbox[1]},${bbox[0]},${bbox[3]},${bbox[2]});
+
+node["heritage"](${bbox[1]},${bbox[0]},${bbox[3]},${bbox[2]});
 
 );
 
@@ -501,10 +591,7 @@ out center;
 
 const res=await fetch(
 "https://overpass.kumi.systems/api/interpreter",
-{
-method:"POST",
-body:query
-}
+{method:"POST",body:query}
 )
 
 const data=await res.json()
@@ -518,11 +605,9 @@ if(!lon||!lat) return null
 if(!el.tags?.name) return null
 
 return{
-
 name:el.tags.name,
 coords:[lon,lat],
 tags:el.tags
-
 }
 
 }).filter(Boolean)
@@ -542,11 +627,7 @@ function filterSitesAlongRoute(sites,coords){
 
 const line=turf.lineString(coords)
 
-const corridor=turf.buffer(
-line,
-0.25,
-{units:"kilometers"}
-)
+const corridor=turf.buffer(line,0.25,{units:"kilometers"})
 
 return sites.filter(site=>
 
@@ -580,14 +661,14 @@ line,
 
 let importance=1
 
-if(site.tags?.tourism==="museum") importance=3
-if(site.tags?.tourism==="gallery") importance=2
-if(site.tags?.historic) importance=2
+if(site.tags?.tourism==="museum") importance=4
+if(site.tags?.tourism==="gallery") importance=3
+if(site.tags?.historic) importance=3
 if(site.tags?.tourism==="artwork") importance=2
 
 return{
 site:site,
-score:(3-dist)+importance
+score:(4-dist)+importance
 }
 
 })
@@ -600,13 +681,57 @@ score:(3-dist)+importance
 
 
 /* ----------------------------------------------------
+SPREAD ENCOUNTERS ALONG ROUTE
+---------------------------------------------------- */
+
+function spaceEncounters(sites,coords){
+
+const spaced=[]
+const used=[]
+
+const line=turf.lineString(coords)
+
+sites.forEach(site=>{
+
+const pt=turf.point(site.coords)
+
+const dist=turf.pointToLineDistance(pt,line,{units:"kilometers"})
+
+let tooClose=false
+
+used.forEach(u=>{
+
+const d=turf.distance(
+turf.point(u.coords),
+pt,
+{units:"kilometers"}
+)
+
+if(d<0.5) tooClose=true
+
+})
+
+if(!tooClose){
+
+spaced.push(site)
+used.push(site)
+
+}
+
+})
+
+return spaced.slice(0,4)
+
+}
+
+
+/* ----------------------------------------------------
 LOAD ENCOUNTERS
 ---------------------------------------------------- */
 
 async function loadEncounters(coords){
 
 markers.forEach(m=>m.remove())
-
 markers=[]
 
 const sites=await fetchCulturalSites(coords)
@@ -615,16 +740,14 @@ const filtered=filterSitesAlongRoute(sites,coords)
 
 const ranked=rankCulturalSites(filtered,coords)
 
-const selected=ranked.slice(0,4)
+const selected=spaceEncounters(ranked,coords)
 
 updateJourneyPanel(selected)
 
 selected.forEach((site,i)=>{
 
 const el=document.createElement("div")
-
 el.className="marker-number"
-
 el.innerText=i+1
 
 const marker=new mapboxgl.Marker(el)
@@ -738,7 +861,7 @@ zoom:14
 
 
 /* ----------------------------------------------------
-GPS UPDATE
+GPS WALK CAMERA
 ---------------------------------------------------- */
 
 function updateWalk(pos){
@@ -831,7 +954,6 @@ const searchData=await searchRes.json()
 if(!searchData.query.search.length){
 
 wikiCache.set(siteName,null)
-
 return null
 
 }
@@ -845,7 +967,6 @@ const summaryRes=await fetch(summaryURL)
 if(!summaryRes.ok){
 
 wikiCache.set(siteName,null)
-
 return null
 
 }
@@ -875,15 +996,13 @@ async function fetchPrompt(){
 
 const prompts=await fetch(API_URL+"?action=prompts").then(r=>r.json())
 
-return prompts[
-Math.floor(Math.random()*prompts.length)
-]
+return prompts[Math.floor(Math.random()*prompts.length)]
 
 }
 
 
 /* ----------------------------------------------------
-OPEN ENCOUNTER
+OPEN ENCOUNTER CARD
 ---------------------------------------------------- */
 
 let currentEncounter=null
@@ -954,7 +1073,7 @@ closeEncounter()
 
 
 /* ----------------------------------------------------
-MEMORY MARKERS
+LOAD MEMORY MARKERS
 ---------------------------------------------------- */
 
 async function loadEncounterArchive(){
