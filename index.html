@@ -5,7 +5,6 @@
 
 <meta charset="utf-8">
 <title>Hot Girl Walk</title>
-
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <link href="https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.css" rel="stylesheet">
@@ -34,22 +33,17 @@ height:100vh;
 /* HOME SCREEN */
 
 #home-screen{
-
 position:absolute;
 top:0;
 left:0;
 width:100%;
 height:100%;
-
 background:#ff2fa3;
-
 display:flex;
 flex-direction:column;
 justify-content:center;
 align-items:center;
-
 z-index:20;
-
 }
 
 .home-title{
@@ -68,433 +62,85 @@ margin-top:30px;
 }
 
 .home-buttons button{
-
 padding:14px 24px;
 border:none;
 border-radius:10px;
-
 background:white;
 color:#ff2fa3;
-
 font-weight:700;
 cursor:pointer;
-
 }
 
 /* SEARCH PANEL */
 
 #search-panel{
-
 position:absolute;
 top:20px;
 right:20px;
-
 background:white;
-
 padding:12px;
-
 border-radius:12px;
-
 box-shadow:0 4px 16px rgba(0,0,0,0.2);
-
 z-index:5;
-
 width:340px;
-
 display:flex;
 flex-direction:column;
 gap:8px;
-
 }
 
 #route-button{
-
 padding:10px;
 border:none;
-
 background:#ff2fa3;
 color:white;
-
 font-weight:700;
-
 border-radius:8px;
 cursor:pointer;
-
 }
 
 /* NAV */
 
 #nav{
-
 position:absolute;
-
 bottom:20px;
 left:50%;
-
 transform:translateX(-50%);
-
 background:white;
-
 padding:8px 14px;
-
 border-radius:20px;
-
 box-shadow:0 4px 16px rgba(0,0,0,.2);
-
 z-index:5;
-
 }
 
 #nav button{
-
 border:none;
 background:none;
-
 margin:0 6px;
 font-weight:600;
 cursor:pointer;
-
 }
 
 /* ENCOUNTER CARD */
 
 #encounter{
-
 position:absolute;
 top:50%;
 left:50%;
-
 transform:translate(-50%,-50%);
-
 width:320px;
-
 background:white;
-
 padding:16px;
-
 border-radius:16px;
-
 box-shadow:0 20px 40px rgba(0,0,0,.4);
-
 display:none;
-
 z-index:10;
-
 }
 
 #encounter img{
-
 width:100%;
 height:160px;
 object-fit:cover;
-
 border-radius:8px;
-
-}
-
-textarea{
-width:100%;
-margin-top:10px;
-}
-
-<div id="home-screen">
-
-<div class="home-title">Hot Girl Walk</div>
-
-<div class="home-sub">
-Turn everyday routes into cultural discovery
-</div>
-
-<div class="home-buttons">
-<button onclick="startApp()">Start Walk</button>
-</div>
-
-</div>
-
-<div id="search-panel">
-
-<div id="start-search"></div>
-<div id="dest-search"></div>
-
-<button id="route-button">Generate Route</button>
-
-</div>
-
-<div id="nav">
-
-<button onclick="previewJourney()">Preview</button>
-<button onclick="startWalk()">Walk</button>
-<button onclick="toggleMemories()">Memories</button>
-
-</div>
-
-<div id="map"></div>
-
-<div id="encounter">
-
-<img id="encounter-photo">
-
-<h3 id="encounter-title"></h3>
-
-<div id="prompt"></div>
-
-<div>Beauty <input id="rating-beauty" type="number" min="1" max="5" value="3"></div>
-<div>History <input id="rating-history" type="number" min="1" max="5" value="3"></div>
-<div>Hidden Gem <input id="rating-hidden" type="number" min="1" max="5" value="3"></div>
-
-<textarea id="note" placeholder="Write reflection..."></textarea>
-
-<br><br>
-
-<button onclick="saveEncounter()">Save</button>
-<button onclick="closeEncounter()">Close</button>
-
-</div>
-
-<script>
-
-mapboxgl.accessToken="pk.eyJ1IjoiYmlnYWwxIiwiYSI6ImNtbWIzODZuaDA0cWYycXIyMXVydmx1eDkifQ.2tS6Ro5jbDlGjbR74_Ox0Q"
-
-const API_URL="https://script.google.com/macros/s/AKfycbxbbqrRbYRrcf_e7GhzEqQ5Kg2FZr0y5JvRC63zbwzgFCYDxqaAHXi5KrD3EfoDebFR/exec"
-
-let map
-let routeCoords=null
-let markers=[]
-let archiveMarkers=[]
-
-let destinationCoords=null
-let startCoords=null
-
-let userMarker=null
-let watchId=null
-
-let USER_ID = localStorage.getItem("hg_user")
-
-if(!USER_ID){
-
-USER_ID = crypto.randomUUID()
-localStorage.setItem("hg_user",USER_ID)
-
-}
-
-function startApp(){
-
-document.getElementById("home-screen").style.display="none"
-
-initMap()
-
-}
-
-function initMap(){
-
-map=new mapboxgl.Map({
-
-container:"map",
-style:"mapbox://styles/mapbox/streets-v12",
-center:[-0.1276,51.5072],
-zoom:12
-
-})
-
-map.addControl(new mapboxgl.NavigationControl())
-
-startGPS()
-
-initSearch()
-
-}
-<!DOCTYPE html>
-<html>
-
-<head>
-
-<meta charset="utf-8">
-<title>Hot Girl Walk</title>
-
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<link href="https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.css" rel="stylesheet">
-<script src="https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.js"></script>
-
-<link href="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v5.0.0/mapbox-gl-geocoder.css" rel="stylesheet">
-<script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v5.0.0/mapbox-gl-geocoder.min.js"></script>
-
-<script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
-<script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
-
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
-
-<style>
-
-body{
-margin:0;
-font-family:'Inter',sans-serif;
-}
-
-#map{
-width:100%;
-height:100vh;
-}
-
-/* HOME SCREEN */
-
-#home-screen{
-
-position:absolute;
-top:0;
-left:0;
-width:100%;
-height:100%;
-
-background:#ff2fa3;
-
-display:flex;
-flex-direction:column;
-justify-content:center;
-align-items:center;
-
-z-index:20;
-
-}
-
-.home-title{
-font-size:64px;
-font-weight:800;
-color:white;
-}
-
-.home-sub{
-color:white;
-margin-top:10px;
-}
-
-.home-buttons{
-margin-top:30px;
-}
-
-.home-buttons button{
-
-padding:14px 24px;
-border:none;
-border-radius:10px;
-
-background:white;
-color:#ff2fa3;
-
-font-weight:700;
-cursor:pointer;
-
-}
-
-/* SEARCH PANEL */
-
-#search-panel{
-
-position:absolute;
-top:20px;
-right:20px;
-
-background:white;
-
-padding:12px;
-
-border-radius:12px;
-
-box-shadow:0 4px 16px rgba(0,0,0,0.2);
-
-z-index:5;
-
-width:340px;
-
-display:flex;
-flex-direction:column;
-gap:8px;
-
-}
-
-#route-button{
-
-padding:10px;
-border:none;
-
-background:#ff2fa3;
-color:white;
-
-font-weight:700;
-
-border-radius:8px;
-cursor:pointer;
-
-}
-
-/* NAV */
-
-#nav{
-
-position:absolute;
-
-bottom:20px;
-left:50%;
-
-transform:translateX(-50%);
-
-background:white;
-
-padding:8px 14px;
-
-border-radius:20px;
-
-box-shadow:0 4px 16px rgba(0,0,0,.2);
-
-z-index:5;
-
-}
-
-#nav button{
-
-border:none;
-background:none;
-
-margin:0 6px;
-font-weight:600;
-cursor:pointer;
-
-}
-
-/* ENCOUNTER CARD */
-
-#encounter{
-
-position:absolute;
-top:50%;
-left:50%;
-
-transform:translate(-50%,-50%);
-
-width:320px;
-
-background:white;
-
-padding:16px;
-
-border-radius:16px;
-
-box-shadow:0 20px 40px rgba(0,0,0,.4);
-
-display:none;
-
-z-index:10;
-
-}
-
-#encounter img{
-
-width:100%;
-height:160px;
-object-fit:cover;
-
-border-radius:8px;
-
 }
 
 textarea{
@@ -532,11 +178,8 @@ Turn everyday routes into cultural discovery
 </div>
 
 <div id="nav">
-
-<button onclick="previewJourney()">Preview</button>
 <button onclick="startWalk()">Walk</button>
 <button onclick="toggleMemories()">Memories</button>
-
 </div>
 
 <div id="map"></div>
@@ -564,53 +207,51 @@ Turn everyday routes into cultural discovery
 
 <script>
 
+/* CONFIG */
+
 mapboxgl.accessToken="pk.eyJ1IjoiYmlnYWwxIiwiYSI6ImNtbWIzODZuaDA0cWYycXIyMXVydmx1eDkifQ.2tS6Ro5jbDlGjbR74_Ox0Q"
 
 const API_URL="https://script.google.com/macros/s/AKfycbxbbqrRbYRrcf_e7GhzEqQ5Kg2FZr0y5JvRC63zbwzgFCYDxqaAHXi5KrD3EfoDebFR/exec"
+
+/* STATE */
 
 let map
 let routeCoords=null
 let markers=[]
 let archiveMarkers=[]
-
 let destinationCoords=null
 let startCoords=null
-
 let userMarker=null
 let watchId=null
 
 let USER_ID = localStorage.getItem("hg_user")
 
 if(!USER_ID){
-
 USER_ID = crypto.randomUUID()
 localStorage.setItem("hg_user",USER_ID)
-
 }
+
+/* START APP */
 
 function startApp(){
-
 document.getElementById("home-screen").style.display="none"
-
 initMap()
-
 }
+
+/* MAP INIT */
 
 function initMap(){
 
 map=new mapboxgl.Map({
-
 container:"map",
 style:"mapbox://styles/mapbox/streets-v12",
 center:[-0.1276,51.5072],
 zoom:12
-
 })
 
 map.addControl(new mapboxgl.NavigationControl())
 
 startGPS()
-
 initSearch()
 
 }
@@ -642,13 +283,9 @@ userMarker.setLngLat(coords)
 
 },
 
-err=>{
-console.log("GPS error",err)
-},
+err=>{console.log("GPS error",err)},
 
-{
-enableHighAccuracy:true
-}
+{enableHighAccuracy:true}
 
 )
 
@@ -692,7 +329,6 @@ destGeocoder.on("result",e=>{
 destinationCoords=e.result.center
 })
 
-
 document.getElementById("route-button").onclick=generateRouteFromSearch
 
 }
@@ -705,11 +341,8 @@ ROUTE BUTTON
 function generateRouteFromSearch(){
 
 if(!destinationCoords){
-
 alert("Choose a destination")
-
 return
-
 }
 
 if(startCoords){
@@ -747,14 +380,11 @@ API_URL+
 "&destLat="+destinationCoords[1]
 
 const res=await fetch(url)
-
 const data=await res.json()
 
 if(!data.geometry){
-
 alert("Route error")
 return
-
 }
 
 routeCoords=data.geometry.coordinates
@@ -775,14 +405,11 @@ DRAW ROUTE
 function drawRoute(coords){
 
 const geojson={
-
 type:"FeatureCollection",
-
 features:[{
 type:"Feature",
 geometry:{type:"LineString",coordinates:coords}
 }]
-
 }
 
 if(map.getSource("route")){
@@ -824,17 +451,95 @@ turf.lineString(routeCoords)
 map.fitBounds(bounds,{padding:60})
 
 }
+
+
 /* ----------------------------------------------------
-WIKIPEDIA LOOKUP
+CULTURAL LANDMARK QUERY
+(Better Overpass)
+---------------------------------------------------- */
+
+async function loadEncounters(coords){
+
+markers.forEach(m=>m.remove())
+markers=[]
+
+const line=turf.lineString(coords)
+const bbox=turf.bbox(line)
+
+const query=`
+[out:json][timeout:25];
+(
+node["tourism"~"museum|gallery"](${bbox[1]},${bbox[0]},${bbox[3]},${bbox[2]});
+node["tourism"="artwork"](${bbox[1]},${bbox[0]},${bbox[3]},${bbox[2]});
+node["historic"~"monument|memorial|castle"](${bbox[1]},${bbox[0]},${bbox[3]},${bbox[2]});
+node["historic"="building"](${bbox[1]},${bbox[0]},${bbox[3]},${bbox[2]});
+node["amenity"="arts_centre"](${bbox[1]},${bbox[0]},${bbox[3]},${bbox[2]});
+node["amenity"="theatre"](${bbox[1]},${bbox[0]},${bbox[3]},${bbox[2]});
+);
+out center;
+`
+
+const res=await fetch(
+"https://overpass-api.de/api/interpreter",
+{method:"POST",body:query}
+)
+
+const data=await res.json()
+
+const sites=data.elements.map(el=>{
+
+const lon=el.lon||el.center?.lon
+const lat=el.lat||el.center?.lat
+
+if(!lon||!lat) return null
+if(!el.tags?.name) return null
+
+return{
+name:el.tags.name,
+coords:[lon,lat]
+}
+
+}).filter(Boolean)
+
+sites.slice(0,4).forEach((site,i)=>{
+
+const el=document.createElement("div")
+
+el.style.width="28px"
+el.style.height="28px"
+el.style.borderRadius="50%"
+el.style.background="#ff2fa3"
+el.style.color="white"
+el.style.display="flex"
+el.style.alignItems="center"
+el.style.justifyContent="center"
+
+el.innerText=i+1
+
+const marker=new mapboxgl.Marker(el)
+.setLngLat(site.coords)
+.addTo(map)
+
+marker.site=site
+
+marker.getElement().onclick=()=>openEncounter(site)
+
+markers.push(marker)
+
+})
+
+}
+
+
+/* ----------------------------------------------------
+WIKIPEDIA IMAGE LOOKUP
 ---------------------------------------------------- */
 
 let wikiCache=new Map()
 
 async function fetchWiki(siteName){
 
-if(wikiCache.has(siteName)){
-return wikiCache.get(siteName)
-}
+if(wikiCache.has(siteName)) return wikiCache.get(siteName)
 
 try{
 
@@ -844,28 +549,21 @@ const searchURL=
 const searchRes=await fetch(searchURL)
 const searchData=await searchRes.json()
 
-if(!searchData.query.search.length){
-wikiCache.set(siteName,null)
-return null
-}
+if(!searchData.query.search.length) return null
 
 const pageTitle=searchData.query.search[0].title
 
 const summaryURL=
 `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(pageTitle)}`
 
-const summaryRes=await fetch(summaryURL)
-const summaryData=await summaryRes.json()
+const res=await fetch(summaryURL)
+const data=await res.json()
 
-wikiCache.set(siteName,summaryData)
+wikiCache.set(siteName,data)
 
-return summaryData
+return data
 
-}catch(err){
-
-console.warn("Wiki lookup failed",siteName)
-
-wikiCache.set(siteName,null)
+}catch{
 
 return null
 
@@ -875,13 +573,12 @@ return null
 
 
 /* ----------------------------------------------------
-REFLECTION PROMPTS
+PROMPTS
 ---------------------------------------------------- */
 
 async function fetchPrompt(){
 
-const prompts=await fetch(API_URL+"?action=prompts")
-.then(r=>r.json())
+const prompts=await fetch(API_URL+"?action=prompts").then(r=>r.json())
 
 return prompts[Math.floor(Math.random()*prompts.length)]
 
@@ -898,25 +595,19 @@ async function openEncounter(site){
 
 currentEncounter=site
 
-document.getElementById("encounter-title")
-.innerText=site.name
+document.getElementById("encounter-title").innerText=site.name
 
 const wiki=await fetchWiki(site.name)
 
 if(wiki?.thumbnail){
-
-document.getElementById("encounter-photo")
-.src=wiki.thumbnail.source
-
+document.getElementById("encounter-photo").src=wiki.thumbnail.source
 }
 
 const prompt=await fetchPrompt()
 
-document.getElementById("prompt")
-.innerText=prompt
+document.getElementById("prompt").innerText=prompt
 
-document.getElementById("encounter")
-.style.display="block"
+document.getElementById("encounter").style.display="block"
 
 }
 
@@ -926,15 +617,12 @@ CLOSE ENCOUNTER
 ---------------------------------------------------- */
 
 function closeEncounter(){
-
-document.getElementById("encounter")
-.style.display="none"
-
+document.getElementById("encounter").style.display="none"
 }
 
 
 /* ----------------------------------------------------
-SAVE ENCOUNTER → GOOGLE SHEETS
+SAVE ENCOUNTER
 ---------------------------------------------------- */
 
 async function saveEncounter(){
@@ -956,9 +644,7 @@ lng:currentEncounter.coords[0],
 
 beauty:document.getElementById("rating-beauty").value,
 history:document.getElementById("rating-history").value,
-hidden_gem:document.getElementById("rating-hidden").value,
-
-category:"culture"
+hidden_gem:document.getElementById("rating-hidden").value
 
 }
 
@@ -977,7 +663,7 @@ alert("Encounter saved!")
 
 
 /* ----------------------------------------------------
-ADD MEMORY MARKER
+MEMORY MARKERS
 ---------------------------------------------------- */
 
 function addMemoryMarker(site){
@@ -992,7 +678,7 @@ archiveMarkers.push(marker)
 
 
 /* ----------------------------------------------------
-LOAD SAVED MEMORIES
+TOGGLE MEMORIES
 ---------------------------------------------------- */
 
 async function toggleMemories(){
@@ -1000,8 +686,7 @@ async function toggleMemories(){
 archiveMarkers.forEach(m=>m.remove())
 archiveMarkers=[]
 
-const data=await fetch(API_URL+"?action=encounters")
-.then(r=>r.json())
+const data=await fetch(API_URL+"?action=encounters").then(r=>r.json())
 
 data.forEach(e=>{
 
@@ -1016,6 +701,8 @@ archiveMarkers.push(marker)
 })
 
 }
+
+
 /* ----------------------------------------------------
 START WALK MODE
 ---------------------------------------------------- */
@@ -1035,7 +722,7 @@ watchId=navigator.geolocation.watchPosition(updateWalk)
 
 
 /* ----------------------------------------------------
-UPDATE WALK POSITION
+WALK GPS CAMERA
 ---------------------------------------------------- */
 
 let lastPosition=null
@@ -1043,8 +730,6 @@ let lastPosition=null
 function updateWalk(pos){
 
 const coords=[pos.coords.longitude,pos.coords.latitude]
-
-/* update blue dot */
 
 if(!userMarker){
 
@@ -1057,9 +742,6 @@ userMarker=new mapboxgl.Marker({color:"#2b7cff"})
 userMarker.setLngLat(coords)
 
 }
-
-
-/* calculate bearing */
 
 let bearing=0
 
@@ -1074,21 +756,13 @@ turf.point(coords)
 
 lastPosition=coords
 
-
-/* navigation camera */
-
 map.easeTo({
-
 center:coords,
 zoom:17,
 pitch:60,
 bearing:bearing,
 duration:800
-
 })
-
-
-/* check encounters */
 
 checkNearbySites(coords)
 
@@ -1117,55 +791,6 @@ openEncounter(site)
 
 }
 
-})
-
-}
-
-
-/* ----------------------------------------------------
-PAUSE WALK
----------------------------------------------------- */
-
-function pauseWalk(){
-
-if(!watchId) return
-
-navigator.geolocation.clearWatch(watchId)
-
-watchId=null
-
-}
-
-
-/* ----------------------------------------------------
-RESUME WALK
----------------------------------------------------- */
-
-function resumeWalk(){
-
-if(watchId) return
-
-watchId=navigator.geolocation.watchPosition(updateWalk)
-
-}
-
-
-/* ----------------------------------------------------
-END WALK
----------------------------------------------------- */
-
-function endWalk(){
-
-if(!watchId) return
-
-navigator.geolocation.clearWatch(watchId)
-
-watchId=null
-
-map.easeTo({
-pitch:0,
-bearing:0,
-zoom:14
 })
 
 }
