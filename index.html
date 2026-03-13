@@ -15,6 +15,7 @@
 <script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v5.0.0/mapbox-gl-geocoder.min.js"></script>
 
 <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
+<script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
 
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
 
@@ -30,20 +31,25 @@ width:100%;
 height:100vh;
 }
 
-/* HOME */
+/* HOME SCREEN */
 
 #home-screen{
+
 position:absolute;
 top:0;
 left:0;
 width:100%;
 height:100%;
+
 background:#ff2fa3;
+
 display:flex;
 flex-direction:column;
 justify-content:center;
 align-items:center;
+
 z-index:20;
+
 }
 
 .home-title{
@@ -62,85 +68,128 @@ margin-top:30px;
 }
 
 .home-buttons button{
-padding:14px 26px;
+
+padding:14px 24px;
 border:none;
 border-radius:10px;
+
 background:white;
 color:#ff2fa3;
+
 font-weight:700;
 cursor:pointer;
+
 }
 
 /* SEARCH PANEL */
 
 #search-panel{
+
 position:absolute;
 top:20px;
 right:20px;
+
 background:white;
-padding:14px;
+
+padding:12px;
+
 border-radius:12px;
+
 box-shadow:0 4px 16px rgba(0,0,0,0.2);
+
 z-index:5;
-width:320px;
+
+width:340px;
+
 display:flex;
 flex-direction:column;
-gap:10px;
+gap:8px;
+
 }
 
 #route-button{
+
 padding:10px;
 border:none;
+
 background:#ff2fa3;
 color:white;
+
 font-weight:700;
+
 border-radius:8px;
 cursor:pointer;
+
 }
 
 /* NAV */
 
 #nav{
+
 position:absolute;
+
 bottom:20px;
 left:50%;
+
 transform:translateX(-50%);
+
 background:white;
+
 padding:8px 14px;
+
 border-radius:20px;
+
 box-shadow:0 4px 16px rgba(0,0,0,.2);
+
 z-index:5;
+
 }
 
 #nav button{
+
 border:none;
 background:none;
+
 margin:0 6px;
 font-weight:600;
 cursor:pointer;
+
 }
 
 /* ENCOUNTER CARD */
 
 #encounter{
+
 position:absolute;
 top:50%;
 left:50%;
+
 transform:translate(-50%,-50%);
+
 width:320px;
+
 background:white;
+
 padding:16px;
+
 border-radius:16px;
+
 box-shadow:0 20px 40px rgba(0,0,0,.4);
+
 display:none;
+
 z-index:10;
+
 }
 
 #encounter img{
+
 width:100%;
 height:160px;
 object-fit:cover;
+
 border-radius:8px;
+
 }
 
 textarea{
@@ -212,16 +261,27 @@ Turn everyday routes into cultural discovery
 
 mapboxgl.accessToken="pk.eyJ1IjoiYmlnYWwxIiwiYSI6ImNtbWIzODZuaDA0cWYycXIyMXVydmx1eDkifQ.2tS6Ro5jbDlGjbR74_Ox0Q"
 
-const API_URL="https://script.google.com/macros/s/AKfycbzsEk_HK8IyKr6YkuL442lB4xnWAaQTLLV6LUfXQ6Gd-3oZKEjrg9yqkEWytoAD5Ye-/exec"
+const API_URL="https://script.google.com/macros/s/AKfycbxbbqrRbYRrcf_e7GhzEqQ5Kg2FZr0y5JvRC63zbwzgFCYDxqaAHXi5KrD3EfoDebFR/exec"
 
 let map
 let routeCoords=null
 let markers=[]
 let archiveMarkers=[]
+
 let destinationCoords=null
 let startCoords=null
+
 let userMarker=null
 let watchId=null
+
+let USER_ID = localStorage.getItem("hg_user")
+
+if(!USER_ID){
+
+USER_ID = crypto.randomUUID()
+localStorage.setItem("hg_user",USER_ID)
+
+}
 
 function startApp(){
 
@@ -234,10 +294,12 @@ initMap()
 function initMap(){
 
 map=new mapboxgl.Map({
+
 container:"map",
 style:"mapbox://styles/mapbox/streets-v12",
 center:[-0.1276,51.5072],
 zoom:12
+
 })
 
 map.addControl(new mapboxgl.NavigationControl())
@@ -264,6 +326,7 @@ initSearch()
 <script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v5.0.0/mapbox-gl-geocoder.min.js"></script>
 
 <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
+<script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
 
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
 
@@ -279,20 +342,25 @@ width:100%;
 height:100vh;
 }
 
-/* HOME */
+/* HOME SCREEN */
 
 #home-screen{
+
 position:absolute;
 top:0;
 left:0;
 width:100%;
 height:100%;
+
 background:#ff2fa3;
+
 display:flex;
 flex-direction:column;
 justify-content:center;
 align-items:center;
+
 z-index:20;
+
 }
 
 .home-title{
@@ -311,85 +379,128 @@ margin-top:30px;
 }
 
 .home-buttons button{
-padding:14px 26px;
+
+padding:14px 24px;
 border:none;
 border-radius:10px;
+
 background:white;
 color:#ff2fa3;
+
 font-weight:700;
 cursor:pointer;
+
 }
 
 /* SEARCH PANEL */
 
 #search-panel{
+
 position:absolute;
 top:20px;
 right:20px;
+
 background:white;
-padding:14px;
+
+padding:12px;
+
 border-radius:12px;
+
 box-shadow:0 4px 16px rgba(0,0,0,0.2);
+
 z-index:5;
-width:320px;
+
+width:340px;
+
 display:flex;
 flex-direction:column;
-gap:10px;
+gap:8px;
+
 }
 
 #route-button{
+
 padding:10px;
 border:none;
+
 background:#ff2fa3;
 color:white;
+
 font-weight:700;
+
 border-radius:8px;
 cursor:pointer;
+
 }
 
 /* NAV */
 
 #nav{
+
 position:absolute;
+
 bottom:20px;
 left:50%;
+
 transform:translateX(-50%);
+
 background:white;
+
 padding:8px 14px;
+
 border-radius:20px;
+
 box-shadow:0 4px 16px rgba(0,0,0,.2);
+
 z-index:5;
+
 }
 
 #nav button{
+
 border:none;
 background:none;
+
 margin:0 6px;
 font-weight:600;
 cursor:pointer;
+
 }
 
 /* ENCOUNTER CARD */
 
 #encounter{
+
 position:absolute;
 top:50%;
 left:50%;
+
 transform:translate(-50%,-50%);
+
 width:320px;
+
 background:white;
+
 padding:16px;
+
 border-radius:16px;
+
 box-shadow:0 20px 40px rgba(0,0,0,.4);
+
 display:none;
+
 z-index:10;
+
 }
 
 #encounter img{
+
 width:100%;
 height:160px;
 object-fit:cover;
+
 border-radius:8px;
+
 }
 
 textarea{
@@ -459,18 +570,29 @@ Turn everyday routes into cultural discovery
 
 <script>
 
-mapboxgl.accessToken="YOUR_MAPBOX_TOKEN"
+mapboxgl.accessToken="pk.eyJ1IjoiYmlnYWwxIiwiYSI6ImNtbWIzODZuaDA0cWYycXIyMXVydmx1eDkifQ.2tS6Ro5jbDlGjbR74_Ox0Q"
 
-const API_URL="YOUR_APPS_SCRIPT_URL"
+const API_URL="https://script.google.com/macros/s/AKfycbxbbqrRbYRrcf_e7GhzEqQ5Kg2FZr0y5JvRC63zbwzgFCYDxqaAHXi5KrD3EfoDebFR/exec"
 
 let map
 let routeCoords=null
 let markers=[]
 let archiveMarkers=[]
+
 let destinationCoords=null
 let startCoords=null
+
 let userMarker=null
 let watchId=null
+
+let USER_ID = localStorage.getItem("hg_user")
+
+if(!USER_ID){
+
+USER_ID = crypto.randomUUID()
+localStorage.setItem("hg_user",USER_ID)
+
+}
 
 function startApp(){
 
@@ -483,10 +605,12 @@ initMap()
 function initMap(){
 
 map=new mapboxgl.Map({
+
 container:"map",
 style:"mapbox://styles/mapbox/streets-v12",
 center:[-0.1276,51.5072],
 zoom:12
+
 })
 
 map.addControl(new mapboxgl.NavigationControl())
@@ -496,175 +620,564 @@ startGPS()
 initSearch()
 
 }
-async function loadEncounters(coords){
+/* ----------------------------------------------------
+GPS BLUE DOT
+---------------------------------------------------- */
 
-markers.forEach(m=>m.remove())
-markers=[]
+function startGPS(){
 
-const line=turf.lineString(coords)
-const bbox=turf.bbox(line)
+navigator.geolocation.watchPosition(
 
-const query=`
-[out:json];
-(
-node["tourism"~"museum|gallery"](${bbox[1]},${bbox[0]},${bbox[3]},${bbox[2]});
-node["historic"~"monument|memorial"](${bbox[1]},${bbox[0]},${bbox[3]},${bbox[2]});
-node["tourism"="artwork"](${bbox[1]},${bbox[0]},${bbox[3]},${bbox[2]});
-);
-out center;
-`
+pos=>{
 
-const res=await fetch(
-"https://overpass.kumi.systems/api/interpreter",
-{method:"POST",body:query}
+const coords=[pos.coords.longitude,pos.coords.latitude]
+
+if(!userMarker){
+
+userMarker=new mapboxgl.Marker({color:"#2b7cff"})
+.setLngLat(coords)
+.addTo(map)
+
+map.setCenter(coords)
+
+}else{
+
+userMarker.setLngLat(coords)
+
+}
+
+},
+
+err=>{
+console.log("GPS error",err)
+},
+
+{
+enableHighAccuracy:true
+}
+
 )
+
+}
+
+
+/* ----------------------------------------------------
+SEARCH SYSTEM
+---------------------------------------------------- */
+
+function initSearch(){
+
+const startGeocoder=new MapboxGeocoder({
+
+accessToken:mapboxgl.accessToken,
+mapboxgl:mapboxgl,
+placeholder:"Start location (or use GPS)"
+
+})
+
+document.getElementById("start-search")
+.appendChild(startGeocoder.onAdd(map))
+
+startGeocoder.on("result",e=>{
+startCoords=e.result.center
+})
+
+
+const destGeocoder=new MapboxGeocoder({
+
+accessToken:mapboxgl.accessToken,
+mapboxgl:mapboxgl,
+placeholder:"Destination"
+
+})
+
+document.getElementById("dest-search")
+.appendChild(destGeocoder.onAdd(map))
+
+destGeocoder.on("result",e=>{
+destinationCoords=e.result.center
+})
+
+
+document.getElementById("route-button").onclick=generateRouteFromSearch
+
+}
+
+
+/* ----------------------------------------------------
+ROUTE BUTTON
+---------------------------------------------------- */
+
+function generateRouteFromSearch(){
+
+if(!destinationCoords){
+
+alert("Choose a destination")
+
+return
+
+}
+
+if(startCoords){
+
+generateRoute(startCoords)
+
+}else{
+
+navigator.geolocation.getCurrentPosition(pos=>{
+
+generateRoute([
+pos.coords.longitude,
+pos.coords.latitude
+])
+
+})
+
+}
+
+}
+
+
+/* ----------------------------------------------------
+ROUTE ENGINE
+---------------------------------------------------- */
+
+async function generateRoute(start){
+
+const url=
+API_URL+
+"?action=routeFromCoords"+
+"&lat="+start[1]+
+"&lng="+start[0]+
+"&destLng="+destinationCoords[0]+
+"&destLat="+destinationCoords[1]
+
+const res=await fetch(url)
 
 const data=await res.json()
 
-const sites=data.elements.map(el=>{
+if(!data.geometry){
 
-const lon=el.lon||el.center?.lon
-const lat=el.lat||el.center?.lat
+alert("Route error")
+return
 
-if(!lon||!lat) return null
-if(!el.tags?.name) return null
-
-return{
-name:el.tags.name,
-coords:[lon,lat]
 }
 
-}).filter(Boolean)
+routeCoords=data.geometry.coordinates
 
-sites.slice(0,4).forEach((site,i)=>{
+drawRoute(routeCoords)
 
-const el=document.createElement("div")
+zoomToRoute()
 
-el.style.width="28px"
-el.style.height="28px"
-el.style.borderRadius="50%"
-el.style.background="#ff2fa3"
-el.style.color="white"
-el.style.display="flex"
-el.style.alignItems="center"
-el.style.justifyContent="center"
-el.innerText=i+1
+loadEncounters(routeCoords)
 
-const marker=new mapboxgl.Marker(el)
-.setLngLat(site.coords)
-.addTo(map)
+}
 
-marker.site=site
 
-marker.getElement().onclick=()=>openEncounter(site)
+/* ----------------------------------------------------
+DRAW ROUTE
+---------------------------------------------------- */
 
-markers.push(marker)
+function drawRoute(coords){
+
+const geojson={
+
+type:"FeatureCollection",
+
+features:[{
+type:"Feature",
+geometry:{type:"LineString",coordinates:coords}
+}]
+
+}
+
+if(map.getSource("route")){
+
+map.getSource("route").setData(geojson)
+
+}else{
+
+map.addSource("route",{type:"geojson",data:geojson})
+
+map.addLayer({
+
+id:"route",
+type:"line",
+source:"route",
+
+paint:{
+"line-color":"#ff2fa3",
+"line-width":6
+}
 
 })
 
 }
 
-async function previewJourney(){
-
-if(!markers.length) return
-
-for(const marker of markers){
-
-map.flyTo({
-center:marker.getLngLat(),
-zoom:16
-})
-
-await new Promise(r=>setTimeout(r,2000))
-
-openEncounter(marker.site)
-
 }
 
-}
-async function loadEncounters(coords){
 
-markers.forEach(m=>m.remove())
-markers=[]
+/* ----------------------------------------------------
+ZOOM TO ROUTE
+---------------------------------------------------- */
 
-const line=turf.lineString(coords)
-const bbox=turf.bbox(line)
+function zoomToRoute(){
 
-const query=`
-[out:json];
-(
-node["tourism"~"museum|gallery"](${bbox[1]},${bbox[0]},${bbox[3]},${bbox[2]});
-node["historic"~"monument|memorial"](${bbox[1]},${bbox[0]},${bbox[3]},${bbox[2]});
-node["tourism"="artwork"](${bbox[1]},${bbox[0]},${bbox[3]},${bbox[2]});
-);
-out center;
-`
-
-const res=await fetch(
-"https://overpass.kumi.systems/api/interpreter",
-{method:"POST",body:query}
+const bounds=turf.bbox(
+turf.lineString(routeCoords)
 )
 
-const data=await res.json()
+map.fitBounds(bounds,{padding:60})
 
-const sites=data.elements.map(el=>{
+}
+/* ----------------------------------------------------
+WIKIPEDIA LOOKUP
+---------------------------------------------------- */
 
-const lon=el.lon||el.center?.lon
-const lat=el.lat||el.center?.lat
+let wikiCache=new Map()
 
-if(!lon||!lat) return null
-if(!el.tags?.name) return null
+async function fetchWiki(siteName){
 
-return{
-name:el.tags.name,
-coords:[lon,lat]
+if(wikiCache.has(siteName)){
+return wikiCache.get(siteName)
 }
 
-}).filter(Boolean)
+try{
 
-sites.slice(0,4).forEach((site,i)=>{
+const searchURL=
+`https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(siteName)}&format=json&origin=*`
 
-const el=document.createElement("div")
+const searchRes=await fetch(searchURL)
+const searchData=await searchRes.json()
 
-el.style.width="28px"
-el.style.height="28px"
-el.style.borderRadius="50%"
-el.style.background="#ff2fa3"
-el.style.color="white"
-el.style.display="flex"
-el.style.alignItems="center"
-el.style.justifyContent="center"
-el.innerText=i+1
+if(!searchData.query.search.length){
+wikiCache.set(siteName,null)
+return null
+}
 
-const marker=new mapboxgl.Marker(el)
+const pageTitle=searchData.query.search[0].title
+
+const summaryURL=
+`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(pageTitle)}`
+
+const summaryRes=await fetch(summaryURL)
+const summaryData=await summaryRes.json()
+
+wikiCache.set(siteName,summaryData)
+
+return summaryData
+
+}catch(err){
+
+console.warn("Wiki lookup failed",siteName)
+
+wikiCache.set(siteName,null)
+
+return null
+
+}
+
+}
+
+
+/* ----------------------------------------------------
+REFLECTION PROMPTS
+---------------------------------------------------- */
+
+async function fetchPrompt(){
+
+const prompts=await fetch(API_URL+"?action=prompts")
+.then(r=>r.json())
+
+return prompts[Math.floor(Math.random()*prompts.length)]
+
+}
+
+
+/* ----------------------------------------------------
+OPEN ENCOUNTER CARD
+---------------------------------------------------- */
+
+let currentEncounter=null
+
+async function openEncounter(site){
+
+currentEncounter=site
+
+document.getElementById("encounter-title")
+.innerText=site.name
+
+const wiki=await fetchWiki(site.name)
+
+if(wiki?.thumbnail){
+
+document.getElementById("encounter-photo")
+.src=wiki.thumbnail.source
+
+}
+
+const prompt=await fetchPrompt()
+
+document.getElementById("prompt")
+.innerText=prompt
+
+document.getElementById("encounter")
+.style.display="block"
+
+}
+
+
+/* ----------------------------------------------------
+CLOSE ENCOUNTER
+---------------------------------------------------- */
+
+function closeEncounter(){
+
+document.getElementById("encounter")
+.style.display="none"
+
+}
+
+
+/* ----------------------------------------------------
+SAVE ENCOUNTER → GOOGLE SHEETS
+---------------------------------------------------- */
+
+async function saveEncounter(){
+
+if(!currentEncounter) return
+
+const payload={
+
+action:"encounter",
+
+user_id:USER_ID,
+
+site_name:currentEncounter.name,
+
+note:document.getElementById("note").value,
+
+lat:currentEncounter.coords[1],
+lng:currentEncounter.coords[0],
+
+beauty:document.getElementById("rating-beauty").value,
+history:document.getElementById("rating-history").value,
+hidden_gem:document.getElementById("rating-hidden").value,
+
+category:"culture"
+
+}
+
+await fetch(API_URL,{
+method:"POST",
+body:JSON.stringify(payload)
+})
+
+addMemoryMarker(currentEncounter)
+
+closeEncounter()
+
+alert("Encounter saved!")
+
+}
+
+
+/* ----------------------------------------------------
+ADD MEMORY MARKER
+---------------------------------------------------- */
+
+function addMemoryMarker(site){
+
+const marker=new mapboxgl.Marker({color:"blue"})
 .setLngLat(site.coords)
 .addTo(map)
 
-marker.site=site
+archiveMarkers.push(marker)
 
-marker.getElement().onclick=()=>openEncounter(site)
+}
 
-markers.push(marker)
+
+/* ----------------------------------------------------
+LOAD SAVED MEMORIES
+---------------------------------------------------- */
+
+async function toggleMemories(){
+
+archiveMarkers.forEach(m=>m.remove())
+archiveMarkers=[]
+
+const data=await fetch(API_URL+"?action=encounters")
+.then(r=>r.json())
+
+data.forEach(e=>{
+
+if(!e.lng||!e.lat) return
+
+const marker=new mapboxgl.Marker({color:"blue"})
+.setLngLat([e.lng,e.lat])
+.addTo(map)
+
+archiveMarkers.push(marker)
+
+})
+
+}
+/* ----------------------------------------------------
+START WALK MODE
+---------------------------------------------------- */
+
+function startWalk(){
+
+if(!routeCoords){
+alert("Generate a route first")
+return
+}
+
+if(watchId) return
+
+watchId=navigator.geolocation.watchPosition(updateWalk)
+
+}
+
+
+/* ----------------------------------------------------
+UPDATE WALK POSITION
+---------------------------------------------------- */
+
+let lastPosition=null
+
+function updateWalk(pos){
+
+const coords=[pos.coords.longitude,pos.coords.latitude]
+
+/* update blue dot */
+
+if(!userMarker){
+
+userMarker=new mapboxgl.Marker({color:"#2b7cff"})
+.setLngLat(coords)
+.addTo(map)
+
+}else{
+
+userMarker.setLngLat(coords)
+
+}
+
+
+/* calculate bearing */
+
+let bearing=0
+
+if(lastPosition){
+
+bearing=turf.bearing(
+turf.point(lastPosition),
+turf.point(coords)
+)
+
+}
+
+lastPosition=coords
+
+
+/* navigation camera */
+
+map.easeTo({
+
+center:coords,
+zoom:17,
+pitch:60,
+bearing:bearing,
+duration:800
+
+})
+
+
+/* check encounters */
+
+checkNearbySites(coords)
+
+}
+
+
+/* ----------------------------------------------------
+AUTO ENCOUNTER TRIGGER
+---------------------------------------------------- */
+
+function checkNearbySites(userCoords){
+
+markers.forEach(marker=>{
+
+const site=marker.site
+
+const dist=turf.distance(
+turf.point(userCoords),
+turf.point(site.coords),
+{units:"meters"}
+)
+
+if(dist<40){
+
+openEncounter(site)
+
+}
 
 })
 
 }
 
-async function previewJourney(){
 
-if(!markers.length) return
+/* ----------------------------------------------------
+PAUSE WALK
+---------------------------------------------------- */
 
-for(const marker of markers){
+function pauseWalk(){
 
-map.flyTo({
-center:marker.getLngLat(),
-zoom:16
+if(!watchId) return
+
+navigator.geolocation.clearWatch(watchId)
+
+watchId=null
+
+}
+
+
+/* ----------------------------------------------------
+RESUME WALK
+---------------------------------------------------- */
+
+function resumeWalk(){
+
+if(watchId) return
+
+watchId=navigator.geolocation.watchPosition(updateWalk)
+
+}
+
+
+/* ----------------------------------------------------
+END WALK
+---------------------------------------------------- */
+
+function endWalk(){
+
+if(!watchId) return
+
+navigator.geolocation.clearWatch(watchId)
+
+watchId=null
+
+map.easeTo({
+pitch:0,
+bearing:0,
+zoom:14
 })
 
-await new Promise(r=>setTimeout(r,2000))
-
-openEncounter(marker.site)
-
 }
 
-}
+</script>
+
+</body>
+
+</html>
