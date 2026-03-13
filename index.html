@@ -11,11 +11,18 @@
 <link href="https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.css" rel="stylesheet">
 <script src="https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.js"></script>
 
+<link
+href="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v5.0.0/mapbox-gl-geocoder.css"
+rel="stylesheet"
+/>
+
+<script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v5.0.0/mapbox-gl-geocoder.min.js"></script>
+
 <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
 
 <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
 
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
 
 <style>
 
@@ -32,46 +39,62 @@ height:100vh;
 /* HOME SCREEN */
 
 #home-screen{
+
 position:absolute;
-top:50%;
-left:50%;
-transform:translate(-50%,-50%);
-background:white;
-padding:40px;
-border-radius:18px;
-box-shadow:0 20px 40px rgba(0,0,0,0.3);
-text-align:center;
+top:0;
+left:0;
+width:100%;
+height:100%;
+
+background:#ff2fa3;
+
+display:flex;
+flex-direction:column;
+justify-content:center;
+align-items:center;
+
 z-index:20;
-width:320px;
+
 }
 
 .home-title{
-font-size:44px;
-font-weight:700;
-color:#ff2fa3;
+
+font-size:64px;
+font-weight:800;
+color:white;
+
 }
 
 .home-sub{
+
+color:white;
 margin-top:10px;
-color:#555;
-font-size:14px;
+
+}
+
+.home-search{
+
+width:320px;
+margin-top:20px;
+
 }
 
 .home-buttons{
+
 margin-top:20px;
+
 }
 
 .home-buttons button{
-display:block;
-width:100%;
-margin:10px 0;
-padding:12px;
+
+padding:12px 20px;
 border:none;
 border-radius:10px;
-background:#ff2fa3;
-color:white;
+background:white;
+color:#ff2fa3;
+font-weight:700;
 cursor:pointer;
-font-weight:600;
+
 }
 
 /* NAV */
@@ -96,75 +119,88 @@ font-weight:600;
 cursor:pointer;
 }
 
-/* PLANNER */
-
-#planner{
-position:absolute;
-top:60px;
-left:20px;
-background:white;
-padding:12px;
-border-radius:10px;
-box-shadow:0 4px 12px rgba(0,0,0,0.2);
-z-index:3;
-display:none;
-}
-
-#planner input{
-display:block;
-margin-bottom:6px;
-padding:6px;
-width:180px;
-}
-
 /* JOURNEY PANEL */
 
 #journey-panel{
+
 position:absolute;
-top:160px;
+top:80px;
 left:20px;
-width:240px;
+
+width:260px;
+
 background:white;
+
 padding:14px;
+
 border-radius:12px;
+
 box-shadow:0 6px 16px rgba(0,0,0,0.2);
+
 z-index:3;
+
+display:none;
+
 }
 
 /* WALK CONTROLS */
 
 #walk-controls{
+
 position:absolute;
 bottom:20px;
 left:50%;
+
 transform:translateX(-50%);
+
 display:none;
+
 gap:6px;
+
 z-index:3;
+
 }
 
 #walk-controls button{
-padding:8px 12px;
+
+padding:8px 14px;
+
 border:none;
-background:#ff2fa3;
-color:white;
+
 border-radius:8px;
+
+background:#ff2fa3;
+
+color:white;
+
 cursor:pointer;
+
 }
 
 /* MARKERS */
 
 .marker-number{
+
 display:flex;
+
 align-items:center;
+
 justify-content:center;
+
 width:28px;
+
 height:28px;
+
 background:#e63946;
+
 border:3px solid white;
+
 border-radius:50%;
+
 color:white;
+
 font-weight:600;
+
 }
 
 </style>
@@ -180,50 +216,39 @@ font-weight:600;
 <div class="home-title">Hot Girl Walk</div>
 
 <div class="home-sub">
-Turn your everyday walk into cultural discovery.
+Turn your everyday walk into cultural discovery
 </div>
+
+<div id="destination-search" class="home-search"></div>
 
 <div class="home-buttons">
 
 <button onclick="startFromHere()">Start Walk From Here</button>
 
-<button onclick="showPlanner()">Plan Route</button>
-
-<button onclick="exploreMode()">Explore Nearby</button>
-
 </div>
 
 </div>
 
-<!-- NAVIGATION -->
+<!-- NAV -->
 
 <div id="top-nav">
 
-<button onclick="showPlanner()">Plan</button>
 <button onclick="previewJourney()">Preview</button>
+
 <button onclick="startWalk()">Start Walk</button>
+
 <button onclick="toggleMemories()">Memories</button>
-
-</div>
-
-<!-- ROUTE PLANNER -->
-
-<div id="planner">
-
-<input id="home" placeholder="Start postcode">
-
-<input id="work" placeholder="Destination postcode">
-
-<button onclick="createRoute()">Generate Route</button>
-
-<button onclick="routeFromHere()">Start From My Location</button>
 
 </div>
 
 <!-- JOURNEY PANEL -->
 
 <div id="journey-panel">
-Your Hot Girl Walk will appear here.
+
+<b>Your Hot Girl Walk</b><br>
+
+Encounters will appear here.
+
 </div>
 
 <!-- WALK CONTROLS -->
@@ -238,7 +263,69 @@ Your Hot Girl Walk will appear here.
 
 </div>
 
-<!-- MAP -->
+<!-- ENCOUNTER CARD -->
+
+<div id="encounter" style="
+
+position:absolute;
+
+top:50%;
+
+left:50%;
+
+transform:translate(-50%,-50%);
+
+width:320px;
+
+background:white;
+
+padding:16px;
+
+border-radius:16px;
+
+box-shadow:0 20px 40px rgba(0,0,0,.4);
+
+display:none;
+
+z-index:10;
+
+">
+
+<img id="encounter-photo" style="width:100%;height:160px;object-fit:cover;border-radius:8px;">
+
+<h3 id="encounter-title"></h3>
+
+<p id="prompt" style="font-style:italic;color:#666;"></p>
+
+<textarea id="note" placeholder="Write reflection..." style="width:100%;margin-top:10px;"></textarea>
+
+<input type="file" id="photo">
+
+<br><br>
+
+<button onclick="saveEncounter()">Save</button>
+
+<button onclick="shareEncounter()">Share</button>
+
+<button onclick="closeEncounter()">Close</button>
+
+</div>
+
+<!-- SHARE CARD -->
+
+<div id="share-card" style="display:none;width:420px;background:white;padding:20px;border-radius:16px;">
+
+<img id="share-image" style="width:100%;height:240px;object-fit:cover;">
+
+<h2 id="share-title"></h2>
+
+<p id="share-note"></p>
+
+<p style="font-size:12px;color:#777;">
+Hot Girl Walk
+</p>
+
+</div>
 
 <div id="map"></div>
 
@@ -248,25 +335,31 @@ Your Hot Girl Walk will appear here.
 
 mapboxgl.accessToken="pk.eyJ1IjoiYmlnYWwxIiwiYSI6ImNtbWIzODZuaDA0cWYycXIyMXVydmx1eDkifQ.2tS6Ro5jbDlGjbR74_Ox0Q"
 
-const API_URL="https://script.google.com/macros/s/AKfycbxaSFGZDnBnRW7XSHLVr8w3hDjY12aRc4ZcTy3up9nv-pULnV84d8DWpLVGQpuEUy5z/exec"
+const API_URL="https://script.google.com/macros/s/AKfycbwoR7AKONVu4T_p9JatJAm2Ag8TjOkOIiT0H_aBmcBtWpPlyR-e1EP7PymozqorgKww/exec"
 
 /* STATE */
 
 let map
 
 let routeCoords=null
-let routeId=null
 
 let markers=[]
+
 let archiveMarkers=[]
 
 let siteCache=new Map()
+
 let wikiCache=new Map()
 
 let watchId=null
+
 let walkActive=false
+
 let lastPosition=null
+
 let userMarker=null
+
+let destinationCoords=null
 
 /* USER ID */
 
@@ -280,28 +373,68 @@ localStorage.setItem("hg_user",USER_ID)
 
 }
 
-/* MAP INITIALIZATION */
+/* MAP INIT */
 
 function initMap(){
 
 map=new mapboxgl.Map({
 
 container:"map",
+
 style:"mapbox://styles/mapbox/streets-v12",
+
 center:[-0.1276,51.5072],
+
 zoom:12
 
 })
 
 map.addControl(new mapboxgl.NavigationControl())
 
+initDestinationSearch()
+
 loadEncounterArchive()
 
 }
 
-/* HOME SCREEN ACTIONS */
+/* DESTINATION SEARCH */
+
+function initDestinationSearch(){
+
+const geocoder = new MapboxGeocoder({
+
+accessToken: mapboxgl.accessToken,
+
+mapboxgl: mapboxgl,
+
+placeholder: "Where are you walking to?",
+
+marker:false
+
+})
+
+document.getElementById("destination-search")
+.appendChild(geocoder.onAdd(map))
+
+geocoder.on("result", e => {
+
+destinationCoords = e.result.center
+
+})
+
+}
+
+/* START WALK FROM HERE */
 
 function startFromHere(){
+
+if(!destinationCoords){
+
+alert("Choose destination")
+
+return
+
+}
 
 document.getElementById("home-screen").style.display="none"
 
@@ -310,56 +443,6 @@ initMap()
 routeFromHere()
 
 }
-
-function showPlanner(){
-
-document.getElementById("home-screen").style.display="none"
-
-initMap()
-
-document.getElementById("planner").style.display="block"
-
-}
-
-function exploreMode(){
-
-document.getElementById("home-screen").style.display="none"
-
-initMap()
-
-alert("Explore mode coming soon ✨")
-
-}
-/* ----------------------------------------------------
-ROUTE CREATION FROM POSTCODES
----------------------------------------------------- */
-
-async function createRoute(){
-
-const home=document.getElementById("home").value
-const work=document.getElementById("work").value
-
-const res=await fetch(
-API_URL+
-"?action=route"+
-"&home="+encodeURIComponent(home)+
-"&work="+encodeURIComponent(work)
-)
-
-const data=await res.json()
-
-routeCoords=data.geometry.coordinates
-routeId=data.properties?.route_id || null
-
-drawRoute(routeCoords)
-
-await loadEncounters(routeCoords)
-
-zoomToRoute()
-
-}
-
-
 /* ----------------------------------------------------
 ROUTE FROM GPS
 ---------------------------------------------------- */
@@ -371,25 +454,21 @@ navigator.geolocation.getCurrentPosition(async pos=>{
 const startLat=pos.coords.latitude
 const startLng=pos.coords.longitude
 
-const dest=document.getElementById("work").value
-
-if(!dest){
-alert("Enter destination postcode")
-return
-}
+const destLng=destinationCoords[0]
+const destLat=destinationCoords[1]
 
 const res=await fetch(
 API_URL+
 "?action=routeFromCoords"+
 "&lat="+startLat+
 "&lng="+startLng+
-"&dest="+encodeURIComponent(dest)
+"&destLng="+destLng+
+"&destLat="+destLat
 )
 
 const data=await res.json()
 
 routeCoords=data.geometry.coordinates
-routeId=data.properties?.route_id || null
 
 drawRoute(routeCoords)
 
@@ -403,7 +482,7 @@ zoomToRoute()
 
 
 /* ----------------------------------------------------
-DRAW ROUTE ON MAP
+DRAW ROUTE
 ---------------------------------------------------- */
 
 function drawRoute(coords){
@@ -458,7 +537,7 @@ padding:60
 
 
 /* ----------------------------------------------------
-ROUTE PREVIEW FLY THROUGH
+ROUTE PREVIEW
 ---------------------------------------------------- */
 
 async function previewJourney(){
@@ -493,7 +572,7 @@ await new Promise(r=>setTimeout(r,2200))
 
 
 /* ----------------------------------------------------
-IMPROVED CULTURAL DISCOVERY QUERY
+ADVANCED CULTURAL DISCOVERY (OVERPASS)
 ---------------------------------------------------- */
 
 async function fetchCulturalSites(coords){
@@ -521,6 +600,12 @@ node["tourism"="artwork"](${bbox[1]},${bbox[0]},${bbox[3]},${bbox[2]});
 node["artwork_type"](${bbox[1]},${bbox[0]},${bbox[3]},${bbox[2]});
 
 node["historic"="plaque"](${bbox[1]},${bbox[0]},${bbox[3]},${bbox[2]});
+
+node["amenity"="arts_centre"](${bbox[1]},${bbox[0]},${bbox[3]},${bbox[2]});
+
+node["amenity"="theatre"](${bbox[1]},${bbox[0]},${bbox[3]},${bbox[2]});
+
+node["tourism"="attraction"](${bbox[1]},${bbox[0]},${bbox[3]},${bbox[2]});
 
 );
 
@@ -564,7 +649,7 @@ return sites
 
 
 /* ----------------------------------------------------
-FILTER SITES ALONG ROUTE CORRIDOR
+CORRIDOR FILTER
 ---------------------------------------------------- */
 
 function filterSitesAlongRoute(sites,coords){
@@ -612,6 +697,7 @@ let importance=1
 if(site.tags?.tourism==="museum") importance=3
 if(site.tags?.tourism==="gallery") importance=2
 if(site.tags?.historic) importance=2
+if(site.tags?.tourism==="artwork") importance=2
 
 return{
 site:site,
@@ -622,13 +708,13 @@ score:(3-dist)+importance
 
 .sort((a,b)=>b.score-a.score)
 
-.map(r=>r.site)
+.map(s=>s.site)
 
 }
 
 
 /* ----------------------------------------------------
-LOAD ENCOUNTERS ALONG ROUTE
+LOAD ENCOUNTERS
 ---------------------------------------------------- */
 
 async function loadEncounters(coords){
@@ -667,11 +753,13 @@ markers.push(marker)
 
 })
 
+document.getElementById("journey-panel").style.display="block"
+
 }
 
 
 /* ----------------------------------------------------
-JOURNEY TIMELINE PANEL
+JOURNEY PANEL
 ---------------------------------------------------- */
 
 function updateJourneyPanel(sites){
@@ -759,7 +847,7 @@ zoom:14
 
 
 /* ----------------------------------------------------
-GPS POSITION UPDATE
+GPS UPDATE
 ---------------------------------------------------- */
 
 function updateWalk(pos){
@@ -805,7 +893,7 @@ checkNearbySites(coords)
 
 
 /* ----------------------------------------------------
-ENCOUNTER PROXIMITY DETECTION
+AUTO ENCOUNTER TRIGGER
 ---------------------------------------------------- */
 
 function checkNearbySites(userCoords){
@@ -904,7 +992,7 @@ Math.floor(Math.random()*prompts.length)
 
 
 /* ----------------------------------------------------
-OPEN ENCOUNTER CARD
+OPEN ENCOUNTER
 ---------------------------------------------------- */
 
 let currentEncounter=null
@@ -947,7 +1035,11 @@ document.getElementById("encounter").style.display="none"
 PHOTO PREVIEW
 ---------------------------------------------------- */
 
-document.getElementById("photo").addEventListener("change",(e)=>{
+const photoInput=document.getElementById("photo")
+
+if(photoInput){
+
+photoInput.addEventListener("change",(e)=>{
 
 const file=e.target.files[0]
 
@@ -956,6 +1048,8 @@ if(!file) return
 document.getElementById("encounter-photo").src=URL.createObjectURL(file)
 
 })
+
+}
 
 
 /* ----------------------------------------------------
@@ -996,7 +1090,6 @@ const payload={
 
 action:"encounter",
 user_id:USER_ID,
-route_id:routeId,
 site_name:currentEncounter.name,
 note:document.getElementById("note").value,
 lat:currentEncounter.coords[1],
@@ -1020,7 +1113,7 @@ closeEncounter()
 
 
 /* ----------------------------------------------------
-LOAD SAVED MEMORIES
+LOAD MEMORY MARKERS
 ---------------------------------------------------- */
 
 async function loadEncounterArchive(){
@@ -1041,7 +1134,6 @@ archiveMarkers.push(marker)
 
 }
 
-
 async function toggleMemories(){
 
 if(archiveMarkers.length){
@@ -1060,7 +1152,7 @@ loadEncounterArchive()
 
 
 /* ----------------------------------------------------
-TOP TRUMP SHARE CARD
+SHARE CARD BUILDER
 ---------------------------------------------------- */
 
 function buildShareCard(){
@@ -1078,7 +1170,7 @@ document.getElementById("note").value
 
 
 /* ----------------------------------------------------
-SHARE CARD
+SOCIAL SHARE
 ---------------------------------------------------- */
 
 async function shareEncounter(){
@@ -1095,7 +1187,7 @@ if(navigator.share){
 
 await navigator.share({
 
-title:"My Hot Girl Walk",
+title:"Hot Girl Walk",
 text:"Look what I discovered on my walk ✨",
 files:[file]
 
