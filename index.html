@@ -11,10 +11,7 @@
 <link href="https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.css" rel="stylesheet">
 <script src="https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.js"></script>
 
-<link
-href="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v5.0.0/mapbox-gl-geocoder.css"
-rel="stylesheet"
-/>
+<link href="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v5.0.0/mapbox-gl-geocoder.css" rel="stylesheet">
 
 <script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v5.0.0/mapbox-gl-geocoder.min.js"></script>
 
@@ -36,7 +33,7 @@ width:100%;
 height:100vh;
 }
 
-/* HOME SCREEN */
+/* HOMEPAGE */
 
 #home-screen{
 
@@ -209,7 +206,7 @@ font-weight:600;
 
 <body>
 
-<!-- HOME SCREEN -->
+<!-- HOME -->
 
 <div id="home-screen">
 
@@ -223,7 +220,7 @@ Turn your everyday walk into cultural discovery
 
 <div class="home-buttons">
 
-<button onclick="startFromHere()">Start Walk From Here</button>
+<button onclick="startApp()">Start Walk From Here</button>
 
 </div>
 
@@ -241,7 +238,7 @@ Turn your everyday walk into cultural discovery
 
 </div>
 
-<!-- JOURNEY PANEL -->
+<!-- JOURNEY -->
 
 <div id="journey-panel">
 
@@ -263,70 +260,6 @@ Encounters will appear here.
 
 </div>
 
-<!-- ENCOUNTER CARD -->
-
-<div id="encounter" style="
-
-position:absolute;
-
-top:50%;
-
-left:50%;
-
-transform:translate(-50%,-50%);
-
-width:320px;
-
-background:white;
-
-padding:16px;
-
-border-radius:16px;
-
-box-shadow:0 20px 40px rgba(0,0,0,.4);
-
-display:none;
-
-z-index:10;
-
-">
-
-<img id="encounter-photo" style="width:100%;height:160px;object-fit:cover;border-radius:8px;">
-
-<h3 id="encounter-title"></h3>
-
-<p id="prompt" style="font-style:italic;color:#666;"></p>
-
-<textarea id="note" placeholder="Write reflection..." style="width:100%;margin-top:10px;"></textarea>
-
-<input type="file" id="photo">
-
-<br><br>
-
-<button onclick="saveEncounter()">Save</button>
-
-<button onclick="shareEncounter()">Share</button>
-
-<button onclick="closeEncounter()">Close</button>
-
-</div>
-
-<!-- SHARE CARD -->
-
-<div id="share-card" style="display:none;width:420px;background:white;padding:20px;border-radius:16px;">
-
-<img id="share-image" style="width:100%;height:240px;object-fit:cover;">
-
-<h2 id="share-title"></h2>
-
-<p id="share-note"></p>
-
-<p style="font-size:12px;color:#777;">
-Hot Girl Walk
-</p>
-
-</div>
-
 <div id="map"></div>
 
 <script>
@@ -335,30 +268,20 @@ Hot Girl Walk
 
 mapboxgl.accessToken="pk.eyJ1IjoiYmlnYWwxIiwiYSI6ImNtbWIzODZuaDA0cWYycXIyMXVydmx1eDkifQ.2tS6Ro5jbDlGjbR74_Ox0Q"
 
-const API_URL="https://script.google.com/macros/s/AKfycbwoR7AKONVu4T_p9JatJAm2Ag8TjOkOIiT0H_aBmcBtWpPlyR-e1EP7PymozqorgKww/exec"
+const API_URL="https://script.google.com/macros/s/AKfycbyTSX4rYwP5A8ScTUnmphdKRS7AlGWwdcLkDSNC-6HJTG4vEZeNFmMZLoUL0DXzKMAV/exec"
 
 /* STATE */
 
 let map
-
 let routeCoords=null
-
 let markers=[]
-
 let archiveMarkers=[]
-
 let siteCache=new Map()
-
 let wikiCache=new Map()
-
 let watchId=null
-
 let walkActive=false
-
 let lastPosition=null
-
 let userMarker=null
-
 let destinationCoords=null
 
 /* USER ID */
@@ -373,20 +296,28 @@ localStorage.setItem("hg_user",USER_ID)
 
 }
 
-/* MAP INIT */
+/* START APP */
+
+function startApp(){
+
+document.getElementById("home-screen").style.display="none"
+
+initMap()
+
+}
+/* ----------------------------------------------------
+MAP INITIALIZATION
+---------------------------------------------------- */
 
 function initMap(){
 
+if(map) return
+
 map=new mapboxgl.Map({
-
 container:"map",
-
 style:"mapbox://styles/mapbox/streets-v12",
-
 center:[-0.1276,51.5072],
-
 zoom:12
-
 })
 
 map.addControl(new mapboxgl.NavigationControl())
@@ -397,7 +328,10 @@ loadEncounterArchive()
 
 }
 
-/* DESTINATION SEARCH */
+
+/* ----------------------------------------------------
+DESTINATION AUTOCOMPLETE
+---------------------------------------------------- */
 
 function initDestinationSearch(){
 
@@ -407,7 +341,7 @@ accessToken: mapboxgl.accessToken,
 
 mapboxgl: mapboxgl,
 
-placeholder: "Where are you walking to?",
+placeholder:"Where are you walking to?",
 
 marker:false
 
@@ -416,33 +350,17 @@ marker:false
 document.getElementById("destination-search")
 .appendChild(geocoder.onAdd(map))
 
-geocoder.on("result", e => {
+geocoder.on("result", async e => {
 
 destinationCoords = e.result.center
+
+await routeFromHere()
 
 })
 
 }
 
-/* START WALK FROM HERE */
 
-function startFromHere(){
-
-if(!destinationCoords){
-
-alert("Choose destination")
-
-return
-
-}
-
-document.getElementById("home-screen").style.display="none"
-
-initMap()
-
-routeFromHere()
-
-}
 /* ----------------------------------------------------
 ROUTE FROM GPS
 ---------------------------------------------------- */
@@ -522,7 +440,7 @@ paint:{
 
 
 /* ----------------------------------------------------
-ZOOM MAP TO ROUTE
+ZOOM TO ROUTE
 ---------------------------------------------------- */
 
 function zoomToRoute(){
@@ -572,7 +490,7 @@ await new Promise(r=>setTimeout(r,2200))
 
 
 /* ----------------------------------------------------
-ADVANCED CULTURAL DISCOVERY (OVERPASS)
+CULTURAL DISCOVERY (OVERPASS)
 ---------------------------------------------------- */
 
 async function fetchCulturalSites(coords){
@@ -649,7 +567,7 @@ return sites
 
 
 /* ----------------------------------------------------
-CORRIDOR FILTER
+FILTER SITES ALONG ROUTE
 ---------------------------------------------------- */
 
 function filterSitesAlongRoute(sites,coords){
@@ -675,7 +593,7 @@ corridor
 
 
 /* ----------------------------------------------------
-CULTURAL IMPORTANCE RANKING
+RANK CULTURAL SITES
 ---------------------------------------------------- */
 
 function rankCulturalSites(sites,coords){
@@ -794,10 +712,15 @@ panel.appendChild(row)
 
 }
 /* ----------------------------------------------------
-WALK NAVIGATION MODE
+WALK MODE
 ---------------------------------------------------- */
 
 function startWalk(){
+
+if(!routeCoords){
+alert("Choose a destination first")
+return
+}
 
 if(walkActive) return
 
@@ -1152,7 +1075,7 @@ loadEncounterArchive()
 
 
 /* ----------------------------------------------------
-SHARE CARD BUILDER
+BUILD SHARE CARD
 ---------------------------------------------------- */
 
 function buildShareCard(){
@@ -1211,7 +1134,7 @@ link.click()
 
 
 /* ----------------------------------------------------
-END OF HOT GIRL WALK APP
+END APP
 ---------------------------------------------------- */
 
 </script>
