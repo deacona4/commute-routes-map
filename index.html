@@ -1,15 +1,19 @@
 <!DOCTYPE html>
 <html>
+
 <head>
 
 <meta charset="utf-8">
-<title>Hot Girl Walks</title>
+<title>Hot Girl Walk</title>
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <link href="https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.css" rel="stylesheet">
 <script src="https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.js"></script>
+
 <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
+
+<script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
 
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
 
@@ -25,41 +29,49 @@ width:100%;
 height:100vh;
 }
 
-/* HOT GIRL INTRO */
+/* HOME SCREEN */
 
-#intro{
+#home-screen{
 position:absolute;
 top:50%;
 left:50%;
 transform:translate(-50%,-50%);
-width:60vw;
-max-width:520px;
 background:white;
 padding:40px;
-border-radius:16px;
+border-radius:18px;
 box-shadow:0 20px 40px rgba(0,0,0,0.3);
-z-index:20;
 text-align:center;
+z-index:20;
+width:320px;
 }
 
-.intro-line{
-font-size:48px;
+.home-title{
+font-size:44px;
 font-weight:700;
-color:white;
-padding:8px;
-margin:6px 0;
-border-radius:8px;
-opacity:0;
-transform:translateX(-60px);
-animation:slideIn .6s forwards;
+color:#ff2fa3;
 }
 
-.intro-line:nth-child(1){background:#ff2fa3;}
-.intro-line:nth-child(2){background:#ff7fa5;animation-delay:.2s;}
-.intro-line:nth-child(3){background:#4f7cff;animation-delay:.4s;}
+.home-sub{
+margin-top:10px;
+color:#555;
+font-size:14px;
+}
 
-@keyframes slideIn{
-to{opacity:1;transform:translateX(0);}
+.home-buttons{
+margin-top:20px;
+}
+
+.home-buttons button{
+display:block;
+width:100%;
+margin:10px 0;
+padding:12px;
+border:none;
+border-radius:10px;
+background:#ff2fa3;
+color:white;
+cursor:pointer;
+font-weight:600;
 }
 
 /* NAV */
@@ -95,6 +107,7 @@ padding:12px;
 border-radius:10px;
 box-shadow:0 4px 12px rgba(0,0,0,0.2);
 z-index:3;
+display:none;
 }
 
 #planner input{
@@ -104,7 +117,7 @@ padding:6px;
 width:180px;
 }
 
-/* JOURNEY TIMELINE */
+/* JOURNEY PANEL */
 
 #journey-panel{
 position:absolute;
@@ -118,55 +131,6 @@ box-shadow:0 6px 16px rgba(0,0,0,0.2);
 z-index:3;
 }
 
-.journey-item{
-display:flex;
-gap:8px;
-padding:6px;
-cursor:pointer;
-}
-
-.journey-dot{
-width:10px;
-height:10px;
-background:#ff7fa5;
-border-radius:50%;
-margin-top:6px;
-}
-
-/* ENCOUNTER CARD */
-
-#encounter{
-position:absolute;
-top:50%;
-left:50%;
-transform:translate(-50%,-50%);
-width:320px;
-background:white;
-padding:16px;
-border-radius:16px;
-box-shadow:0 20px 40px rgba(0,0,0,.4);
-display:none;
-z-index:10;
-}
-
-#encounter img{
-width:100%;
-height:160px;
-object-fit:cover;
-border-radius:8px;
-}
-
-.stat{
-display:flex;
-justify-content:space-between;
-margin:6px 0;
-}
-
-textarea{
-width:100%;
-margin-top:10px;
-}
-
 /* WALK CONTROLS */
 
 #walk-controls{
@@ -178,6 +142,17 @@ display:none;
 gap:6px;
 z-index:3;
 }
+
+#walk-controls button{
+padding:8px 12px;
+border:none;
+background:#ff2fa3;
+color:white;
+border-radius:8px;
+cursor:pointer;
+}
+
+/* MARKERS */
 
 .marker-number{
 display:flex;
@@ -193,62 +168,77 @@ font-weight:600;
 }
 
 </style>
+
 </head>
 
 <body>
 
-<div id="intro">
-<div class="intro-line">HOT</div>
-<div class="intro-line">GIRLS</div>
-<div class="intro-line">WALK</div>
-<br>
-<button onclick="startApp()">Start Exploring ✨</button>
+<!-- HOME SCREEN -->
+
+<div id="home-screen">
+
+<div class="home-title">Hot Girl Walk</div>
+
+<div class="home-sub">
+Turn your everyday walk into cultural discovery.
 </div>
 
-<div id="top-nav">
-<button onclick="modePlan()">Plan</button>
-<button onclick="previewJourney()">Preview</button>
-<button onclick="startWalk()">Walk</button>
-<button onclick="modeExplore()">Explore</button>
+<div class="home-buttons">
+
+<button onclick="startFromHere()">Start Walk From Here</button>
+
+<button onclick="showPlanner()">Plan Route</button>
+
+<button onclick="exploreMode()">Explore Nearby</button>
+
 </div>
+
+</div>
+
+<!-- NAVIGATION -->
+
+<div id="top-nav">
+
+<button onclick="showPlanner()">Plan</button>
+<button onclick="previewJourney()">Preview</button>
+<button onclick="startWalk()">Start Walk</button>
+<button onclick="toggleMemories()">Memories</button>
+
+</div>
+
+<!-- ROUTE PLANNER -->
 
 <div id="planner">
 
 <input id="home" placeholder="Start postcode">
+
 <input id="work" placeholder="Destination postcode">
 
 <button onclick="createRoute()">Generate Route</button>
 
+<button onclick="routeFromHere()">Start From My Location</button>
+
 </div>
 
-<div id="journey-panel">Enter a route to begin</div>
+<!-- JOURNEY PANEL -->
+
+<div id="journey-panel">
+Your Hot Girl Walk will appear here.
+</div>
+
+<!-- WALK CONTROLS -->
 
 <div id="walk-controls">
+
 <button onclick="pauseWalk()">Pause</button>
+
 <button onclick="resumeWalk()">Resume</button>
+
 <button onclick="endWalk()">End</button>
-</div>
-
-<div id="encounter">
-
-<img id="encounter-photo">
-
-<h3 id="encounter-title"></h3>
-
-<div class="stat"><span>Beauty</span><span>★★★★★</span></div>
-<div class="stat"><span>History</span><span>★★★★</span></div>
-<div class="stat"><span>Hidden Gem</span><span>★★★</span></div>
-
-<textarea id="note" placeholder="Write reflection..."></textarea>
-
-<input type="file" id="photo">
-
-<br><br>
-
-<button onclick="saveEncounter()">Save</button>
-<button onclick="closeEncounter()">Close</button>
 
 </div>
+
+<!-- MAP -->
 
 <div id="map"></div>
 
@@ -258,32 +248,49 @@ font-weight:600;
 
 mapboxgl.accessToken="pk.eyJ1IjoiYmlnYWwxIiwiYSI6ImNtbWIzODZuaDA0cWYycXIyMXVydmx1eDkifQ.2tS6Ro5jbDlGjbR74_Ox0Q"
 
-const API_URL="https://script.google.com/macros/s/AKfycbynF6QPJUh5fR-yu8HtlDSDZyjy73LOARMynPphhdrufYeKwH9MqK7ci2XafG7biJQD/exec"
+const API_URL="https://script.google.com/macros/s/AKfycbxaSFGZDnBnRW7XSHLVr8w3hDjY12aRc4ZcTy3up9nv-pULnV84d8DWpLVGQpuEUy5z/exec"
 
 /* STATE */
 
 let map
+
 let routeCoords=null
+let routeId=null
+
 let markers=[]
 let archiveMarkers=[]
-let currentEncounter=null
+
 let siteCache=new Map()
 let wikiCache=new Map()
 
 let watchId=null
+let walkActive=false
+let lastPosition=null
 let userMarker=null
 
-/* INIT */
+/* USER ID */
 
-function startApp(){
+let USER_ID = localStorage.getItem("hg_user")
 
-document.getElementById("intro").style.display="none"
+if(!USER_ID){
+
+USER_ID = crypto.randomUUID()
+
+localStorage.setItem("hg_user",USER_ID)
+
+}
+
+/* MAP INITIALIZATION */
+
+function initMap(){
 
 map=new mapboxgl.Map({
+
 container:"map",
 style:"mapbox://styles/mapbox/streets-v12",
 center:[-0.1276,51.5072],
-zoom:11
+zoom:12
+
 })
 
 map.addControl(new mapboxgl.NavigationControl())
@@ -292,26 +299,112 @@ loadEncounterArchive()
 
 }
 
-/* ROUTE */
+/* HOME SCREEN ACTIONS */
+
+function startFromHere(){
+
+document.getElementById("home-screen").style.display="none"
+
+initMap()
+
+routeFromHere()
+
+}
+
+function showPlanner(){
+
+document.getElementById("home-screen").style.display="none"
+
+initMap()
+
+document.getElementById("planner").style.display="block"
+
+}
+
+function exploreMode(){
+
+document.getElementById("home-screen").style.display="none"
+
+initMap()
+
+alert("Explore mode coming soon ✨")
+
+}
+/* ----------------------------------------------------
+ROUTE CREATION FROM POSTCODES
+---------------------------------------------------- */
 
 async function createRoute(){
 
 const home=document.getElementById("home").value
 const work=document.getElementById("work").value
 
-const res=await fetch(API_URL+"?action=route&home="+encodeURIComponent(home)+"&work="+encodeURIComponent(work))
+const res=await fetch(
+API_URL+
+"?action=route"+
+"&home="+encodeURIComponent(home)+
+"&work="+encodeURIComponent(work)
+)
 
 const data=await res.json()
 
 routeCoords=data.geometry.coordinates
+routeId=data.properties?.route_id || null
 
 drawRoute(routeCoords)
 
 await loadEncounters(routeCoords)
 
+zoomToRoute()
+
 }
 
-/* DRAW ROUTE */
+
+/* ----------------------------------------------------
+ROUTE FROM GPS
+---------------------------------------------------- */
+
+async function routeFromHere(){
+
+navigator.geolocation.getCurrentPosition(async pos=>{
+
+const startLat=pos.coords.latitude
+const startLng=pos.coords.longitude
+
+const dest=document.getElementById("work").value
+
+if(!dest){
+alert("Enter destination postcode")
+return
+}
+
+const res=await fetch(
+API_URL+
+"?action=routeFromCoords"+
+"&lat="+startLat+
+"&lng="+startLng+
+"&dest="+encodeURIComponent(dest)
+)
+
+const data=await res.json()
+
+routeCoords=data.geometry.coordinates
+routeId=data.properties?.route_id || null
+
+drawRoute(routeCoords)
+
+await loadEncounters(routeCoords)
+
+zoomToRoute()
+
+})
+
+}
+
+
+/* ----------------------------------------------------
+DRAW ROUTE ON MAP
+---------------------------------------------------- */
 
 function drawRoute(coords){
 
@@ -319,12 +412,17 @@ const geojson={
 type:"FeatureCollection",
 features:[{
 type:"Feature",
-geometry:{type:"LineString",coordinates:coords}
+geometry:{
+type:"LineString",
+coordinates:coords
+}
 }]
 }
 
 if(map.getSource("route")){
+
 map.getSource("route").setData(geojson)
+
 }else{
 
 map.addSource("route",{type:"geojson",data:geojson})
@@ -343,7 +441,60 @@ paint:{
 
 }
 
-/* DISCOVERY */
+
+/* ----------------------------------------------------
+ZOOM MAP TO ROUTE
+---------------------------------------------------- */
+
+function zoomToRoute(){
+
+const bounds=turf.bbox(turf.lineString(routeCoords))
+
+map.fitBounds(bounds,{
+padding:60
+})
+
+}
+
+
+/* ----------------------------------------------------
+ROUTE PREVIEW FLY THROUGH
+---------------------------------------------------- */
+
+async function previewJourney(){
+
+if(!routeCoords) return
+
+const stops=[
+
+routeCoords[0],
+
+...markers.map(m=>m.getLngLat().toArray()),
+
+routeCoords[routeCoords.length-1]
+
+]
+
+for(const point of stops){
+
+map.flyTo({
+center:point,
+zoom:16,
+pitch:50,
+bearing:map.getBearing()+30,
+duration:2500
+})
+
+await new Promise(r=>setTimeout(r,2200))
+
+}
+
+}
+
+
+/* ----------------------------------------------------
+IMPROVED CULTURAL DISCOVERY QUERY
+---------------------------------------------------- */
 
 async function fetchCulturalSites(coords){
 
@@ -356,15 +507,34 @@ const line=turf.lineString(coords)
 const bbox=turf.bbox(line)
 
 const query=`
+
 [out:json];
+
 (
-node["tourism"~"museum|gallery|artwork"](${bbox[1]},${bbox[0]},${bbox[3]},${bbox[2]});
-node["historic"~"monument|memorial"](${bbox[1]},${bbox[0]},${bbox[3]},${bbox[2]});
+
+node["tourism"~"museum|gallery"](${bbox[1]},${bbox[0]},${bbox[3]},${bbox[2]});
+
+node["historic"~"monument|memorial|building"](${bbox[1]},${bbox[0]},${bbox[3]},${bbox[2]});
+
+node["tourism"="artwork"](${bbox[1]},${bbox[0]},${bbox[3]},${bbox[2]});
+
+node["artwork_type"](${bbox[1]},${bbox[0]},${bbox[3]},${bbox[2]});
+
+node["historic"="plaque"](${bbox[1]},${bbox[0]},${bbox[3]},${bbox[2]});
+
 );
+
 out center;
+
 `
 
-const res=await fetch("https://overpass.kumi.systems/api/interpreter",{method:"POST",body:query})
+const res=await fetch(
+"https://overpass.kumi.systems/api/interpreter",
+{
+method:"POST",
+body:query
+}
+)
 
 const data=await res.json()
 
@@ -377,8 +547,11 @@ if(!lon||!lat) return null
 if(!el.tags?.name) return null
 
 return{
+
 name:el.tags.name,
-coords:[lon,lat]
+coords:[lon,lat],
+tags:el.tags
+
 }
 
 }).filter(Boolean)
@@ -389,28 +562,104 @@ return sites
 
 }
 
-/* ENCOUNTERS */
+
+/* ----------------------------------------------------
+FILTER SITES ALONG ROUTE CORRIDOR
+---------------------------------------------------- */
+
+function filterSitesAlongRoute(sites,coords){
+
+const line=turf.lineString(coords)
+
+const corridor=turf.buffer(
+line,
+0.25,
+{units:"kilometers"}
+)
+
+return sites.filter(site=>
+
+turf.booleanPointInPolygon(
+turf.point(site.coords),
+corridor
+)
+
+)
+
+}
+
+
+/* ----------------------------------------------------
+CULTURAL IMPORTANCE RANKING
+---------------------------------------------------- */
+
+function rankCulturalSites(sites,coords){
+
+const line=turf.lineString(coords)
+
+return sites
+
+.map(site=>{
+
+const dist=turf.pointToLineDistance(
+turf.point(site.coords),
+line,
+{units:"kilometers"}
+)
+
+let importance=1
+
+if(site.tags?.tourism==="museum") importance=3
+if(site.tags?.tourism==="gallery") importance=2
+if(site.tags?.historic) importance=2
+
+return{
+site:site,
+score:(3-dist)+importance
+}
+
+})
+
+.sort((a,b)=>b.score-a.score)
+
+.map(r=>r.site)
+
+}
+
+
+/* ----------------------------------------------------
+LOAD ENCOUNTERS ALONG ROUTE
+---------------------------------------------------- */
 
 async function loadEncounters(coords){
 
 markers.forEach(m=>m.remove())
+
 markers=[]
 
 const sites=await fetchCulturalSites(coords)
 
-const selected=sites.slice(0,4)
+const filtered=filterSitesAlongRoute(sites,coords)
+
+const ranked=rankCulturalSites(filtered,coords)
+
+const selected=ranked.slice(0,4)
 
 updateJourneyPanel(selected)
 
 selected.forEach((site,i)=>{
 
 const el=document.createElement("div")
+
 el.className="marker-number"
+
 el.innerText=i+1
 
 const marker=new mapboxgl.Marker(el)
 .setLngLat(site.coords)
 .addTo(map)
+
+marker.site=site
 
 marker.getElement().onclick=()=>openEncounter(site)
 
@@ -420,7 +669,10 @@ markers.push(marker)
 
 }
 
-/* TIMELINE */
+
+/* ----------------------------------------------------
+JOURNEY TIMELINE PANEL
+---------------------------------------------------- */
 
 function updateJourneyPanel(sites){
 
@@ -431,16 +683,21 @@ panel.innerHTML="<b>Your Hot Girl Walk</b><br><br>"
 sites.forEach((site,i)=>{
 
 const row=document.createElement("div")
-row.className="journey-item"
 
-row.innerHTML=`
-<div class="journey-dot"></div>
-<div>${i+1}. ${site.name}</div>
-`
+row.style.padding="6px"
+row.style.cursor="pointer"
+
+row.innerHTML=i+1+". "+site.name
 
 row.onclick=()=>{
-map.flyTo({center:site.coords,zoom:16})
+
+map.flyTo({
+center:site.coords,
+zoom:16
+})
+
 openEncounter(site)
+
 }
 
 panel.appendChild(row)
@@ -448,29 +705,209 @@ panel.appendChild(row)
 })
 
 }
+/* ----------------------------------------------------
+WALK NAVIGATION MODE
+---------------------------------------------------- */
 
-/* WIKIPEDIA */
+function startWalk(){
+
+if(walkActive) return
+
+walkActive=true
+
+watchId=navigator.geolocation.watchPosition(updateWalk)
+
+document.getElementById("walk-controls").style.display="flex"
+
+}
+
+function pauseWalk(){
+
+if(!walkActive) return
+
+navigator.geolocation.clearWatch(watchId)
+
+walkActive=false
+
+}
+
+function resumeWalk(){
+
+if(walkActive) return
+
+watchId=navigator.geolocation.watchPosition(updateWalk)
+
+walkActive=true
+
+}
+
+function endWalk(){
+
+navigator.geolocation.clearWatch(watchId)
+
+walkActive=false
+
+document.getElementById("walk-controls").style.display="none"
+
+map.easeTo({
+pitch:0,
+bearing:0,
+zoom:14
+})
+
+}
+
+
+/* ----------------------------------------------------
+GPS POSITION UPDATE
+---------------------------------------------------- */
+
+function updateWalk(pos){
+
+const coords=[pos.coords.longitude,pos.coords.latitude]
+
+if(!userMarker){
+
+userMarker=new mapboxgl.Marker({color:"#2b7cff"})
+.setLngLat(coords)
+.addTo(map)
+
+}else{
+
+userMarker.setLngLat(coords)
+
+}
+
+let bearing=0
+
+if(lastPosition){
+
+bearing=turf.bearing(
+turf.point(lastPosition),
+turf.point(coords)
+)
+
+}
+
+lastPosition=coords
+
+map.easeTo({
+center:coords,
+zoom:17,
+pitch:60,
+bearing:bearing,
+duration:800
+})
+
+checkNearbySites(coords)
+
+}
+
+
+/* ----------------------------------------------------
+ENCOUNTER PROXIMITY DETECTION
+---------------------------------------------------- */
+
+function checkNearbySites(userCoords){
+
+markers.forEach(marker=>{
+
+const site=marker.site
+
+const dist=turf.distance(
+turf.point(userCoords),
+turf.point(site.coords),
+{units:"meters"}
+)
+
+if(dist<40){
+
+openEncounter(site)
+
+}
+
+})
+
+}
+
+
+/* ----------------------------------------------------
+WIKIPEDIA LOOKUP
+---------------------------------------------------- */
 
 async function fetchWiki(siteName){
+
+if(!siteName) return null
 
 if(wikiCache.has(siteName)) return wikiCache.get(siteName)
 
 try{
 
-const res=await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(siteName)}`)
-const data=await res.json()
+const searchURL=`https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(siteName)}&format=json&origin=*`
 
-wikiCache.set(siteName,data)
+const searchRes=await fetch(searchURL)
 
-return data
+const searchData=await searchRes.json()
 
-}catch{
+if(!searchData.query.search.length){
+
+wikiCache.set(siteName,null)
+
 return null
-}
 
 }
 
-/* ENCOUNTER */
+const pageTitle=searchData.query.search[0].title
+
+const summaryURL=`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(pageTitle)}`
+
+const summaryRes=await fetch(summaryURL)
+
+if(!summaryRes.ok){
+
+wikiCache.set(siteName,null)
+
+return null
+
+}
+
+const summaryData=await summaryRes.json()
+
+wikiCache.set(siteName,summaryData)
+
+return summaryData
+
+}catch(err){
+
+wikiCache.set(siteName,null)
+
+return null
+
+}
+
+}
+
+
+/* ----------------------------------------------------
+REFLECTION PROMPTS
+---------------------------------------------------- */
+
+async function fetchPrompt(){
+
+const prompts=await fetch(API_URL+"?action=prompts").then(r=>r.json())
+
+return prompts[
+Math.floor(Math.random()*prompts.length)
+]
+
+}
+
+
+/* ----------------------------------------------------
+OPEN ENCOUNTER CARD
+---------------------------------------------------- */
+
+let currentEncounter=null
 
 async function openEncounter(site){
 
@@ -481,38 +918,91 @@ document.getElementById("encounter-title").innerText=site.name
 const wiki=await fetchWiki(site.name)
 
 if(wiki?.thumbnail){
+
 document.getElementById("encounter-photo").src=wiki.thumbnail.source
+
 }
+
+const prompt=await fetchPrompt()
+
+document.getElementById("prompt").innerText=prompt
 
 document.getElementById("encounter").style.display="block"
 
 }
 
+
+/* ----------------------------------------------------
+CLOSE ENCOUNTER
+---------------------------------------------------- */
+
 function closeEncounter(){
+
 document.getElementById("encounter").style.display="none"
+
 }
 
-/* PHOTO PREVIEW */
+
+/* ----------------------------------------------------
+PHOTO PREVIEW
+---------------------------------------------------- */
 
 document.getElementById("photo").addEventListener("change",(e)=>{
 
 const file=e.target.files[0]
-if(!file)return
+
+if(!file) return
 
 document.getElementById("encounter-photo").src=URL.createObjectURL(file)
 
 })
 
-/* SAVE */
+
+/* ----------------------------------------------------
+SAVE ENCOUNTER
+---------------------------------------------------- */
 
 async function saveEncounter(){
 
+if(!currentEncounter) return
+
+let photoBase64=""
+
+const file=document.getElementById("photo").files[0]
+
+if(file){
+
+photoBase64=await new Promise((resolve,reject)=>{
+
+const reader=new FileReader()
+
+reader.onload=()=>{
+
+const result=String(reader.result||"")
+
+resolve(result.split(",")[1]||"")
+
+}
+
+reader.onerror=reject
+
+reader.readAsDataURL(file)
+
+})
+
+}
+
 const payload={
+
 action:"encounter",
+user_id:USER_ID,
+route_id:routeId,
 site_name:currentEncounter.name,
 note:document.getElementById("note").value,
 lat:currentEncounter.coords[1],
-lng:currentEncounter.coords[0]
+lng:currentEncounter.coords[0],
+photo:photoBase64
+
 }
 
 await fetch(API_URL,{
@@ -520,11 +1010,18 @@ method:"POST",
 body:JSON.stringify(payload)
 })
 
-alert("Saved!")
+alert("Encounter saved!")
+
+buildShareCard()
+
+closeEncounter()
 
 }
 
-/* ARCHIVE */
+
+/* ----------------------------------------------------
+LOAD SAVED MEMORIES
+---------------------------------------------------- */
 
 async function loadEncounterArchive(){
 
@@ -544,327 +1041,89 @@ archiveMarkers.push(marker)
 
 }
 
-/* PREVIEW */
-
-async function previewJourney(){
-
-for(let i=0;i<markers.length;i++){
-
-map.flyTo({
-center:markers[i].getLngLat(),
-zoom:16
-})
-
-await new Promise(r=>setTimeout(r,1200))
-
-}
-
-}
-
-/* WALK MODE */
-
-function startWalk(){
-
-watchId=navigator.geolocation.watchPosition(updateWalk)
-
-document.getElementById("walk-controls").style.display="flex"
-
-}
-
-function updateWalk(pos){
-
-const coords=[pos.coords.longitude,pos.coords.latitude]
-
-if(!userMarker){
-
-userMarker=new mapboxgl.Marker({color:"blue"})
-.setLngLat(coords)
-.addTo(map)
-
-}else{
-
-userMarker.setLngLat(coords)
-
-}
-
-map.easeTo({center:coords})
-
-}
-
-function pauseWalk(){
-navigator.geolocation.clearWatch(watchId)
-}
-
-function resumeWalk(){
-startWalk()
-}
-
-function endWalk(){
-navigator.geolocation.clearWatch(watchId)
-document.getElementById("walk-controls").style.display="none"
-}
-
-/* NAV */
-
-function modePlan(){
-document.getElementById("planner").style.display="block"
-}
-
-function modeExplore(){
-alert("Explore deck coming next ✨")
-}
-/* WIKIPEDIA LOOKUP */
-
-async function fetchWiki(siteName){
-
-if(!siteName) return null
-
-if(wikiCache.has(siteName)){
-return wikiCache.get(siteName)
-}
-
-try{
-
-/* search first to avoid 404 */
-
-const searchURL=`https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(siteName)}&format=json&origin=*`
-
-const searchRes=await fetch(searchURL)
-const searchData=await searchRes.json()
-
-if(!searchData.query.search.length){
-wikiCache.set(siteName,null)
-return null
-}
-
-const pageTitle=searchData.query.search[0].title
-
-const summaryURL=`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(pageTitle)}`
-
-const summaryRes=await fetch(summaryURL)
-
-if(!summaryRes.ok){
-wikiCache.set(siteName,null)
-return null
-}
-
-const summaryData=await summaryRes.json()
-
-wikiCache.set(siteName,summaryData)
-
-return summaryData
-
-}catch(err){
-
-console.warn("Wiki lookup failed:",siteName)
-
-wikiCache.set(siteName,null)
-
-return null
-
-}
-
-}
-
-/* OPEN ENCOUNTER CARD */
-
-async function openEncounter(site){
-
-currentEncounter=site
-
-document.getElementById("encounter-title").innerText=site.name
-
-const wiki=await fetchWiki(site.name)
-
-if(wiki?.thumbnail){
-document.getElementById("encounter-photo").src=wiki.thumbnail.source
-}
-
-document.getElementById("encounter").style.display="block"
-
-}
-
-/* CLOSE ENCOUNTER */
-
-function closeEncounter(){
-document.getElementById("encounter").style.display="none"
-}
-
-/* PHOTO PREVIEW */
-
-document.getElementById("photo").addEventListener("change",(e)=>{
-
-const file=e.target.files[0]
-
-if(!file) return
-
-document.getElementById("encounter-photo").src=URL.createObjectURL(file)
-
-})
-
-/* SAVE ENCOUNTER */
-
-async function saveEncounter(){
-
-if(!currentEncounter) return
-
-let photoBase64=""
-
-const file=document.getElementById("photo").files[0]
-
-if(file){
-
-photoBase64=await new Promise((resolve,reject)=>{
-
-const reader=new FileReader()
-
-reader.onload=()=>{
-const result=String(reader.result||"")
-resolve(result.split(",")[1]||"")
-}
-
-reader.onerror=reject
-
-reader.readAsDataURL(file)
-
-})
-
-}
-
-const payload={
-action:"encounter",
-site_name:currentEncounter.name,
-note:document.getElementById("note").value,
-lat:currentEncounter.coords[1],
-lng:currentEncounter.coords[0],
-photo:photoBase64
-}
-
-await fetch(API_URL,{
-method:"POST",
-body:JSON.stringify(payload)
-})
-
-alert("Encounter saved!")
-
-closeEncounter()
-
-}
-
-/* ARCHIVE MARKERS (TOGGLED) */
 
 async function toggleMemories(){
 
 if(archiveMarkers.length){
 
 archiveMarkers.forEach(m=>m.remove())
+
 archiveMarkers=[]
 
 return
 
 }
 
-const res=await fetch(API_URL+"?action=encounters")
-const data=await res.json()
+loadEncounterArchive()
 
-data.forEach(e=>{
+}
 
-if(!e.lng||!e.lat) return
 
-const marker=new mapboxgl.Marker({color:"blue"})
-.setLngLat([e.lng,e.lat])
-.addTo(map)
+/* ----------------------------------------------------
+TOP TRUMP SHARE CARD
+---------------------------------------------------- */
 
-archiveMarkers.push(marker)
+function buildShareCard(){
+
+document.getElementById("share-image").src=
+document.getElementById("encounter-photo").src
+
+document.getElementById("share-title").innerText=
+currentEncounter.name
+
+document.getElementById("share-note").innerText=
+document.getElementById("note").value
+
+}
+
+
+/* ----------------------------------------------------
+SHARE CARD
+---------------------------------------------------- */
+
+async function shareEncounter(){
+
+const card=document.getElementById("share-card")
+
+const canvas=await html2canvas(card)
+
+canvas.toBlob(async blob=>{
+
+const file=new File([blob],"hot-girl-walk.png",{type:"image/png"})
+
+if(navigator.share){
+
+await navigator.share({
+
+title:"My Hot Girl Walk",
+text:"Look what I discovered on my walk ✨",
+files:[file]
 
 })
-
-}
-
-/* WALK MODE */
-
-function startWalk(){
-
-/* collapse deck */
-
-document.getElementById("deck").style.display="none"
-
-document.getElementById("walk-controls").style.display="flex"
-
-watchId=navigator.geolocation.watchPosition(updateWalk)
-
-}
-
-/* NAVIGATION CAMERA */
-
-function updateWalk(pos){
-const coords=[pos.coords.longitude,pos.coords.latitude]
-
-/* create or update marker */
-
-if(!userMarker){
-
-userMarker=new mapboxgl.Marker({color:"#2b7cff"})
-.setLngLat(coords)
-.addTo(map)
 
 }else{
 
-userMarker.setLngLat(coords)
+const link=document.createElement("a")
+
+link.href=URL.createObjectURL(blob)
+
+link.download="hot-girl-walk.png"
+
+link.click()
 
 }
 
-/* calculate direction */
-
-let bearing=0
-
-if(lastPosition){
-
-bearing=turf.bearing(
-turf.point(lastPosition),
-turf.point(coords)
-)
-
-}
-
-lastPosition=coords
-
-/* navigation camera */
-
-map.easeTo({
-center:coords,
-zoom:17,
-pitch:60,
-bearing:bearing,
-duration:1000
 })
 
 }
 
-/* WALK CONTROLS */
 
-function pauseWalk(){
-navigator.geolocation.clearWatch(watchId)
-}
+/* ----------------------------------------------------
+END OF HOT GIRL WALK APP
+---------------------------------------------------- */
 
-function resumeWalk(){
-watchId=navigator.geolocation.watchPosition(updateWalk)
-}
-
-function endWalk(){
-
-navigator.geolocation.clearWatch(watchId)
-
-document.getElementById("walk-controls").style.display="none"
-
-map.easeTo({
-pitch:0,
-bearing:0,
-zoom:14
-})
-
-}
 </script>
 
 </body>
+
 </html>
