@@ -613,7 +613,191 @@ document.getElementById("planner").style.display="block"
 function modeExplore(){
 alert("Explore deck coming next ✨")
 }
+/* WIKIPEDIA LOOKUP */
 
+async function fetchWiki(siteName){
+
+if(!siteName) return null
+
+if(wikiCache.has(siteName)){
+return wikiCache.get(siteName)
+}
+
+try{
+
+/* search first to avoid 404 */
+
+const searchURL=`https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(siteName)}&format=json&origin=*`
+
+const searchRes=await fetch(searchURL)
+const searchData=await searchRes.json()
+
+if(!searchData.query.search.length){
+wikiCache.set(siteName,null)
+return null
+}
+
+const pageTitle=searchData.query.search[0].title
+
+const summaryURL=`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(pageTitle)}`
+
+const summaryRes=await fetch(summaryURL)
+
+if(!summaryRes.ok){
+wikiCache.set(siteName,null)
+return null
+}
+
+const summaryData=await summaryRes.json()
+
+wikiCache.set(siteName,summaryData)
+
+return summaryData
+
+}catch(err){
+
+console.warn("Wiki lookup failed:",siteName)
+
+wikiCache.set(siteName,null)
+
+return null
+
+}
+
+}
+
+/* OPEN ENCOUNTER CARD */
+
+async function openEncounter(site){
+
+currentEncounter=site
+
+document.getElementById("encounter-title").innerText=site.name
+
+const wiki=await fetchWiki(site.name)
+
+if(wiki?.thumbnail){
+document.getElementById("encounter-photo").src=wiki.thumbnail.source
+}
+
+document.getElementById("encounter").style.display="block"
+
+}
+
+/* CLOSE ENCOUNTER */
+
+function closeEncounter(){
+document.getElementById("encounter").style.display="none"
+}
+
+/* PHOTO PREVIEW */
+
+document.getElementById("photo").addEventListener("change",(e)=>{
+
+const file=e.target.files[0]
+
+if(!file) return
+
+document.getElementById("encounter-photo").src=URL.createObjectURL(file)
+
+})
+
+/* SAVE ENCOUNTER */
+
+async function saveEncounter(){
+
+if(!currentEncounter) return
+
+let photoBase64=""
+
+const file=document.getElementById("photo").files[0]
+
+if(file){
+
+photoBase64=await new Promise((resolve,reject)=>{
+
+const reader=new FileReader()
+
+reader.onload=()=>{
+const result=String(reader.result||"")
+resolve(result.split(",")[1]||"")
+}
+
+reader.onerror=reject
+
+reader.readAsDataURL(file)
+
+})
+
+}
+
+const payload={
+action:"encounter",
+site_name:currentEncounter.name,
+note:document.getElementById("note").value,
+lat:currentEncounter.coords[1],
+lng:currentEncounter.coords[0],
+photo:photoBase64
+}
+
+await fetch(API_URL,{
+method:"POST",
+body:JSON.stringify(payload)
+})
+
+alert("Encounter saved!")
+
+closeEncounter()
+
+}
+
+/* ARCHIVE MARKERS (TOGGLED) */
+
+async function toggleMemories(){
+
+if(archiveMarkers.length){
+
+archiveMarkers.forEach(m=>m.remove())
+archiveMarkers=[]
+
+return
+
+}
+
+const res=await fetch(API_URL+"?action=encounters")
+const data=await res.json()
+
+data.forEach(e=>{
+
+if(!e.lng||!e.lat) return
+
+const marker=new mapboxgl.Marker({color:"blue"})
+.setLngLat([e.lng,e.lat])
+.addTo(map)
+
+archiveMarkers.push(marker)
+
+})
+
+}
+
+/* WALK MODE */
+
+function startWalk(){
+
+/* collapse deck */
+
+document.getElementById("deck").style.display="none"
+
+document.getElementById("walk-controls").style.display="flex"
+
+watchId=navigator.geolocation.watchPosition(updateWalk)
+
+}
+
+/* NAVIGATION CAMERA */
+
+function updateWalk(pos){
 </script>
 
 </body>
