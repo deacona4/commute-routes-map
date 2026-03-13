@@ -12,11 +12,9 @@
 <script src="https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.js"></script>
 
 <link href="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v5.0.0/mapbox-gl-geocoder.css" rel="stylesheet">
-
 <script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v5.0.0/mapbox-gl-geocoder.min.js"></script>
 
 <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
-
 <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
 
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
@@ -55,42 +53,44 @@ z-index:20;
 }
 
 .home-title{
-
 font-size:64px;
 font-weight:800;
 color:white;
-
 }
 
 .home-sub{
-
 color:white;
 margin-top:10px;
-
-}
-
-.home-search{
-
-width:320px;
-margin-top:20px;
-
 }
 
 .home-buttons{
-
-margin-top:20px;
-
+margin-top:30px;
 }
 
 .home-buttons button{
 
-padding:12px 20px;
+padding:14px 24px;
 border:none;
 border-radius:10px;
 background:white;
 color:#ff2fa3;
 font-weight:700;
 cursor:pointer;
+
+}
+
+/* SEARCH BAR */
+
+#search-bar{
+
+position:absolute;
+top:70px;
+left:50%;
+transform:translateX(-50%);
+
+width:380px;
+
+z-index:5;
 
 }
 
@@ -105,7 +105,7 @@ background:white;
 padding:6px 12px;
 border-radius:20px;
 box-shadow:0 3px 8px rgba(0,0,0,.2);
-z-index:3;
+z-index:5;
 }
 
 #top-nav button{
@@ -116,12 +116,12 @@ font-weight:600;
 cursor:pointer;
 }
 
-/* JOURNEY PANEL */
+/* JOURNEY */
 
 #journey-panel{
 
 position:absolute;
-top:80px;
+top:120px;
 left:20px;
 
 width:260px;
@@ -147,7 +147,6 @@ display:none;
 position:absolute;
 bottom:20px;
 left:50%;
-
 transform:translateX(-50%);
 
 display:none;
@@ -161,41 +160,25 @@ z-index:3;
 #walk-controls button{
 
 padding:8px 14px;
-
 border:none;
-
 border-radius:8px;
-
 background:#ff2fa3;
-
 color:white;
-
 cursor:pointer;
 
 }
 
-/* MARKERS */
-
 .marker-number{
 
 display:flex;
-
 align-items:center;
-
 justify-content:center;
-
 width:28px;
-
 height:28px;
-
 background:#e63946;
-
 border:3px solid white;
-
 border-radius:50%;
-
 color:white;
-
 font-weight:600;
 
 }
@@ -216,8 +199,6 @@ font-weight:600;
 Turn your everyday walk into cultural discovery
 </div>
 
-<div id="destination-search" class="home-search"></div>
-
 <div class="home-buttons">
 
 <button onclick="startApp()">Start Walk From Here</button>
@@ -225,6 +206,10 @@ Turn your everyday walk into cultural discovery
 </div>
 
 </div>
+
+<!-- SEARCH -->
+
+<div id="search-bar"></div>
 
 <!-- NAV -->
 
@@ -253,9 +238,7 @@ Encounters will appear here.
 <div id="walk-controls">
 
 <button onclick="pauseWalk()">Pause</button>
-
 <button onclick="resumeWalk()">Resume</button>
-
 <button onclick="endWalk()">End</button>
 
 </div>
@@ -264,13 +247,9 @@ Encounters will appear here.
 
 <script>
 
-/* CONFIG */
-
 mapboxgl.accessToken="pk.eyJ1IjoiYmlnYWwxIiwiYSI6ImNtbWIzODZuaDA0cWYycXIyMXVydmx1eDkifQ.2tS6Ro5jbDlGjbR74_Ox0Q"
 
 const API_URL="https://script.google.com/macros/s/AKfycbyTSX4rYwP5A8ScTUnmphdKRS7AlGWwdcLkDSNC-6HJTG4vEZeNFmMZLoUL0DXzKMAV/exec"
-
-/* STATE */
 
 let map
 let routeCoords=null
@@ -284,19 +263,12 @@ let lastPosition=null
 let userMarker=null
 let destinationCoords=null
 
-/* USER ID */
-
 let USER_ID = localStorage.getItem("hg_user")
 
 if(!USER_ID){
-
 USER_ID = crypto.randomUUID()
-
 localStorage.setItem("hg_user",USER_ID)
-
 }
-
-/* START APP */
 
 function startApp(){
 
@@ -324,13 +296,11 @@ map.addControl(new mapboxgl.NavigationControl())
 
 initDestinationSearch()
 
-loadEncounterArchive()
-
 }
 
 
 /* ----------------------------------------------------
-DESTINATION AUTOCOMPLETE
+DESTINATION SEARCH
 ---------------------------------------------------- */
 
 function initDestinationSearch(){
@@ -341,13 +311,11 @@ accessToken: mapboxgl.accessToken,
 
 mapboxgl: mapboxgl,
 
-placeholder:"Where are you walking to?",
-
-marker:false
+placeholder:"Enter destination (museum, gallery, address...)"
 
 })
 
-document.getElementById("destination-search")
+document.getElementById("search-bar")
 .appendChild(geocoder.onAdd(map))
 
 geocoder.on("result", async e => {
@@ -440,7 +408,7 @@ paint:{
 
 
 /* ----------------------------------------------------
-ZOOM TO ROUTE
+ZOOM MAP TO ROUTE
 ---------------------------------------------------- */
 
 function zoomToRoute(){
@@ -490,7 +458,7 @@ await new Promise(r=>setTimeout(r,2200))
 
 
 /* ----------------------------------------------------
-CULTURAL DISCOVERY (OVERPASS)
+CULTURAL DISCOVERY
 ---------------------------------------------------- */
 
 async function fetchCulturalSites(coords){
@@ -955,59 +923,12 @@ document.getElementById("encounter").style.display="none"
 
 
 /* ----------------------------------------------------
-PHOTO PREVIEW
----------------------------------------------------- */
-
-const photoInput=document.getElementById("photo")
-
-if(photoInput){
-
-photoInput.addEventListener("change",(e)=>{
-
-const file=e.target.files[0]
-
-if(!file) return
-
-document.getElementById("encounter-photo").src=URL.createObjectURL(file)
-
-})
-
-}
-
-
-/* ----------------------------------------------------
 SAVE ENCOUNTER
 ---------------------------------------------------- */
 
 async function saveEncounter(){
 
 if(!currentEncounter) return
-
-let photoBase64=""
-
-const file=document.getElementById("photo").files[0]
-
-if(file){
-
-photoBase64=await new Promise((resolve,reject)=>{
-
-const reader=new FileReader()
-
-reader.onload=()=>{
-
-const result=String(reader.result||"")
-
-resolve(result.split(",")[1]||"")
-
-}
-
-reader.onerror=reject
-
-reader.readAsDataURL(file)
-
-})
-
-}
 
 const payload={
 
@@ -1016,8 +937,7 @@ user_id:USER_ID,
 site_name:currentEncounter.name,
 note:document.getElementById("note").value,
 lat:currentEncounter.coords[1],
-lng:currentEncounter.coords[0],
-photo:photoBase64
+lng:currentEncounter.coords[0]
 
 }
 
@@ -1028,15 +948,13 @@ body:JSON.stringify(payload)
 
 alert("Encounter saved!")
 
-buildShareCard()
-
 closeEncounter()
 
 }
 
 
 /* ----------------------------------------------------
-LOAD MEMORY MARKERS
+MEMORY MARKERS
 ---------------------------------------------------- */
 
 async function loadEncounterArchive(){
@@ -1062,7 +980,6 @@ async function toggleMemories(){
 if(archiveMarkers.length){
 
 archiveMarkers.forEach(m=>m.remove())
-
 archiveMarkers=[]
 
 return
@@ -1075,25 +992,7 @@ loadEncounterArchive()
 
 
 /* ----------------------------------------------------
-BUILD SHARE CARD
----------------------------------------------------- */
-
-function buildShareCard(){
-
-document.getElementById("share-image").src=
-document.getElementById("encounter-photo").src
-
-document.getElementById("share-title").innerText=
-currentEncounter.name
-
-document.getElementById("share-note").innerText=
-document.getElementById("note").value
-
-}
-
-
-/* ----------------------------------------------------
-SOCIAL SHARE
+SHARE CARD
 ---------------------------------------------------- */
 
 async function shareEncounter(){
@@ -1109,21 +1008,16 @@ const file=new File([blob],"hot-girl-walk.png",{type:"image/png"})
 if(navigator.share){
 
 await navigator.share({
-
 title:"Hot Girl Walk",
 text:"Look what I discovered on my walk ✨",
 files:[file]
-
 })
 
 }else{
 
 const link=document.createElement("a")
-
 link.href=URL.createObjectURL(blob)
-
 link.download="hot-girl-walk.png"
-
 link.click()
 
 }
