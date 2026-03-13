@@ -1,668 +1,815 @@
 <!DOCTYPE html>
 <html>
-
 <head>
 
 <meta charset="utf-8">
-<title>Hot Girl Walks</title>
+<title>Cultural Walk Explorer</title>
 
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <link href="https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.css" rel="stylesheet">
 <script src="https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.js"></script>
+
 <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
+
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 
 <style>
 
 body{
 margin:0;
-font-family:Inter, sans-serif;
-overflow:hidden;
+font-family:'Inter',sans-serif;
 }
 
 #map{
+width:100%;
+height:100vh;
+}
+
+#route-input{
 position:absolute;
-top:0;
-bottom:0;
-width:100%;
-}
-
-/* ===============================
-BRAT INTRO
-=============================== */
-
-#intro-overlay{
-
-position:fixed;
-top:0;
-left:0;
-right:0;
-bottom:0;
-
-display:flex;
-align-items:center;
-justify-content:center;
-
-z-index:1000;
-
-}
-
-#intro-card{
-
-width:60vw;
-max-width:520px;
-aspect-ratio:1/1;
-
-background:#fff8f4;
-
-border-radius:24px;
-
-box-shadow:0 20px 60px rgba(0,0,0,0.35);
-
-display:flex;
-flex-direction:column;
-justify-content:center;
-
-gap:16px;
-
-padding:36px;
-
-}
-
-.intro-bar{
-
-font-size:52px;
-font-weight:900;
-
-padding:10px 18px;
-
-color:white;
-
-transform:translateX(-120%);
-opacity:0;
-
-letter-spacing:2px;
-
-border-radius:8px;
-
-}
-
-.hot{
-background:#ff2fa3;
-animation:slideIn 0.7s forwards;
-}
-
-.girls{
-background:#ff7fa5;
-animation:slideIn 0.7s forwards;
-animation-delay:0.2s;
-}
-
-.walk{
-background:#4f7cff;
-animation:slideIn 0.7s forwards;
-animation-delay:0.4s;
-}
-
-#intro-start{
-
-margin-top:16px;
-padding:14px;
-
-border:none;
-border-radius:20px;
-
-background:black;
-color:white;
-
-font-size:15px;
-font-weight:600;
-
-cursor:pointer;
-
-}
-
-@keyframes slideIn{
-
-0%{
-transform:translateX(-120%);
-opacity:0;
-}
-
-80%{
-transform:translateX(10px);
-}
-
-100%{
-transform:translateX(0);
-opacity:1;
-}
-
-}
-
-/* ===============================
-NAV
-=============================== */
-
-#top-nav{
-
-position:fixed;
-top:0;
-left:0;
-right:0;
-
-height:50px;
-
+top:20px;
+left:20px;
+z-index:2;
 background:white;
-
-display:flex;
-align-items:center;
-justify-content:center;
-
-gap:20px;
-
-z-index:200;
-
-box-shadow:0 2px 8px rgba(0,0,0,0.2);
-
-}
-
-#top-nav button{
-border:none;
-background:none;
-font-weight:bold;
-cursor:pointer;
-}
-
-/* ===============================
-PLANNER
-=============================== */
-
-#planner{
-
-position:fixed;
-bottom:0;
-left:0;
-right:0;
-
-background:white;
-
-padding:16px;
-
-border-radius:20px 20px 0 0;
-
-box-shadow:0 -5px 20px rgba(0,0,0,0.2);
-
-z-index:200;
-
-transition:transform .3s;
-
-}
-
-#planner.collapsed{
-transform:translateY(100%);
-}
-
-#planner input,
-#planner select{
-
-width:100%;
-padding:8px;
-margin-bottom:8px;
+padding:12px;
 border-radius:8px;
-border:1px solid #ccc;
-
+box-shadow:0 4px 12px rgba(0,0,0,0.15);
 }
 
-#planner button{
+#route-input input{
+display:block;
+margin-bottom:6px;
+padding:6px;
+width:180px;
+}
 
+#route-input button{
 width:100%;
-padding:10px;
-
-border:none;
-border-radius:20px;
-
-background:#ff7fa5;
-color:white;
-
+padding:6px;
 margin-top:5px;
-
 }
 
-/* ===============================
-WALK CONTROLS
-=============================== */
-
-#walk-controls{
-
-position:fixed;
-bottom:20px;
-left:50%;
-transform:translateX(-50%);
-
-display:none;
-
-gap:10px;
-
-z-index:300;
-
-}
-
-#walk-controls button{
-
-padding:10px 14px;
-border:none;
-border-radius:20px;
-
+#journey-panel{
+position:absolute;
+top:180px;
+left:20px;
 background:white;
-
-box-shadow:0 2px 8px rgba(0,0,0,0.2);
-
+padding:10px;
+border-radius:6px;
+box-shadow:0 0 6px rgba(0,0,0,0.2);
+font-size:14px;
 }
 
-/* ===============================
-TOP TRUMPS CARD
-=============================== */
+#status-message{
+position:absolute;
+top:130px;
+left:20px;
+z-index:3;
+background:#fff6f6;
+color:#8b1e1e;
+padding:10px 12px;
+border-radius:6px;
+border:1px solid #f0c2c2;
+box-shadow:0 0 6px rgba(0,0,0,0.15);
+font-size:13px;
+display:none;
+max-width:420px;
+}
 
-#encounter{
+#status-message.info{
+background:#f4f8ff;
+color:#1f3e74;
+border-color:#c8d8fa;
+}
 
-position:fixed;
-
+#welcome-panel{
+position:absolute;
 top:50%;
 left:50%;
-
-transform:translate(-50%,-50%) rotate(-2deg);
-
-width:320px;
-
-background:#fff8f4;
-
-border-radius:22px;
-
-border:4px solid #ff2fa3;
-
-box-shadow:0 20px 50px rgba(0,0,0,0.35);
-
-padding:16px;
-
-display:none;
-
-z-index:600;
-
-}
-
-#encounter-photo{
-
-width:100%;
-height:180px;
-
-object-fit:cover;
-
-border-radius:12px;
-
-margin-bottom:10px;
-
-}
-
-#encounter-title{
-
-font-size:22px;
-font-weight:700;
-
-margin-bottom:10px;
-
-}
-
-.stat{
-
-display:flex;
-justify-content:space-between;
-
-margin-bottom:6px;
-
-font-weight:600;
-
-}
-
-.star{
-
-font-size:20px;
-cursor:pointer;
-
-color:#ccc;
-
-}
-
-.star.active{
-color:#ffd000;
-}
-
-#note{
-
-margin-top:10px;
-
-width:100%;
-padding:8px;
-
-border-radius:10px;
-
-border:1px solid #ddd;
-
-}
-
-.card-buttons{
-
-display:flex;
-gap:10px;
-
-margin-top:10px;
-
-}
-
-.card-buttons button{
-
-flex:1;
-
-padding:8px;
-
-border:none;
-
-border-radius:12px;
-
-background:#ff2fa3;
-
-color:white;
-
-font-weight:600;
-
-}
-
-/* ===============================
-CARD DECK (EXPLORE)
-=============================== */
-
-#card-deck{
-
-position:fixed;
-
-bottom:40px;
-left:50%;
-
-transform:translateX(-50%);
-
-display:none;
-
-z-index:500;
-
-}
-
-.deck-card{
-
-width:220px;
-height:300px;
-
+transform:translate(-50%,-50%);
 background:white;
+padding:30px;
+border-radius:10px;
+box-shadow:0 10px 30px rgba(0,0,0,0.25);
+max-width:420px;
+z-index:20;
+text-align:center;
+}
 
-border-radius:20px;
-
-border:3px solid #ff2fa3;
-
-box-shadow:0 10px 30px rgba(0,0,0,0.3);
-
+#encounter-panel{
 position:absolute;
+bottom:0;
+left:0;
+right:0;
+background:white;
+padding:16px;
+box-shadow:0 -4px 12px rgba(0,0,0,0.3);
+display:none;
+z-index:5;
+}
 
-cursor:pointer;
+#encounter-photo-preview{
+max-width:220px;
+border-radius:8px;
+margin-top:10px;
+display:none;
+}
 
+#encounter-prompt{
+margin:6px 0 10px;
+line-height:1.4;
+}
+
+.marker-number{
+display:flex;
+align-items:center;
+justify-content:center;
+width:28px;
+height:28px;
+background:#e63946;
+border:3px solid white;
+border-radius:50%;
+color:white;
+font-weight:600;
+font-size:14px;
 }
 
 </style>
-
 </head>
 
 <body>
 
-<div id="intro-overlay">
+<div id="welcome-panel">
 
-<div id="intro-card">
+<h2>Cultural Walk Explorer</h2>
 
-<div class="intro-bar hot">HOT</div>
-<div class="intro-bar girls">GIRLS</div>
-<div class="intro-bar walk">WALK</div>
+<p>
+Enter two postcodes to generate a walking route.
+Along the way you'll discover cultural encounters —
+artworks, historic places and monuments.
+Pause, notice, reflect and record what you see.
+</p>
 
-<button id="intro-start" onclick="startApp()">start exploring ✨</button>
+<button onclick="closeWelcome()">Start Exploring</button>
 
 </div>
 
-</div>
 
-<div id="top-nav">
-<button onclick="modePlan()">Plan</button>
-<button onclick="modeWalk()">Walk</button>
-<button onclick="modeExplore()">Explore</button>
-</div>
-
-<div id="map"></div>
-
-<div id="planner">
-
-<h3>Plan your Hot Girl Walk</h3>
+<div id="route-input">
 
 <input id="home" placeholder="Start postcode">
 <input id="work" placeholder="Destination postcode">
 
-<button onclick="createRoute()">Generate Walk</button>
-<button onclick="startWalk()">Start Walk</button>
+<button onclick="createRoute()">Show Route</button>
+<button onclick="refreshEncounters()">Discover Encounters</button>
+<button onclick="toggleEncounters()">Toggle Encounters</button>
 
 </div>
 
-<div id="walk-controls">
-<button onclick="pauseWalk()">Pause</button>
-<button onclick="resumeWalk()">Resume</button>
-<button onclick="endWalk()">End Walk</button>
-</div>
+<div id="status-message"></div>
 
-<div id="encounter">
+<div id="journey-panel">Enter a route to begin</div>
 
-<img id="encounter-photo">
+<div id="map"></div>
+
+<div id="encounter-panel">
 
 <h3 id="encounter-title"></h3>
 
-<div class="stat">
-<span>Beauty</span>
-<span class="star">★ ★ ★ ★ ★</span>
-</div>
+<p id="encounter-prompt"></p>
 
-<div class="stat">
-<span>History</span>
-<span class="star">★ ★ ★ ★ ★</span>
-</div>
+<input type="file" id="photo-input">
 
-<div class="stat">
-<span>Hidden Gem</span>
-<span class="star">★ ★ ★ ★ ★</span>
-</div>
+<img id="encounter-photo-preview">
 
-<textarea id="note" placeholder="What did you notice?"></textarea>
+<button onclick="removePhoto()">Remove Photo</button>
 
-<input type="file" id="photo">
+<textarea id="note-input" placeholder="Write reflection..."></textarea>
 
-<div class="card-buttons">
+<br><br>
 
 <button onclick="saveEncounter()">Save</button>
+<button onclick="shareEncounter()">Share</button>
 <button onclick="closeEncounter()">Close</button>
 
 </div>
 
-</div>
-
-<div id="card-deck"></div>
-
 <script>
 
-const MAPBOX_TOKEN="pk.eyJ1IjoiYmlnYWwxIiwiYSI6ImNtbWIzODZuaDA0cWYycXIyMXVydmx1eDkifQ.2tS6Ro5jbDlGjbR74_Ox0Q"
+/* INSERT YOUR MAPBOX TOKEN HERE */
+mapboxgl.accessToken="PASTE_MAPBOX_TOKEN_HERE";
 
-const API_URL="https://script.google.com/macros/s/AKfycbynF6QPJUh5fR-yu8HtlDSDZyjy73LOARMynPphhdrufYeKwH9MqK7ci2XafG7biJQD/exec"
+/* INSERT YOUR APPS SCRIPT URL HERE */
+const API_URL="PASTE_APPS_SCRIPT_URL_HERE";
 
-mapboxgl.accessToken=MAPBOX_TOKEN
+let markers=[];
+let archiveMarkers=[];
+let currentEncounter=null;
+let currentRouteCoords=null;
+let encounterArchive=[];
+let encountersVisible=true;
+let overpassFailed=false;
+let encountersLoading=false;
+const siteCache=new Map();
+const wikiCache=new Map();
 
-const LONDON_BOUNDS=[[-0.563,51.261],[0.280,51.686]]
-
-let map
-let routeCoords=null
-let markers=[]
-let watchId=null
-let userMarker=null
-let currentSite=null
-
-function startApp(){
-
-const intro=document.getElementById("intro-overlay")
-
-intro.style.transition="opacity .4s"
-intro.style.opacity="0"
-
-setTimeout(()=>{
-intro.style.display="none"
-},400)
-
-initMap()
-
-}
-
-function initMap(){
-
-map=new mapboxgl.Map({
-container:"map",
-style:"mapbox://styles/mapbox/streets-v12",
+const map=new mapboxgl.Map({
+container:'map',
+style:'mapbox://styles/mapbox/streets-v12',
 center:[-0.1276,51.5072],
-zoom:11,
-maxBounds:LONDON_BOUNDS
-})
+zoom:11
+});
 
-map.addControl(new mapboxgl.NavigationControl())
+map.addControl(new mapboxgl.NavigationControl());
+
+
+function closeWelcome(){
+document.getElementById("welcome-panel").style.display="none";
+}
+
+
+function setStatus(message,type="error"){
+const status=document.getElementById("status-message");
+status.textContent=message;
+status.className=type==="info"?"info":"";
+status.style.display="block";
+}
+
+function clearStatus(){
+document.getElementById("status-message").style.display="none";
+}
+
+function canCallApi(){
+if(!API_URL || API_URL.includes("PASTE_APPS_SCRIPT_URL_HERE")){
+setStatus("Set API_URL to your deployed Apps Script URL before fetching routes.");
+return false;
+}
+return true;
+}
+
+
+function routeCacheKey(coords){
+return coords
+.slice(0,40)
+.map(pt=>`${pt[0].toFixed(4)},${pt[1].toFixed(4)}`)
+.join("|");
+}
+
+
+/* SIMPLE API REQUEST */
+
+async function fetchAPI(url){
+
+let res;
+
+try{
+res = await fetch(url,{cache:"no-cache"});
+}catch(err){
+throw new Error("Network request failed. Check your Apps Script deployment and internet connection.");
+}
+
+if(!res.ok){
+throw new Error(`API error (${res.status})`);
+}
+
+return await res.json();
 
 }
 
-function modePlan(){
-document.getElementById("planner").classList.remove("collapsed")
+
+/* USER ID */
+
+function getUserId(){
+
+let id=localStorage.getItem("culture_user");
+
+if(!id){
+id="user_"+Math.random().toString(36).substring(2,10);
+localStorage.setItem("culture_user",id);
 }
 
-function modeWalk(){
-startWalk()
+return id;
+
 }
 
-function modeExplore(){
-loadArchive()
-}
+
+/* ROUTE */
 
 async function createRoute(){
 
-const home=document.getElementById("home").value
-const work=document.getElementById("work").value
+if(!canCallApi()) return;
 
-const res=await fetch(API_URL+"?action=route&home="+encodeURIComponent(home)+"&work="+encodeURIComponent(work))
+const home=document.getElementById("home").value.trim();
+const work=document.getElementById("work").value.trim();
 
-const data=await res.json()
+if(!home||!work){
+setStatus("Enter both a start and destination postcode.");
+return;
+}
 
-routeCoords=data.geometry.coordinates
+clearStatus();
 
-drawRoute()
+try{
+const data=await fetchAPI(
+API_URL+"?action=route&home="+encodeURIComponent(home)+"&work="+encodeURIComponent(work)
+);
+
+if(!data?.geometry?.coordinates?.length){
+throw new Error("Route API returned no geometry.");
+}
+
+const coords=data.geometry.coordinates;
+currentRouteCoords=coords;
+
+drawRoute(coords);
+
+await loadEncounters(coords);
+
+await loadEncounterArchive();
+}catch(err){
+setStatus(err.message||"Failed to create route.");
+console.error(err);
+}
 
 }
 
-function drawRoute(){
+async function refreshEncounters(){
+if(!currentRouteCoords){
+setStatus("Create a route before discovering encounters.","info");
+return;
+}
 
-const geo={
+clearStatus();
+
+try{
+await loadEncounters(currentRouteCoords,true);
+}catch(err){
+setStatus(err.message||"Failed to refresh encounters.");
+console.error(err);
+}
+}
+
+
+/* DRAW ROUTE */
+
+function drawRoute(coords){
+
+if(!map.isStyleLoaded()){
+map.once("load",()=>drawRoute(coords));
+return;
+}
+
+const geojson={
 type:"FeatureCollection",
 features:[{
 type:"Feature",
-geometry:{type:"LineString",coordinates:routeCoords}
-}]
+geometry:{
+type:"LineString",
+coordinates:coords
 }
+}]
+};
 
 if(map.getSource("route")){
-map.getSource("route").setData(geo)
+map.getSource("route").setData(geojson);
 }else{
 
-map.addSource("route",{type:"geojson",data:geo})
+map.addSource("route",{type:"geojson",data:geojson});
 
 map.addLayer({
 id:"route",
 type:"line",
 source:"route",
 paint:{
-"line-color":"#ff2fa3",
+"line-color":"#ff5500",
 "line-width":6
 }
-})
+});
 
 }
 
 }
 
-function openEncounter(site){
 
-currentSite=site
+/* CULTURAL DISCOVERY */
 
-document.getElementById("encounter-title").innerText=site.name
+async function fetchCulturalSites(line,cacheKey,forceRefresh=false){
 
-document.getElementById("encounter").style.display="block"
+if(!forceRefresh && siteCache.has(cacheKey)){
+overpassFailed=false;
+return siteCache.get(cacheKey);
+}
+
+const bbox=turf.bbox(line);
+
+const query=`
+[out:json][timeout:25];
+(
+node["tourism"~"museum|gallery|artwork"](${bbox[1]},${bbox[0]},${bbox[3]},${bbox[2]});
+node["historic"~"monument|memorial"](${bbox[1]},${bbox[0]},${bbox[3]},${bbox[2]});
+);
+out center;
+`;
+
+const endpoints=[
+"https://overpass-api.de/api/interpreter",
+"https://overpass.kumi.systems/api/interpreter"
+];
+
+for(const endpoint of endpoints){
+const controller=new AbortController();
+const timer=setTimeout(()=>controller.abort(),20000);
+
+try{
+const res=await fetch(endpoint,{
+method:"POST",
+body:query,
+signal:controller.signal
+});
+
+if(!res.ok){
+throw new Error(`Overpass error (${res.status})`);
+}
+
+const text=await res.text();
+
+if(text.startsWith("<")){
+throw new Error("Overpass returned HTML error");
+}
+
+const data=JSON.parse(text);
+const cleaned=data.elements.map(el=>{
+const lon=el.lon||el.center?.lon;
+const lat=el.lat||el.center?.lat;
+
+if(lon==null||lat==null) return null;
+if(!el.tags?.name) return null;
+
+return{
+name:el.tags.name,
+coords:[lon,lat],
+source:"overpass"
+};
+
+}).filter(Boolean);
+
+overpassFailed=false;
+siteCache.set(cacheKey,cleaned);
+clearStatus();
+return cleaned;
+}catch(err){
+console.error(`Overpass failed via ${endpoint}:`,err);
+}finally{
+clearTimeout(timer);
+}
+}
+
+overpassFailed=true;
+setStatus("Cultural data provider is rate-limited right now. Showing route waypoints instead.","info");
+return [];
+
+}
+
+
+/* ENCOUNTER MARKERS */
+
+async function loadEncounters(coords,forceRefresh=false){
+
+if(encountersLoading) return;
+encountersLoading=true;
+
+markers.forEach(m=>m.remove());
+markers=[];
+
+const line=turf.lineString(coords);
+const key=routeCacheKey(coords);
+const sites=await fetchCulturalSites(line,key,forceRefresh);
+
+try{
+const length=turf.length(line);
+const selectedSites=[];
+
+for(let i=1;i<=4;i++){
+const pt=turf.along(line,length/5*i);
+
+if(sites.length){
+let best=null;
+let min=Infinity;
+
+sites.forEach(site=>{
+if(selectedSites.some(chosen=>chosen.name===site.name&&chosen.coords[0]===site.coords[0]&&chosen.coords[1]===site.coords[1])) return;
+
+const d=turf.distance(pt,turf.point(site.coords));
+
+if(d<min){
+min=d;
+best=site;
+}
+
+});
+
+if(best){
+selectedSites.push(best);
+continue;
+}
+}
+
+selectedSites.push({
+name:`Route waypoint ${i}`,
+coords:pt.geometry.coordinates,
+source:"fallback"
+});
+}
+
+updateJourneyPanel(selectedSites);
+
+selectedSites.forEach((site,i)=>{
+const el=document.createElement("div");
+el.className="marker-number";
+el.innerText=i+1;
+
+const marker=new mapboxgl.Marker(el)
+.setLngLat(site.coords)
+.addTo(map);
+
+marker.getElement().addEventListener("click",()=>{
+openEncounter(site);
+});
+
+markers.push(marker);
+});
+}finally{
+encountersLoading=false;
+}
+
+}
+
+
+/* JOURNEY PANEL */
+
+function updateJourneyPanel(sites){
+
+const panel=document.getElementById("journey-panel");
+
+panel.innerHTML="<b>Your Cultural Journey</b><br><br>";
+
+if(!sites.length){
+panel.innerHTML+="No cultural sites found on this route yet.";
+return;
+}
+
+if(overpassFailed){
+panel.innerHTML+="Showing route waypoints while cultural data reloads.";
+}
+
+sites.slice(0,4).forEach((site,i)=>{
+const row=document.createElement("div");
+row.textContent=`${i+1}. ${site.name}`;
+panel.appendChild(row);
+});
+
+}
+
+
+
+async function fetchWikipediaDetails(siteName){
+if(!siteName) return null;
+if(wikiCache.has(siteName)) return wikiCache.get(siteName);
+
+const endpoint=`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(siteName)}`;
+
+try{
+const res=await fetch(endpoint,{cache:"force-cache"});
+if(!res.ok) throw new Error("No wiki summary");
+
+const data=await res.json();
+const details={
+summary:data.extract||"",
+photo:data.thumbnail?.source||""
+};
+
+wikiCache.set(siteName,details);
+return details;
+}catch(err){
+wikiCache.set(siteName,null);
+return null;
+}
+}
+
+function resetEncounterInputs(){
+document.getElementById("note-input").value="";
+document.getElementById("photo-input").value="";
+document.getElementById("encounter-photo-preview").src="";
+document.getElementById("encounter-photo-preview").style.display="none";
+}
+
+document.getElementById("photo-input").addEventListener("change",(event)=>{
+const file=event.target.files?.[0];
+const preview=document.getElementById("encounter-photo-preview");
+
+if(!file){
+if(currentEncounter?.wiki_photo){
+preview.src=currentEncounter.wiki_photo;
+preview.style.display="block";
+}else{
+preview.src="";
+preview.style.display="none";
+}
+return;
+}
+
+const objectUrl=URL.createObjectURL(file);
+preview.src=objectUrl;
+preview.style.display="block";
+if(currentEncounter) currentEncounter.remove_photo=false;
+});
+
+/* ENCOUNTER PANEL */
+
+async function openEncounter(site){
+
+currentEncounter={...site,remove_photo:false,wiki_photo:""};
+resetEncounterInputs();
+
+document.getElementById("encounter-title").innerText=site.name;
+document.getElementById("encounter-prompt").innerText="Loading details...";
+
+document.getElementById("encounter-panel").style.display="block";
+
+const wiki=await fetchWikipediaDetails(site.name);
+
+if(!currentEncounter || currentEncounter.name!==site.name){
+return;
+}
+
+if(wiki?.summary){
+document.getElementById("encounter-prompt").innerText=wiki.summary;
+}else{
+document.getElementById("encounter-prompt").innerText="No Wikipedia summary found yet. Add your own reflection below.";
+}
+
+if(wiki?.photo){
+const preview=document.getElementById("encounter-photo-preview");
+preview.src=wiki.photo;
+preview.style.display="block";
+currentEncounter.wiki_photo=wiki.photo;
+}
 
 }
 
 function closeEncounter(){
+document.getElementById("encounter-panel").style.display="none";
+}
 
-document.getElementById("encounter").style.display="none"
+
+/* REMOVE PHOTO */
+
+function removePhoto(){
+if(!currentEncounter){
+setStatus("Open an encounter before removing a photo.","info");
+return;
+}
+
+document.getElementById("encounter-photo-preview").src="";
+document.getElementById("encounter-photo-preview").style.display="none";
+currentEncounter.remove_photo=true;
 
 }
 
-async function saveEncounter(){
 
-const note=document.getElementById("note").value
+/* SAVE ENCOUNTER */
+
+async function saveEncounter(){
+if(!canCallApi()) return;
+if(!currentEncounter){
+setStatus("Select an encounter marker before saving.","info");
+return;
+}
+
+let photoBase64="";
+const fileInput=document.getElementById("photo-input");
+const file=fileInput?.files?.[0];
+
+if(file){
+photoBase64=await new Promise((resolve,reject)=>{
+const reader=new FileReader();
+reader.onload=()=>{
+const result=String(reader.result||"");
+resolve(result.includes(",")?result.split(",")[1]:"");
+};
+reader.onerror=reject;
+reader.readAsDataURL(file);
+});
+}
 
 const payload={
 action:"encounter",
-user_id:"demo_user",
-site_name:currentSite.name,
+user_id:getUserId(),
+site_name:currentEncounter.name,
 route_id:"route",
-note:note,
-lat:currentSite.coords[1],
-lng:currentSite.coords[0]
-}
+note:document.getElementById("note-input").value,
+remove_photo:currentEncounter.remove_photo||false,
+lat:currentEncounter.coords?.[1]??null,
+lng:currentEncounter.coords?.[0]??null,
+photo:photoBase64
+};
 
-await fetch(API_URL,{
+try{
+const res=await fetch(API_URL,{
 method:"POST",
+// Keep this a simple request so Apps Script doesn't fail CORS preflight.
 body:JSON.stringify(payload)
-})
+});
 
-alert("Saved!")
+if(!res.ok){
+throw new Error(`Save failed (${res.status})`);
+}
+
+closeEncounter();
+await loadEncounterArchive();
+}catch(err){
+setStatus(err.message||"Failed to save encounter.");
+console.error(err);
+}
 
 }
 
-async function loadArchive(){
 
-const deck=document.getElementById("card-deck")
 
-deck.innerHTML=""
-deck.style.display="block"
+/* ARCHIVE */
 
-const data=await fetch(API_URL+"?action=encounters").then(r=>r.json())
+async function loadEncounterArchive(){
+if(!canCallApi()) return;
 
-data.forEach((e,i)=>{
+archiveMarkers.forEach(m=>m.remove());
+archiveMarkers=[];
 
-const card=document.createElement("div")
-card.className="deck-card"
+try{
+const data=await fetchAPI(API_URL+"?action=encounters");
 
-card.style.transform=`rotate(${i*5-10}deg) translateX(${i*30}px)`
+encounterArchive=data;
 
-card.onclick=()=>openEncounter({
-name:e.site_name,
-coords:[e.lng,e.lat]
-})
+data.forEach(e=>{
+if(e?.lng==null||e?.lat==null) return;
 
-deck.appendChild(card)
+const marker=new mapboxgl.Marker({color:"blue"})
+.setLngLat([e.lng,e.lat])
+.addTo(map);
 
-})
+marker.getElement().addEventListener("click",()=>{
+openEncounter({
+name:e.site_name||"Saved encounter",
+coords:[e.lng,e.lat],
+source:"archive"
+});
+});
+
+archiveMarkers.push(marker);
+
+});
+}catch(err){
+setStatus(err.message||"Failed to load archive.");
+console.error(err);
+}
+
+}
+
+
+/* SHARE */
+
+function shareEncounter(){
+if(!currentEncounter){
+setStatus("Select an encounter marker before sharing.","info");
+return;
+}
+
+const text=encodeURIComponent(
+"I discovered "+currentEncounter.name+" on my cultural walk."
+);
+
+const url=encodeURIComponent(window.location.href);
+
+window.open(
+"https://twitter.com/intent/tweet?text="+text+"&url="+url
+);
+
+}
+
+
+/* TOGGLE */
+
+function toggleEncounters(){
+
+encountersVisible=!encountersVisible;
+
+markers.forEach(m=>{
+m.getElement().style.display=encountersVisible?"block":"none";
+});
+
+archiveMarkers.forEach(m=>{
+m.getElement().style.display=encountersVisible?"block":"none";
+});
 
 }
 
