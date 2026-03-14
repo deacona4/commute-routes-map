@@ -35,28 +35,21 @@ width:100%;
 height:100vh;
 }
 
-/* HOME SCREEN */
+/* HOME */
 
 #home-screen{
-
 position:absolute;
 top:0;
 left:0;
 width:100%;
 height:100%;
-
 background:#ff2fa3;
-
 display:flex;
 flex-direction:column;
 justify-content:center;
 align-items:center;
-
-z-index:20;
 color:white;
-
-text-align:center;
-
+z-index:20;
 }
 
 .home-title{
@@ -65,334 +58,197 @@ font-weight:800;
 }
 
 .home-sub{
-margin-top:10px;
+margin-top:12px;
 font-size:18px;
 }
 
-/* SEARCH PANEL */
+/* SEARCH */
 
 #search-panel{
-
 position:absolute;
 top:16px;
 right:16px;
-
 background:white;
-
 padding:12px;
 border-radius:12px;
-
 box-shadow:0 4px 16px rgba(0,0,0,0.2);
-
 z-index:5;
-
 width:320px;
-
 display:flex;
 flex-direction:column;
 gap:8px;
-
 }
 
 /* NAV */
 
 #nav{
-
 position:absolute;
 bottom:20px;
 left:50%;
-
 transform:translateX(-50%);
-
 background:white;
-
 padding:10px 16px;
-
 border-radius:24px;
-
 box-shadow:0 4px 16px rgba(0,0,0,.25);
-
-z-index:5;
-
 display:flex;
 gap:10px;
-
+z-index:5;
 }
 
 #nav button{
-
 border:none;
 background:none;
-
 font-weight:600;
 cursor:pointer;
-
 padding:6px 10px;
+}
 
+/* WALK MODE INDICATOR */
+
+.walk-indicator{
+position:absolute;
+top:12px;
+left:12px;
+background:#2b7cff;
+color:white;
+padding:6px 10px;
+border-radius:10px;
+font-size:13px;
+z-index:10;
+display:none;
 }
 
 /* ENCOUNTER CARD */
 
 #encounter{
-
 position:absolute;
 top:50%;
 left:50%;
-
 transform:translate(-50%,-50%);
-
 width:min(92vw,360px);
-
 background:#fff7ec;
-
 border:5px solid #ff2fa3;
-
 border-radius:18px;
-
 box-shadow:0 20px 40px rgba(0,0,0,.4);
-
 padding:14px;
-
 display:none;
-
 z-index:10;
-
 }
-
-/* CARD TITLE */
 
 .card-title{
-
 font-size:20px;
 font-weight:800;
-
 color:#2b7cff;
-
-margin-bottom:4px;
-
 }
-
-/* BADGES */
 
 .badge{
-
 display:inline-block;
-
 padding:4px 8px;
-
 border-radius:8px;
-
 font-size:12px;
-
 font-weight:700;
-
 margin-top:4px;
-
 }
 
-.discovery-Landmark{
-background:#2b7cff;
-color:white;
-}
-
-.discovery-Notable{
-background:#7a3cff;
-color:white;
-}
-
-.discovery-HiddenGem{
-background:#ff2fa3;
-color:white;
-}
-
-.discovery-Secret{
-background:#f5b400;
-color:black;
-}
-
-/* IMAGE */
+.discovery-Landmark{background:#2b7cff;color:white;}
+.discovery-Notable{background:#7a3cff;color:white;}
+.discovery-HiddenGem{background:#ff2fa3;color:white;}
+.discovery-Secret{background:#f5b400;color:black;}
 
 .card-image{
-
 position:relative;
 margin-top:6px;
-
 }
 
 .card-image img{
-
 width:100%;
 height:200px;
-
 object-fit:cover;
-
 border-radius:10px;
-
 }
-
-/* REMOVE PHOTO BUTTON */
 
 .photo-remove{
-
 position:absolute;
-
 top:6px;
 right:6px;
-
 background:#ff2fa3;
-
 color:white;
-
 border-radius:50%;
-
 width:24px;
 height:24px;
-
 text-align:center;
-
 line-height:24px;
-
 font-weight:700;
-
 cursor:pointer;
-
 display:none;
-
 }
-
-/* REFLECTION */
 
 textarea{
-
 width:100%;
-
 margin-top:8px;
-
 padding:8px;
-
 border-radius:10px;
-
 border:1px solid #ddd;
-
 }
 
-/* CARD ACTIONS */
-
 .card-actions{
-
 display:flex;
-
 justify-content:space-between;
-
 margin-top:10px;
-
 }
 
 .collect-btn{
-
 background:#2b7cff;
 color:white;
-
 border:none;
-
 padding:8px 12px;
-
 border-radius:10px;
-
 }
 
 .close-btn{
-
 background:#eee;
-
 border:none;
-
 padding:8px 12px;
-
 border-radius:10px;
-
 }
 
-/* COLLECTION PAGE */
+/* COLLECTION */
 
 #collection-page{
-
 position:absolute;
-
 top:0;
 left:0;
-
 width:100%;
 height:100%;
-
 background:white;
-
 z-index:30;
-
 display:none;
-
 overflow:auto;
-
 padding:20px;
-
 }
 
 .collection-grid{
-
 display:grid;
-
 grid-template-columns:repeat(auto-fill,minmax(200px,1fr));
-
 gap:16px;
-
 }
 
 .collection-card{
-
 background:#fff7ec;
-
 border:3px solid #ff2fa3;
-
 border-radius:14px;
-
 padding:10px;
-
 }
 
 .collection-card img{
-
 width:100%;
 height:140px;
-
 object-fit:cover;
-
 border-radius:8px;
-
 }
 
 .collection-card h3{
-
 color:#2b7cff;
-
-}
-
-/* ROUTE SHARE CARD */
-
-.route-share-card{
-
-width:360px;
-height:640px;
-
-background:#fff7ec;
-
-border:6px solid #ff2fa3;
-
-border-radius:20px;
-
-padding:20px;
-
-font-family:'Inter';
-
 }
 
 /* MOBILE */
@@ -416,7 +272,7 @@ bottom:10px;
 
 <body>
 
-<!-- HOME SCREEN -->
+<div id="walk-indicator">Walking Mode</div>
 
 <div id="home-screen">
 
@@ -432,8 +288,6 @@ Turn everyday routes into cultural discovery
 
 </div>
 
-<!-- SEARCH PANEL -->
-
 <div id="search-panel">
 
 <div id="start-search"></div>
@@ -445,8 +299,6 @@ Turn everyday routes into cultural discovery
 <button id="route-button">Generate Route</button>
 
 </div>
-
-<!-- NAVIGATION -->
 
 <div id="nav">
 
@@ -464,11 +316,7 @@ Turn everyday routes into cultural discovery
 
 </div>
 
-<!-- MAP -->
-
 <div id="map"></div>
-
-<!-- ENCOUNTER CARD -->
 
 <div id="encounter">
 
@@ -500,8 +348,6 @@ Turn everyday routes into cultural discovery
 
 </div>
 
-<!-- COLLECTION PAGE -->
-
 <div id="collection-page">
 
 <h1>Your Cultural Collection</h1>
@@ -515,8 +361,10 @@ Turn everyday routes into cultural discovery
 </div>
 
 <script>
+/* CONFIG */
+
 mapboxgl.accessToken="pk.eyJ1IjoiYmlnYWwxIiwiYSI6ImNtbWIzODZuaDA0cWYycXIyMXVydmx1eDkifQ.2tS6Ro5jbDlGjbR74_Ox0Q"
-const API_URL="https://script.google.com/macros/s/AKfycbyuqgDUQjUfsXKDPeRHZhBSPNUHLlLoIEX9rAvV6oAjAAI1xzYZ2mfRlBYKmixKS-FR/exec"
+const API_URL="https://script.google.com/macros/s/AKfycbxxYIc9Rf-2OrF7Ud9XQseeschMBjthjwpuA-a4RM5dgEMGmVPhBjWdFVnNIq1tHPDE/exec"
 
 /* GLOBAL STATE */
 
@@ -590,7 +438,7 @@ zoom:14
 
 }
 
-/* SEARCH BOXES */
+/* SEARCH */
 
 function initSearch(){
 
@@ -600,7 +448,8 @@ mapboxgl:mapboxgl,
 placeholder:"Start location"
 })
 
-document.getElementById("start-search").appendChild(startGeo.onAdd(map))
+document.getElementById("start-search")
+.appendChild(startGeo.onAdd(map))
 
 startGeo.on("result",e=>{
 startCoords=e.result.center
@@ -612,7 +461,8 @@ mapboxgl:mapboxgl,
 placeholder:"Destination"
 })
 
-document.getElementById("dest-search").appendChild(destGeo.onAdd(map))
+document.getElementById("dest-search")
+.appendChild(destGeo.onAdd(map))
 
 destGeo.on("result",e=>{
 destinationCoords=e.result.center
@@ -690,7 +540,7 @@ paint:{
 
 }
 
-/* TYPE SYSTEM */
+/* CULTURAL TYPE */
 
 function getType(tags){
 
@@ -725,8 +575,6 @@ const line=turf.lineString(coords)
 
 const bbox=turf.bbox(line)
 
-/* OVERPASS QUERY */
-
 const query=`
 [out:json];
 (
@@ -739,10 +587,7 @@ out center;
 
 const res=await fetch(
 "https://overpass-api.de/api/interpreter",
-{
-method:"POST",
-body:query
-}
+{method:"POST",body:query}
 )
 
 const data=await res.json()
@@ -757,9 +602,9 @@ if(!el.tags || !el.tags.name) return
 
 const coords=[el.lon||el.center.lon,el.lat||el.center.lat]
 
-const pt=turf.point(coords)
+const point=turf.point(coords)
 
-const dist=turf.pointToLineDistance(pt,line,{units:"kilometers"})
+const dist=turf.pointToLineDistance(point,line,{units:"kilometers"})
 
 if(dist>0.25) return
 
@@ -775,7 +620,7 @@ discovery:discovery
 
 })
 
-/* EVEN DISTRIBUTION */
+if(candidates.length===0) return
 
 const step=Math.floor(candidates.length/4)
 
@@ -812,7 +657,8 @@ for(const m of markers){
 map.flyTo({
 center:m.site.coords,
 zoom:17,
-pitch:60
+pitch:60,
+speed:0.6
 })
 
 await sleep(2000)
@@ -827,8 +673,6 @@ closeEncounter()
 
 }
 
-/* SLEEP */
-
 function sleep(ms){
 return new Promise(r=>setTimeout(r,ms))
 }
@@ -840,16 +684,21 @@ function startWalk(){
 walkMode=true
 
 document.getElementById("search-panel").style.display="none"
+document.getElementById("walk-indicator").style.display="block"
 
 map.easeTo({
-pitch:65,
+pitch:70,
 zoom:17
 })
 
-walkWatcher=navigator.geolocation.watchPosition(updateWalkPosition,{
+walkWatcher=navigator.geolocation.watchPosition(
+updateWalkPosition,
+gpsError,
+{
 enableHighAccuracy:true,
 maximumAge:0
-})
+}
+)
 
 }
 
@@ -864,6 +713,7 @@ navigator.geolocation.clearWatch(walkWatcher)
 }
 
 document.getElementById("search-panel").style.display="block"
+document.getElementById("walk-indicator").style.display="none"
 
 map.easeTo({
 pitch:0,
@@ -872,7 +722,17 @@ zoom:14
 
 }
 
-/* GPS POSITION */
+/* GPS ERROR */
+
+function gpsError(err){
+
+console.warn("GPS error",err)
+
+alert("Location access required for walking mode")
+
+}
+
+/* UPDATE WALK POSITION */
 
 function updateWalkPosition(pos){
 
@@ -901,11 +761,14 @@ userMarker.setLngLat(coords)
 map.easeTo({
 center:coords,
 zoom:17,
-pitch:65,
-bearing:pos.coords.heading || map.getBearing()
+pitch:70,
+bearing:pos.coords.heading || 0,
+duration:800
 })
 
 }
+/* OPEN ENCOUNTER CARD */
+
 function openEncounter(site){
 
 currentEncounter=site
@@ -926,7 +789,7 @@ document.getElementById("encounter").style.display="block"
 
 }
 
-/* CLOSE CARD */
+/* CLOSE ENCOUNTER */
 
 function closeEncounter(){
 
@@ -1013,7 +876,14 @@ return
 
 const canvas=await html2canvas(card,{
 backgroundColor:"#fff7ec",
-ignoreElements:(el)=>el.classList?.contains("mapboxgl-canvas")
+ignoreElements:(el)=>{
+
+if(el.classList?.contains("mapboxgl-canvas")) return true
+if(el.classList?.contains("mapboxgl-control-container")) return true
+
+return false
+
+}
 })
 
 canvas.toBlob(blob=>{
@@ -1023,29 +893,24 @@ alert("Share failed")
 return
 }
 
-const file=new File([blob],"encounter-card.png",{type:"image/png"})
-
-if(navigator.share){
-
-navigator.share({
-files:[file],
-title:"Cultural Encounter"
-})
-
-}else{
+const url=URL.createObjectURL(blob)
 
 const link=document.createElement("a")
-link.href=URL.createObjectURL(blob)
+
+link.href=url
 link.download="encounter-card.png"
+
+document.body.appendChild(link)
+
 link.click()
 
-}
+link.remove()
 
 })
 
 }
 
-/* SHARE ROUTE */
+/* SHARE ROUTE CARD */
 
 async function shareRoute(){
 
@@ -1058,7 +923,13 @@ const routeName=prompt("Name this route")
 
 const card=document.createElement("div")
 
-card.className="route-share-card"
+card.style.width="360px"
+card.style.height="640px"
+card.style.background="#fff7ec"
+card.style.border="6px solid #ff2fa3"
+card.style.borderRadius="20px"
+card.style.padding="20px"
+card.style.fontFamily="Inter"
 
 card.innerHTML=`
 
@@ -1080,7 +951,9 @@ margin-top:20px;
 Route Preview
 </div>
 
-<p style="margin-top:20px">Explore culture along your route</p>
+<p style="margin-top:20px">
+Explore culture along your route
+</p>
 
 `
 
@@ -1096,23 +969,18 @@ canvas.toBlob(blob=>{
 
 if(!blob) return
 
-const file=new File([blob],"route-card.png",{type:"image/png"})
-
-if(navigator.share){
-
-navigator.share({
-files:[file],
-title:"Hot Girl Walk Route"
-})
-
-}else{
+const url=URL.createObjectURL(blob)
 
 const link=document.createElement("a")
-link.href=URL.createObjectURL(blob)
+
+link.href=url
 link.download="route-card.png"
+
+document.body.appendChild(link)
+
 link.click()
 
-}
+link.remove()
 
 })
 
