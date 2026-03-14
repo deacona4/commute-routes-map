@@ -110,6 +110,26 @@ width:100%;
 margin-top:10px;
 }
 
+#collection-page{
+position:absolute;
+top:0;
+left:0;
+width:100%;
+height:100%;
+background:white;
+z-index:30;
+display:none;
+overflow:auto;
+padding:20px;
+}
+
+#collection-grid{
+display:grid;
+grid-template-columns:repeat(auto-fill,minmax(200px,1fr));
+gap:16px;
+margin-top:20px;
+}
+
 </style>
 </head>
 
@@ -136,6 +156,7 @@ margin-top:10px;
 <button onclick="resumeWalk()">Resume</button>
 <button onclick="endWalk()">End</button>
 <button onclick="toggleMemories()">Memories</button>
+<button onclick="openCollection()">Collection</button>
 <button onclick="shareJourney()">Share</button>
 </div>
 
@@ -146,25 +167,32 @@ margin-top:10px;
 <img id="encounter-photo">
 <h3 id="encounter-title"></h3>
 
-<div id="prompt"></div>
-
-<div>Beauty <input id="rating-beauty" type="number" min="1" max="5"></div>
-<div>History <input id="rating-history" type="number" min="1" max="5"></div>
-<div>Hidden Gem <input id="rating-hidden" type="number" min="1" max="5"></div>
+<div id="prompt">✨ Cultural Encounter</div>
 
 <textarea id="note" placeholder="Write reflection..."></textarea>
 
 <br><br>
 
-<button onclick="saveEncounter()">Save</button>
+<button onclick="saveEncounter()">Collect</button>
 <button onclick="closeEncounter()">Close</button>
+
+</div>
+
+<div id="collection-page">
+
+<h1>Your Cultural Collection</h1>
+
+<div id="collection-grid"></div>
+
+<br>
+<button onclick="closeCollection()">Close</button>
 
 </div>
 
 <script>
 
-mapboxgl.accessToken="YOUR_MAPBOX_TOKEN"
-const API_URL="YOUR_APPS_SCRIPT_URL"
+mapboxgl.accessToken="pk.eyJ1IjoiYmlnYWwxIiwiYSI6ImNtbWIzODZuaDA0cWYycXIyMXVydmx1eDkifQ.2tS6Ro5jbDlGjbR74_Ox0Q"
+const API_URL="https://script.google.com/macros/s/AKfycbyaSu9_SytF-_iHGFSUd-p0T8mdeE3He3cXEWwq7_JxBTAfIMO-Ru6uwT-SWUBEfolY/exec"
 
 let map
 let routeCoords=null
@@ -176,7 +204,8 @@ let startCoords=null
 
 let userMarker=null
 let watchId=null
-let lastPosition=null
+
+let currentEncounter=null
 
 let USER_ID=localStorage.getItem("hg_user")
 
@@ -201,8 +230,12 @@ zoom:12
 
 map.addControl(new mapboxgl.NavigationControl())
 
+map.on("load",()=>{
+
 startGPS()
 initSearch()
+
+})
 
 }
 
@@ -228,13 +261,7 @@ userMarker.setLngLat(coords)
 
 startCoords=coords
 
-},
-
-err=>console.log(err),
-
-{enableHighAccuracy:true}
-
-)
+})
 
 }
 
@@ -284,6 +311,8 @@ document.getElementById("route-button").onclick=generateRoute
 
 async function generateRoute(){
 
+if(!startCoords||!destinationCoords) return
+
 const url=
 API_URL+
 "?action=routeFromCoords"+
@@ -314,9 +343,7 @@ geometry:{type:"LineString",coordinates:coords}
 }
 
 if(map.getSource("route")){
-
 map.getSource("route").setData(geojson)
-
 }else{
 
 map.addSource("route",{type:"geojson",data:geojson})
@@ -351,6 +378,7 @@ markers.forEach(m=>m.remove())
 markers=[]
 
 const line=turf.lineString(coords)
+
 const bbox=turf.bbox(line)
 
 const query=`
@@ -370,16 +398,34 @@ const res=await fetch(
 
 const data=await res.json()
 
-data.elements.slice(0,4).forEach((el,i)=>{
+const filtered=data.elements.filter(el=>el.tags&&el.tags.name)
+
+filtered
+.sort((a,b)=>{
+
+const scoreA=(a.tags.tourism?3:0)+(a.tags.historic?2:0)
+const scoreB=(b.tags.tourism?3:0)+(b.tags.historic?2:0)
+
+return scoreB-scoreA
+
+})
+.slice(0,4)
+.forEach(el=>{
 
 const coords=[el.lon||el.center.lon,el.lat||el.center.lat]
 
-const marker=new mapboxgl.Marker()
+const point=turf.point(coords)
+
+const dist=turf.pointToLineDistance(point,line,{units:"kilometers"})
+
+if(dist>0.2) return
+
+const marker=new mapboxgl.Marker({color:"#ff2fa3"})
 .setLngLat(coords)
 .addTo(map)
 
 marker.site={
-name:el.tags.name||"Cultural site",
+name:el.tags.name,
 coords:coords
 }
 
@@ -393,24 +439,29 @@ markers.push(marker)
 
 async function previewJourney(){
 
-if(!routeCoords) return
+if(!routeCoords||markers.length==0) return
 
-map.flyTo({center:routeCoords[0],zoom:15})
-await sleep(1500)
+const start=routeCoords[0]
 
-for(const m of markers){
-
-map.flyTo({
-center:m.site.coords,
-zoom:16,
-pitch:60
-})
+map.flyTo({center:start,zoom:15,pitch:45})
 
 await sleep(2000)
 
+for(const marker of markers){
+
+map.flyTo({center:marker.site.coords,zoom:17,pitch:60})
+
+await sleep(1500)
+
+openEncounter(marker.site)
+
+await sleep(2500)
+
+closeEncounter()
+
 }
 
-map.flyTo({center:routeCoords[0],zoom:15})
+map.flyTo({center:start,zoom:15,pitch:45})
 
 }
 
@@ -418,27 +469,34 @@ function sleep(ms){
 return new Promise(r=>setTimeout(r,ms))
 }
 
-let currentEncounter=null
-
 function openEncounter(site){
 
 currentEncounter=site
 
 document.getElementById("encounter-title").innerText=site.name
+
+document.getElementById("encounter-photo").src=
+"https://source.unsplash.com/400x300/?architecture,city"
+
 document.getElementById("encounter").style.display="block"
 
 }
 
 function closeEncounter(){
+
+document.getElementById("note").value=""
+
 document.getElementById("encounter").style.display="none"
+
 }
 
-async function saveEncounter(){
+function saveEncounter(){
 
 fetch(API_URL,{
 method:"POST",
 body:JSON.stringify({
-action:"encounter",
+action:"collectEncounter",
+user:USER_ID,
 site_name:currentEncounter.name,
 lat:currentEncounter.coords[1],
 lng:currentEncounter.coords[0],
@@ -446,10 +504,18 @@ note:document.getElementById("note").value
 })
 })
 
+closeEncounter()
+
 }
 
 function startWalk(){
+
+if(watchId){
+navigator.geolocation.clearWatch(watchId)
+}
+
 watchId=navigator.geolocation.watchPosition(updateWalk)
+
 }
 
 function pauseWalk(){
@@ -471,27 +537,89 @@ const coords=[pos.coords.longitude,pos.coords.latitude]
 map.easeTo({
 center:coords,
 zoom:17,
-pitch:60
+pitch:65
 })
 
 }
 
-function toggleMemories(){
+async function toggleMemories(){
 
 archiveMarkers.forEach(m=>m.remove())
 archiveMarkers=[]
 
+const res=await fetch(API_URL+"?action=getMemories&user="+USER_ID)
+
+const memories=await res.json()
+
+memories.forEach(mem=>{
+
+const marker=new mapboxgl.Marker({color:"#ff9ecb"})
+.setLngLat([mem.lng,mem.lat])
+.addTo(map)
+
+const popup=new mapboxgl.Popup({offset:25})
+.setHTML(`<b>${mem.site_name}</b><br>${mem.note||""}`)
+
+marker.setPopup(popup)
+
+archiveMarkers.push(marker)
+
+})
+
+}
+
+async function openCollection(){
+
+document.getElementById("collection-page").style.display="block"
+
+const grid=document.getElementById("collection-grid")
+
+grid.innerHTML="Loading..."
+
+const res=await fetch(API_URL+"?action=getMemories&user="+USER_ID)
+
+const data=await res.json()
+
+grid.innerHTML=""
+
+data.forEach(card=>{
+
+const div=document.createElement("div")
+
+div.style.border="1px solid #ddd"
+div.style.borderRadius="12px"
+div.style.padding="10px"
+
+div.innerHTML=`
+<img src="https://source.unsplash.com/400x300/?architecture,city"
+style="width:100%;border-radius:8px">
+
+<h3>${card.site_name}</h3>
+
+<p style="font-size:13px">${card.note||""}</p>
+`
+
+grid.appendChild(div)
+
+})
+
+}
+
+function closeCollection(){
+document.getElementById("collection-page").style.display="none"
 }
 
 async function shareJourney(){
 
-const canvas=await html2canvas(document.body)
+const card=document.getElementById("encounter")
+
+const canvas=await html2canvas(card)
 
 canvas.toBlob(blob=>{
 
 const link=document.createElement("a")
 link.href=URL.createObjectURL(blob)
-link.download="hot-girl-walk.png"
+link.download="encounter-card.png"
 link.click()
 
 })
