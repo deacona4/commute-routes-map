@@ -571,6 +571,27 @@ map.addControl(new mapboxgl.NavigationControl())
 map.on("load",()=>{
 
 startGPS()
+async function requestGPS(){
+
+navigator.geolocation.getCurrentPosition(async pos=>{
+
+startCoords=[pos.coords.longitude,pos.coords.latitude]
+
+map.flyTo({
+center:startCoords,
+zoom:14
+})
+
+const address = await reverseGeocode(
+startCoords[0],
+startCoords[1]
+)
+
+document.querySelector("#start-search input").value = address
+
+})
+
+}
 initSearch()
 
 })
@@ -578,6 +599,17 @@ initSearch()
 }
 
 /* GPS START */
+async function reverseGeocode(lng,lat){
+
+const url =
+`https://api.mapbox.com/geocoding/v5/mapbox.places/${lng},${lat}.json?access_token=${mapboxgl.accessToken}`
+
+const res = await fetch(url)
+const data = await res.json()
+
+return data.features[0].place_name
+
+}
 
 function startGPS(){
 
@@ -740,11 +772,7 @@ node["historic"](${bbox[1]},${bbox[0]},${bbox[3]},${bbox[2]});
 );
 out center;
 `
-
-const res=await fetch(
-"https://overpass-api.de/api/interpreter",
-{method:"POST",body:query}
-)
+const data = await fetchOverpass(query)
 
 const data=await res.json()
 
@@ -806,37 +834,82 @@ markers.push(marker)
 
 async function previewJourney(){
 
-if(!markers.length) return
+if(!routeCoords || markers.length===0) return
 
-for(const m of markers){
+const line = turf.lineString(routeCoords)
+
+const ordered = markers.map(m=>{
+
+const pt = turf.point(m.site.coords)
+
+const snapped = turf.nearestPointOnLine(line,pt)
+
+return{
+marker:m,
+dist:snapped.properties.location
+}
+
+})
+
+ordered.sort((a,b)=>a.dist-b.dist)
+
+/* start */
 
 map.flyTo({
-center:m.site.coords,
-zoom:17,
-pitch:60,
-speed:0.6
+center:routeCoords[0],
+zoom:15,
+pitch:55
 })
 
 await sleep(2000)
 
-openEncounter(m.site)
+/* fly through */
 
-await sleep(2500)
+for(const item of ordered){
+
+map.flyTo({
+center:item.marker.site.coords,
+zoom:17,
+pitch:65
+})
+
+await sleep(2000)
+
+openEncounter(item.marker.site)
+
+await sleep(2000)
 
 closeEncounter()
 
 }
 
-}
+/* return */
 
-function sleep(ms){
-return new Promise(r=>setTimeout(r,ms))
+map.flyTo({
+center:routeCoords[0],
+zoom:15,
+pitch:40
+})
+
 }
 
 /* WALK MODE */
 
 function startWalk(){
-
+map.moveLayer("route")
+map.addLayer({
+id:"route",
+type:"line",
+source:"route",
+layout:{
+"line-cap":"round",
+"line-join":"round"
+},
+paint:{
+"line-color":"#ff2fa3",
+"line-width":6
+}
+})
 walkMode=true
 
 document.getElementById("search-panel").style.display="none"
@@ -1025,42 +1098,23 @@ async function shareEncounter(){
 
 const card=document.getElementById("encounter")
 
-if(!card){
-alert("Open an encounter card first")
-return
-}
-
-const canvas=await html2canvas(card,{
+const canvas = await html2canvas(card,{
 backgroundColor:"#fff7ec",
-ignoreElements:(el)=>{
-
-if(el.classList?.contains("mapboxgl-canvas")) return true
-if(el.classList?.contains("mapboxgl-control-container")) return true
-
-return false
-
-}
+logging:false
 })
 
 canvas.toBlob(blob=>{
 
-if(!blob){
-alert("Share failed")
-return
+const file = new File([blob],"encounter.png",{type:"image/png"})
+
+if(navigator.share){
+
+navigator.share({
+files:[file],
+title:"Hot Girl Walk Encounter"
+})
+
 }
-
-const url=URL.createObjectURL(blob)
-
-const link=document.createElement("a")
-
-link.href=url
-link.download="encounter-card.png"
-
-document.body.appendChild(link)
-
-link.click()
-
-link.remove()
 
 })
 
@@ -1075,68 +1129,43 @@ alert("Generate a route first")
 return
 }
 
-const routeName=prompt("Name this route")
+const canvas = document.createElement("canvas")
 
-const card=document.createElement("div")
+canvas.width = 1080
+canvas.height = 1920
 
-card.style.width="360px"
-card.style.height="640px"
-card.style.background="#fff7ec"
-card.style.border="6px solid #ff2fa3"
-card.style.borderRadius="20px"
-card.style.padding="20px"
-card.style.fontFamily="Inter"
+const ctx = canvas.getContext("2d")
 
-card.innerHTML=`
+ctx.fillStyle="#fff7ec"
+ctx.fillRect(0,0,1080,1920)
 
-<h2 style="color:#2b7cff">Hot Girl Walk</h2>
+ctx.fillStyle="#ff2fa3"
+ctx.font="bold 64px Inter"
 
-<h3>${routeName || "My Cultural Walk"}</h3>
+ctx.fillText("Hot Girl Walk",120,160)
 
-<p>${markers.length} discoveries</p>
+ctx.font="42px Inter"
 
-<div style="
-height:280px;
-background:#eee;
-border-radius:10px;
-display:flex;
-align-items:center;
-justify-content:center;
-margin-top:20px;
-">
-Route Preview
-</div>
+ctx.fillText(
+markers.length+" cultural discoveries",
+120,
+240
+)
 
-<p style="margin-top:20px">
-Explore culture along your route
-</p>
-
-`
-
-document.body.appendChild(card)
-
-const canvas=await html2canvas(card,{
-backgroundColor:"#fff7ec"
-})
-
-card.remove()
+ctx.drawImage(map.getCanvas(),90,350,900,900)
 
 canvas.toBlob(blob=>{
 
-if(!blob) return
+const file = new File([blob],"route.png",{type:"image/png"})
 
-const url=URL.createObjectURL(blob)
+if(navigator.share){
 
-const link=document.createElement("a")
+navigator.share({
+files:[file],
+title:"My Hot Girl Walk"
+})
 
-link.href=url
-link.download="route-card.png"
-
-document.body.appendChild(link)
-
-link.click()
-
-link.remove()
+}
 
 })
 
