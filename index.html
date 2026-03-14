@@ -265,6 +265,20 @@ bottom:10px;
 }
 
 }
+.photo-remove{
+position:absolute;
+top:6px;
+right:6px;
+background:#ff2fa3;
+color:white;
+border-radius:50%;
+width:24px;
+height:24px;
+text-align:center;
+line-height:24px;
+font-weight:700;
+cursor:pointer;
+}
 
 </style>
 
@@ -359,6 +373,148 @@ Turn everyday routes into cultural discovery
 <button onclick="closeCollection()">Back to Map</button>
 
 </div>
+/* ENCOUNTER CARD */
+
+function openEncounter(site){
+
+currentEncounter=site
+
+document.getElementById("encounter-title").innerText=site.name
+
+document.getElementById("encounter-photo").src=
+"https://picsum.photos/400/250?random="+Math.random()
+
+document.getElementById("encounter").style.display="block"
+
+}
+
+function closeEncounter(){
+document.getElementById("encounter").style.display="none"
+}
+
+
+/* SAVE ENCOUNTER */
+
+function saveEncounter(){
+
+fetch(API_URL,{
+method:"POST",
+body:JSON.stringify({
+action:"encounter",
+site_name:currentEncounter.name,
+lat:currentEncounter.coords[1],
+lng:currentEncounter.coords[0],
+note:document.getElementById("note").value,
+photo:uploadedPhotoBase64
+})
+})
+
+closeEncounter()
+
+}
+
+
+/* SHARE ENCOUNTER CARD */
+
+async function shareEncounter(){
+
+const card=document.getElementById("encounter")
+
+const canvas=await html2canvas(card,{
+backgroundColor:"#fff7ec",
+logging:false,
+ignoreElements:(el)=>{
+return el.classList?.contains("mapboxgl-canvas")
+}
+})
+
+canvas.toBlob(blob=>{
+
+if(!blob) return
+
+const link=document.createElement("a")
+link.href=URL.createObjectURL(blob)
+link.download="encounter-card.png"
+link.click()
+
+})
+
+}
+
+
+/* SHARE ROUTE STORY */
+
+async function shareRoute(){
+
+if(!routeCoords){
+alert("Generate a route first")
+return
+}
+
+const canvas=map.getCanvas()
+
+const story=document.createElement("canvas")
+
+story.width=1080
+story.height=1920
+
+const ctx=story.getContext("2d")
+
+ctx.fillStyle="#fff7ec"
+ctx.fillRect(0,0,1080,1920)
+
+ctx.drawImage(canvas,90,360,900,900)
+
+ctx.fillStyle="#ff2fa3"
+ctx.font="bold 48px Inter"
+
+ctx.fillText("Hot Girl Walk",100,140)
+
+story.toBlob(blob=>{
+
+const link=document.createElement("a")
+link.href=URL.createObjectURL(blob)
+link.download="route-story.png"
+link.click()
+
+})
+
+}
+
+
+/* COLLECTION */
+
+async function openCollection(){
+
+const res=await fetch(API_URL+"?action=encounters")
+const data=await res.json()
+
+console.log("Your encounters:",data)
+
+}
+
+
+/* PHOTO UPLOAD */
+
+document.getElementById("photo-input").addEventListener("change",function(e){
+
+const file=e.target.files[0]
+
+if(!file) return
+
+const reader=new FileReader()
+
+reader.onload=function(evt){
+
+uploadedPhotoBase64=evt.target.result.split(",")[1]
+
+document.getElementById("encounter-photo").src=evt.target.result
+
+}
+
+reader.readAsDataURL(file)
+
+})
 
 <script>
 /* CONFIG */
