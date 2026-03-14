@@ -373,24 +373,8 @@ Turn everyday routes into cultural discovery
 <button onclick="closeCollection()">Back to Map</button>
 
 </div>
-/* ENCOUNTER CARD */
 
-function openEncounter(site){
-
-currentEncounter=site
-
-document.getElementById("encounter-title").innerText=site.name
-
-document.getElementById("encounter-photo").src=
-"https://picsum.photos/400/250?random="+Math.random()
-
-document.getElementById("encounter").style.display="block"
-
-}
-
-function closeEncounter(){
-document.getElementById("encounter").style.display="none"
-}
+<script>
 
 
 /* SAVE ENCOUNTER */
@@ -516,7 +500,6 @@ reader.readAsDataURL(file)
 
 })
 
-<script>
 /* CONFIG */
 
 mapboxgl.accessToken="pk.eyJ1IjoiYmlnYWwxIiwiYSI6ImNtbWIzODZuaDA0cWYycXIyMXVydmx1eDkifQ.2tS6Ro5jbDlGjbR74_Ox0Q"
@@ -629,6 +612,7 @@ zoom:14
 /* SEARCH */
 
 function initSearch(){
+document.getElementById("gps-btn").onclick=requestGPS
 
 const startGeo=new MapboxGeocoder({
 accessToken:mapboxgl.accessToken,
@@ -751,7 +735,41 @@ if(distance<0.2) return "HiddenGem"
 return "Secret"
 
 }
+async function fetchOverpass(query){
 
+try{
+
+const res = await fetch(
+"https://overpass-api.de/api/interpreter",
+{
+method:"POST",
+body:query
+})
+
+const text = await res.text()
+
+if(!text.startsWith("{")){
+throw new Error("Overpass returned HTML")
+}
+
+return JSON.parse(text)
+
+}catch(e){
+
+console.warn("Overpass timeout, using mirror")
+
+const res = await fetch(
+"https://overpass.kumi.systems/api/interpreter",
+{
+method:"POST",
+body:query
+})
+
+return await res.json()
+
+}
+
+}
 /* LOAD ENCOUNTERS */
 
 async function loadEncounters(coords){
@@ -834,7 +852,10 @@ markers.push(marker)
 
 async function previewJourney(){
 
-if(!routeCoords || markers.length===0) return
+if(!routeCoords || markers.length===0){
+alert("Generate a route first")
+return
+}
 
 const line = turf.lineString(routeCoords)
 
@@ -861,7 +882,7 @@ zoom:15,
 pitch:55
 })
 
-await sleep(2000)
+await new Promise(r=>setTimeout(r,2000))  
 
 /* fly through */
 
@@ -896,10 +917,9 @@ pitch:40
 /* WALK MODE */
 
 function startWalk(){
+if(map.getLayer("route")){
 map.moveLayer("route")
-map.addLayer({
-id:"route",
-type:"line",
+}
 source:"route",
 layout:{
 "line-cap":"round",
