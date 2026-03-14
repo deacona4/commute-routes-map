@@ -19,8 +19,6 @@
 
 <style>
 
-/* GLOBAL */
-
 body{
 margin:0;
 font-family:'Inter',sans-serif;
@@ -28,14 +26,10 @@ background:#fff7ec;
 overflow:hidden;
 }
 
-/* MAP */
-
 #map{
 width:100%;
 height:100vh;
 }
-
-/* HOME */
 
 #home-screen{
 position:absolute;
@@ -50,6 +44,7 @@ justify-content:center;
 align-items:center;
 color:white;
 z-index:20;
+text-align:center;
 }
 
 .home-title{
@@ -61,8 +56,6 @@ font-weight:800;
 margin-top:12px;
 font-size:18px;
 }
-
-/* SEARCH */
 
 #search-panel{
 position:absolute;
@@ -78,8 +71,6 @@ display:flex;
 flex-direction:column;
 gap:8px;
 }
-
-/* NAV */
 
 #nav{
 position:absolute;
@@ -103,8 +94,6 @@ cursor:pointer;
 padding:6px 10px;
 }
 
-/* WALK MODE INDICATOR */
-
 .walk-indicator{
 position:absolute;
 top:12px;
@@ -117,8 +106,6 @@ font-size:13px;
 z-index:10;
 display:none;
 }
-
-/* ENCOUNTER CARD */
 
 #encounter{
 position:absolute;
@@ -212,8 +199,6 @@ padding:8px 12px;
 border-radius:10px;
 }
 
-/* COLLECTION */
-
 #collection-page{
 position:absolute;
 top:0;
@@ -251,37 +236,7 @@ border-radius:8px;
 color:#2b7cff;
 }
 
-/* MOBILE */
-
-@media(max-width:600px){
-
-#search-panel{
-width:90%;
-right:5%;
-}
-
-#nav{
-bottom:10px;
-}
-
-}
-.photo-remove{
-position:absolute;
-top:6px;
-right:6px;
-background:#ff2fa3;
-color:white;
-border-radius:50%;
-width:24px;
-height:24px;
-text-align:center;
-line-height:24px;
-font-weight:700;
-cursor:pointer;
-}
-
 </style>
-
 </head>
 
 <body>
@@ -331,195 +286,35 @@ Turn everyday routes into cultural discovery
 </div>
 
 <div id="map"></div>
-
-<div id="encounter">
-
-<div class="card-title" id="encounter-title"></div>
-
-<div id="type-badge" class="badge"></div>
-
-<div id="discovery-badge" class="badge"></div>
-
-<div class="card-image">
-
-<img id="encounter-photo">
-
-<div class="photo-remove" id="remove-photo">×</div>
-
-</div>
-
-<input type="file" id="photo-input" accept="image/*" capture="environment">
-
-<textarea id="note" placeholder="Write reflection..."></textarea>
-
-<div class="card-actions">
-
-<button class="collect-btn" onclick="saveEncounter()">Collect</button>
-
-<button class="close-btn" onclick="closeEncounter()">Close</button>
-
-</div>
-
-</div>
-
-<div id="collection-page">
-
-<h1>Your Cultural Collection</h1>
-
-<div id="collection-container"></div>
-
-<br>
-
-<button onclick="closeCollection()">Back to Map</button>
-
-</div>
-
 <script>
 
-
-/* SAVE ENCOUNTER */
-
-function saveEncounter(){
-
-fetch(API_URL,{
-method:"POST",
-body:JSON.stringify({
-action:"encounter",
-site_name:currentEncounter.name,
-lat:currentEncounter.coords[1],
-lng:currentEncounter.coords[0],
-note:document.getElementById("note").value,
-photo:uploadedPhotoBase64
-})
-})
-
-closeEncounter()
-
-}
-
-
-/* SHARE ENCOUNTER CARD */
-
-async function shareEncounter(){
-
-const card=document.getElementById("encounter")
-
-const canvas=await html2canvas(card,{
-backgroundColor:"#fff7ec",
-logging:false,
-ignoreElements:(el)=>{
-return el.classList?.contains("mapboxgl-canvas")
-}
-})
-
-canvas.toBlob(blob=>{
-
-if(!blob) return
-
-const link=document.createElement("a")
-link.href=URL.createObjectURL(blob)
-link.download="encounter-card.png"
-link.click()
-
-})
-
-}
-
-
-/* SHARE ROUTE STORY */
-
-async function shareRoute(){
-
-if(!routeCoords){
-alert("Generate a route first")
-return
-}
-
-const canvas=map.getCanvas()
-
-const story=document.createElement("canvas")
-
-story.width=1080
-story.height=1920
-
-const ctx=story.getContext("2d")
-
-ctx.fillStyle="#fff7ec"
-ctx.fillRect(0,0,1080,1920)
-
-ctx.drawImage(canvas,90,360,900,900)
-
-ctx.fillStyle="#ff2fa3"
-ctx.font="bold 48px Inter"
-
-ctx.fillText("Hot Girl Walk",100,140)
-
-story.toBlob(blob=>{
-
-const link=document.createElement("a")
-link.href=URL.createObjectURL(blob)
-link.download="route-story.png"
-link.click()
-
-})
-
-}
-
-
-/* COLLECTION */
-
-async function openCollection(){
-
-const res=await fetch(API_URL+"?action=encounters")
-const data=await res.json()
-
-console.log("Your encounters:",data)
-
-}
-
-
-/* PHOTO UPLOAD */
-
-document.getElementById("photo-input").addEventListener("change",function(e){
-
-const file=e.target.files[0]
-
-if(!file) return
-
-const reader=new FileReader()
-
-reader.onload=function(evt){
-
-uploadedPhotoBase64=evt.target.result.split(",")[1]
-
-document.getElementById("encounter-photo").src=evt.target.result
-
-}
-
-reader.readAsDataURL(file)
-
-})
-
-/* CONFIG */
+/************************************************
+CONFIG
+************************************************/
 
 mapboxgl.accessToken="pk.eyJ1IjoiYmlnYWwxIiwiYSI6ImNtbWIzODZuaDA0cWYycXIyMXVydmx1eDkifQ.2tS6Ro5jbDlGjbR74_Ox0Q"
-const API_URL="https://script.google.com/macros/s/AKfycbxxYIc9Rf-2OrF7Ud9XQseeschMBjthjwpuA-a4RM5dgEMGmVPhBjWdFVnNIq1tHPDE/exec"
 
-/* GLOBAL STATE */
+const API_URL="https://script.google.com/macros/s/AKfycby3XHTccdx37K_1NHrvC-gyOpfc9M1VKxeFjmFlk76GTybGPrchV6ILAFWZXjboc9ux/exec"
+
+/************************************************
+GLOBAL STATE
+************************************************/
 
 let map
+
 let routeCoords=null
 let markers=[]
 
 let startCoords=null
 let destinationCoords=null
 
-let currentEncounter=null
-let uploadedPhotoBase64=null
-
-let walkMode=false
 let walkWatcher=null
 let userMarker=null
+
+let walkMode=false
+
+let currentEncounter=null
+let uploadedPhotoBase64=null
 
 let USER_ID=localStorage.getItem("hg_user")
 
@@ -528,7 +323,9 @@ USER_ID=crypto.randomUUID()
 localStorage.setItem("hg_user",USER_ID)
 }
 
-/* START APP */
+/************************************************
+START APP
+************************************************/
 
 function startApp(){
 
@@ -538,7 +335,9 @@ initMap()
 
 }
 
-/* MAP INIT */
+/************************************************
+MAP INITIALIZATION
+************************************************/
 
 function initMap(){
 
@@ -553,48 +352,26 @@ map.addControl(new mapboxgl.NavigationControl())
 
 map.on("load",()=>{
 
-startGPS()
-async function requestGPS(){
+requestGPS()
 
-navigator.geolocation.getCurrentPosition(async pos=>{
-
-startCoords=[pos.coords.longitude,pos.coords.latitude]
-
-map.flyTo({
-center:startCoords,
-zoom:14
-})
-
-const address = await reverseGeocode(
-startCoords[0],
-startCoords[1]
-)
-
-document.querySelector("#start-search input").value = address
-
-})
-
-}
 initSearch()
 
 })
 
-}
-
-/* GPS START */
-async function reverseGeocode(lng,lat){
-
-const url =
-`https://api.mapbox.com/geocoding/v5/mapbox.places/${lng},${lat}.json?access_token=${mapboxgl.accessToken}`
-
-const res = await fetch(url)
-const data = await res.json()
-
-return data.features[0].place_name
+document.getElementById("gps-btn").onclick=requestGPS
 
 }
 
-function startGPS(){
+/************************************************
+GPS LOCATION
+************************************************/
+
+function requestGPS(){
+
+if(!navigator.geolocation){
+alert("Geolocation not supported")
+return
+}
 
 navigator.geolocation.getCurrentPosition(pos=>{
 
@@ -609,10 +386,11 @@ zoom:14
 
 }
 
-/* SEARCH */
+/************************************************
+SEARCH BOXES
+************************************************/
 
 function initSearch(){
-document.getElementById("gps-btn").onclick=requestGPS
 
 const startGeo=new MapboxGeocoder({
 accessToken:mapboxgl.accessToken,
@@ -644,7 +422,9 @@ document.getElementById("route-button").onclick=generateRoute
 
 }
 
-/* GENERATE ROUTE */
+/************************************************
+GENERATE ROUTE
+************************************************/
 
 async function generateRoute(){
 
@@ -664,6 +444,11 @@ API_URL+
 const res=await fetch(url)
 const data=await res.json()
 
+if(!data.geometry){
+alert("Route generation failed")
+return
+}
+
 routeCoords=data.geometry.coordinates
 
 drawRoute(routeCoords)
@@ -672,7 +457,9 @@ loadEncounters(routeCoords)
 
 }
 
-/* DRAW ROUTE */
+/************************************************
+DRAW ROUTE
+************************************************/
 
 function drawRoute(coords){
 
@@ -712,53 +499,34 @@ paint:{
 
 }
 
-/* CULTURAL TYPE */
+/************************************************
+FETCH OVERPASS WITH MIRROR RETRY
+************************************************/
 
-function getType(tags){
-
-if(tags.tourism==="museum") return "Museum"
-if(tags.tourism==="artwork") return "Artwork"
-if(tags.historic) return "Historic"
-
-return "Culture"
-
-}
-
-/* DISCOVERY LEVEL */
-
-function getDiscovery(distance){
-
-if(distance<0.05) return "Landmark"
-if(distance<0.1) return "Notable"
-if(distance<0.2) return "HiddenGem"
-
-return "Secret"
-
-}
 async function fetchOverpass(query){
 
 try{
 
-const res = await fetch(
+const res=await fetch(
 "https://overpass-api.de/api/interpreter",
 {
 method:"POST",
 body:query
 })
 
-const text = await res.text()
+const text=await res.text()
 
 if(!text.startsWith("{")){
-throw new Error("Overpass returned HTML")
+throw new Error("Invalid JSON")
 }
 
 return JSON.parse(text)
 
 }catch(e){
 
-console.warn("Overpass timeout, using mirror")
+console.warn("Overpass timeout → using mirror")
 
-const res = await fetch(
+const res=await fetch(
 "https://overpass.kumi.systems/api/interpreter",
 {
 method:"POST",
@@ -770,11 +538,31 @@ return await res.json()
 }
 
 }
-/* LOAD ENCOUNTERS */
+
+/************************************************
+DISCOVERY TYPE
+************************************************/
+
+function getDiscovery(distance){
+
+if(distance<0.05) return "Landmark"
+
+if(distance<0.1) return "Notable"
+
+if(distance<0.2) return "HiddenGem"
+
+return "Secret"
+
+}
+
+/************************************************
+LOAD CULTURAL ENCOUNTERS
+************************************************/
 
 async function loadEncounters(coords){
 
 markers.forEach(m=>m.remove())
+
 markers=[]
 
 const line=turf.lineString(coords)
@@ -790,9 +578,8 @@ node["historic"](${bbox[1]},${bbox[0]},${bbox[3]},${bbox[2]});
 );
 out center;
 `
-const data = await fetchOverpass(query)
 
-const data=await res.json()
+const data=await fetchOverpass(query)
 
 if(!data.elements) return
 
@@ -806,17 +593,19 @@ const coords=[el.lon||el.center.lon,el.lat||el.center.lat]
 
 const point=turf.point(coords)
 
-const dist=turf.pointToLineDistance(point,line,{units:"kilometers"})
+const dist=turf.pointToLineDistance(
+point,
+line,
+{units:"kilometers"}
+)
 
 if(dist>0.25) return
 
-const type=getType(el.tags)
 const discovery=getDiscovery(dist)
 
 candidates.push({
 name:el.tags.name,
 coords:coords,
-type:type,
 discovery:discovery
 })
 
@@ -834,7 +623,9 @@ const site=candidates[index]
 
 if(!site) continue
 
-const marker=new mapboxgl.Marker({color:"#ff2fa3"})
+const marker=new mapboxgl.Marker({
+color:"#ff2fa3"
+})
 .setLngLat(site.coords)
 .addTo(map)
 
@@ -847,8 +638,17 @@ markers.push(marker)
 }
 
 }
+/************************************************
+UTILITY
+************************************************/
 
-/* PREVIEW JOURNEY */
+function sleep(ms){
+return new Promise(resolve=>setTimeout(resolve,ms))
+}
+
+/************************************************
+PREVIEW JOURNEY
+************************************************/
 
 async function previewJourney(){
 
@@ -857,13 +657,15 @@ alert("Generate a route first")
 return
 }
 
-const line = turf.lineString(routeCoords)
+const line=turf.lineString(routeCoords)
 
-const ordered = markers.map(m=>{
+/* order encounters along route */
 
-const pt = turf.point(m.site.coords)
+const ordered=markers.map(m=>{
 
-const snapped = turf.nearestPointOnLine(line,pt)
+const pt=turf.point(m.site.coords)
+
+const snapped=turf.nearestPointOnLine(line,pt)
 
 return{
 marker:m,
@@ -874,37 +676,39 @@ dist:snapped.properties.location
 
 ordered.sort((a,b)=>a.dist-b.dist)
 
-/* start */
+/* start at origin */
 
 map.flyTo({
 center:routeCoords[0],
-zoom:15,
-pitch:55
+zoom:16,
+pitch:55,
+speed:0.6
 })
 
-await new Promise(r=>setTimeout(r,2000))  
+await sleep(2000)
 
-/* fly through */
+/* fly through encounters */
 
 for(const item of ordered){
 
 map.flyTo({
 center:item.marker.site.coords,
 zoom:17,
-pitch:65
+pitch:65,
+speed:0.6
 })
 
 await sleep(2000)
 
 openEncounter(item.marker.site)
 
-await sleep(2000)
+await sleep(2500)
 
 closeEncounter()
 
 }
 
-/* return */
+/* return to start */
 
 map.flyTo({
 center:routeCoords[0],
@@ -914,25 +718,21 @@ pitch:40
 
 }
 
-/* WALK MODE */
+/************************************************
+WALK MODE
+************************************************/
 
 function startWalk(){
-if(map.getLayer("route")){
-map.moveLayer("route")
+
+if(!navigator.geolocation){
+alert("Geolocation not supported")
+return
 }
-source:"route",
-layout:{
-"line-cap":"round",
-"line-join":"round"
-},
-paint:{
-"line-color":"#ff2fa3",
-"line-width":6
-}
-})
+
 walkMode=true
 
 document.getElementById("search-panel").style.display="none"
+
 document.getElementById("walk-indicator").style.display="block"
 
 map.easeTo({
@@ -951,7 +751,9 @@ maximumAge:0
 
 }
 
-/* STOP WALK */
+/************************************************
+STOP WALK
+************************************************/
 
 function stopWalk(){
 
@@ -962,6 +764,7 @@ navigator.geolocation.clearWatch(walkWatcher)
 }
 
 document.getElementById("search-panel").style.display="block"
+
 document.getElementById("walk-indicator").style.display="none"
 
 map.easeTo({
@@ -971,21 +774,27 @@ zoom:14
 
 }
 
-/* GPS ERROR */
+/************************************************
+GPS ERROR
+************************************************/
 
 function gpsError(err){
 
 console.warn("GPS error",err)
 
-alert("Location access required for walking mode")
+alert("Location permission required for walking mode")
 
 }
 
-/* UPDATE WALK POSITION */
+/************************************************
+USER GPS MARKER
+************************************************/
 
 function updateWalkPosition(pos){
 
 const coords=[pos.coords.longitude,pos.coords.latitude]
+
+/* create marker */
 
 if(!userMarker){
 
@@ -1007,6 +816,8 @@ userMarker.setLngLat(coords)
 
 }
 
+/* follow camera */
+
 map.easeTo({
 center:coords,
 zoom:17,
@@ -1015,8 +826,48 @@ bearing:pos.coords.heading || 0,
 duration:800
 })
 
+checkDiscovery(coords)
+
 }
-/* OPEN ENCOUNTER CARD */
+
+/************************************************
+PROXIMITY DISCOVERY
+************************************************/
+
+function checkDiscovery(userCoords){
+
+markers.forEach(marker=>{
+
+if(marker.discovered) return
+
+const site=marker.site
+
+const distance=turf.distance(
+turf.point(userCoords),
+turf.point(site.coords),
+{units:"kilometers"}
+)
+
+/* trigger discovery */
+
+if(distance<0.05){
+
+marker.discovered=true
+
+if(navigator.vibrate){
+navigator.vibrate(200)
+}
+
+openEncounter(site)
+
+}
+
+})
+
+}
+/************************************************
+ENCOUNTER CARD
+************************************************/
 
 function openEncounter(site){
 
@@ -1024,12 +875,10 @@ currentEncounter=site
 
 document.getElementById("encounter-title").innerText=site.name
 
-document.getElementById("type-badge").innerText=site.type
+const badge=document.getElementById("discovery-badge")
 
-const discovery=document.getElementById("discovery-badge")
-
-discovery.innerText=site.discovery
-discovery.className="badge discovery-"+site.discovery
+badge.innerText=site.discovery
+badge.className="badge discovery-"+site.discovery
 
 document.getElementById("encounter-photo").src=
 "https://picsum.photos/400/250?random="+Math.random()
@@ -1038,7 +887,9 @@ document.getElementById("encounter").style.display="block"
 
 }
 
-/* CLOSE ENCOUNTER */
+/************************************************
+CLOSE CARD
+************************************************/
 
 function closeEncounter(){
 
@@ -1046,7 +897,9 @@ document.getElementById("encounter").style.display="none"
 
 }
 
-/* PHOTO UPLOAD */
+/************************************************
+PHOTO UPLOAD
+************************************************/
 
 document.getElementById("photo-input").addEventListener("change",function(e){
 
@@ -1070,7 +923,9 @@ reader.readAsDataURL(file)
 
 })
 
-/* REMOVE PHOTO */
+/************************************************
+REMOVE PHOTO
+************************************************/
 
 document.getElementById("remove-photo").onclick=function(){
 
@@ -1083,7 +938,9 @@ this.style.display="none"
 
 }
 
-/* SAVE ENCOUNTER */
+/************************************************
+SAVE ENCOUNTER
+************************************************/
 
 function saveEncounter(){
 
@@ -1112,27 +969,46 @@ closeEncounter()
 
 }
 
-/* SHARE ENCOUNTER CARD */
+/************************************************
+SHARE ENCOUNTER CARD
+************************************************/
 
 async function shareEncounter(){
 
 const card=document.getElementById("encounter")
 
-const canvas = await html2canvas(card,{
+if(!card){
+alert("Open an encounter first")
+return
+}
+
+const canvas=await html2canvas(card,{
 backgroundColor:"#fff7ec",
 logging:false
 })
 
 canvas.toBlob(blob=>{
 
-const file = new File([blob],"encounter.png",{type:"image/png"})
+if(!blob) return
 
-if(navigator.share){
+const file=new File([blob],"encounter.png",{type:"image/png"})
+
+if(navigator.share && navigator.canShare?.({files:[file]})){
 
 navigator.share({
 files:[file],
-title:"Hot Girl Walk Encounter"
+title:"Hot Girl Walk Discovery"
 })
+
+}else{
+
+const link=document.createElement("a")
+
+link.href=URL.createObjectURL(blob)
+
+link.download="encounter.png"
+
+link.click()
 
 }
 
@@ -1140,7 +1016,9 @@ title:"Hot Girl Walk Encounter"
 
 }
 
-/* SHARE ROUTE CARD */
+/************************************************
+SHARE ROUTE STORY
+************************************************/
 
 async function shareRoute(){
 
@@ -1149,41 +1027,58 @@ alert("Generate a route first")
 return
 }
 
-const canvas = document.createElement("canvas")
+const canvas=document.createElement("canvas")
 
-canvas.width = 1080
-canvas.height = 1920
+canvas.width=1080
+canvas.height=1920
 
-const ctx = canvas.getContext("2d")
+const ctx=canvas.getContext("2d")
 
 ctx.fillStyle="#fff7ec"
 ctx.fillRect(0,0,1080,1920)
 
 ctx.fillStyle="#ff2fa3"
-ctx.font="bold 64px Inter"
+ctx.font="bold 70px Inter"
 
-ctx.fillText("Hot Girl Walk",120,160)
+ctx.fillText("Hot Girl Walk",100,140)
 
-ctx.font="42px Inter"
+ctx.font="bold 60px Inter"
+
+ctx.fillText("Cultural Route",100,240)
+
+ctx.drawImage(map.getCanvas(),90,360,900,900)
+
+ctx.fillStyle="#ff2fa3"
+ctx.font="bold 48px Inter"
 
 ctx.fillText(
-markers.length+" cultural discoveries",
-120,
-240
+markers.length+" discoveries",
+100,
+1350
 )
-
-ctx.drawImage(map.getCanvas(),90,350,900,900)
 
 canvas.toBlob(blob=>{
 
-const file = new File([blob],"route.png",{type:"image/png"})
+if(!blob) return
 
-if(navigator.share){
+const file=new File([blob],"route.png",{type:"image/png"})
+
+if(navigator.share && navigator.canShare?.({files:[file]})){
 
 navigator.share({
 files:[file],
-title:"My Hot Girl Walk"
+title:"My Hot Girl Walk Route"
 })
+
+}else{
+
+const link=document.createElement("a")
+
+link.href=URL.createObjectURL(blob)
+
+link.download="route.png"
+
+link.click()
 
 }
 
@@ -1191,7 +1086,9 @@ title:"My Hot Girl Walk"
 
 }
 
-/* COLLECTION PAGE */
+/************************************************
+COLLECTION PAGE
+************************************************/
 
 async function openCollection(){
 
@@ -1255,7 +1152,9 @@ container.appendChild(grid)
 
 }
 
-/* CLOSE COLLECTION */
+/************************************************
+CLOSE COLLECTION
+************************************************/
 
 function closeCollection(){
 
