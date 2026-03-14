@@ -22,12 +22,17 @@
 body{
 margin:0;
 font-family:'Inter',sans-serif;
+background:#fff7ec;
 }
+
+/* MAP */
 
 #map{
 width:100%;
 height:100vh;
 }
+
+/* HOME */
 
 #home-screen{
 position:absolute;
@@ -42,27 +47,32 @@ justify-content:center;
 align-items:center;
 z-index:20;
 color:white;
+text-align:center;
 }
 
 .home-title{
-font-size:64px;
+font-size:56px;
 font-weight:800;
 }
 
+/* SEARCH PANEL */
+
 #search-panel{
 position:absolute;
-top:20px;
-right:20px;
+top:16px;
+right:16px;
 background:white;
 padding:12px;
 border-radius:12px;
 box-shadow:0 4px 16px rgba(0,0,0,0.2);
 z-index:5;
-width:320px;
+width:300px;
 display:flex;
 flex-direction:column;
 gap:8px;
 }
+
+/* NAV */
 
 #nav{
 position:absolute;
@@ -84,31 +94,111 @@ font-weight:600;
 cursor:pointer;
 }
 
+/* ENCOUNTER CARD */
+
 #encounter{
+
 position:absolute;
 top:50%;
 left:50%;
 transform:translate(-50%,-50%);
-width:320px;
-background:white;
-padding:16px;
-border-radius:16px;
-box-shadow:0 20px 40px rgba(0,0,0,.4);
+
+width:min(92vw,340px);
+
+background:#fff7ec;
+border:5px solid #ff2fa3;
+border-radius:18px;
+
+box-shadow:0 20px 40px rgba(0,0,0,.35);
+
+padding:14px;
 display:none;
 z-index:10;
+
 }
 
-#encounter img{
-width:100%;
-height:160px;
-object-fit:cover;
-border-radius:8px;
+.card-title{
+font-size:20px;
+font-weight:800;
+color:#2b7cff;
 }
+
+.card-image{
+position:relative;
+margin-top:6px;
+}
+
+.card-image img{
+width:100%;
+height:190px;
+object-fit:cover;
+border-radius:10px;
+}
+
+/* REMOVE PHOTO BUTTON */
+
+.photo-remove{
+position:absolute;
+top:6px;
+right:6px;
+background:#ff2fa3;
+color:white;
+border-radius:50%;
+width:24px;
+height:24px;
+text-align:center;
+line-height:24px;
+font-weight:700;
+cursor:pointer;
+display:none;
+}
+
+/* BADGES */
+
+.badge{
+display:inline-block;
+padding:4px 8px;
+border-radius:8px;
+font-size:12px;
+font-weight:700;
+margin-top:4px;
+}
+
+.discovery-Landmark{background:#2b7cff;color:white;}
+.discovery-Notable{background:#7a3cff;color:white;}
+.discovery-HiddenGem{background:#ff2fa3;color:white;}
+.discovery-Secret{background:#f5b400;color:black;}
 
 textarea{
 width:100%;
+margin-top:8px;
+padding:8px;
+border-radius:10px;
+border:1px solid #ddd;
+}
+
+.card-actions{
+display:flex;
+justify-content:space-between;
 margin-top:10px;
 }
+
+.collect-btn{
+background:#2b7cff;
+color:white;
+border:none;
+padding:8px 12px;
+border-radius:10px;
+}
+
+.close-btn{
+background:#eee;
+border:none;
+padding:8px 12px;
+border-radius:10px;
+}
+
+/* COLLECTION PAGE */
 
 #collection-page{
 position:absolute;
@@ -123,11 +213,37 @@ overflow:auto;
 padding:20px;
 }
 
-#collection-grid{
+.collection-grid{
 display:grid;
 grid-template-columns:repeat(auto-fill,minmax(200px,1fr));
 gap:16px;
-margin-top:20px;
+}
+
+.collection-card{
+background:#fff7ec;
+border:3px solid #ff2fa3;
+border-radius:14px;
+padding:10px;
+}
+
+.collection-card img{
+width:100%;
+height:140px;
+object-fit:cover;
+border-radius:8px;
+}
+
+.collection-card h3{
+color:#2b7cff;
+}
+
+@media(max-width:600px){
+
+#search-panel{
+width:90%;
+right:5%;
+}
+
 }
 
 </style>
@@ -151,61 +267,68 @@ margin-top:20px;
 
 <div id="nav">
 <button onclick="previewJourney()">Preview</button>
-<button onclick="startWalk()">Start</button>
-<button onclick="pauseWalk()">Pause</button>
-<button onclick="resumeWalk()">Resume</button>
-<button onclick="endWalk()">End</button>
-<button onclick="toggleMemories()">Memories</button>
 <button onclick="openCollection()">Collection</button>
 <button onclick="shareJourney()">Share</button>
 </div>
 
 <div id="map"></div>
 
+<!-- ENCOUNTER CARD -->
+
 <div id="encounter">
 
-<img id="encounter-photo">
-<h3 id="encounter-title"></h3>
+<div class="card-title" id="encounter-title"></div>
 
-<div id="prompt">✨ Cultural Encounter</div>
+<div id="type-badge" class="badge"></div>
+<div id="discovery-badge" class="badge"></div>
+
+<div class="card-image">
+
+<img id="encounter-photo">
+
+<div class="photo-remove" id="remove-photo">×</div>
+
+</div>
+
+<input type="file" id="photo-input" accept="image/*" capture="environment">
 
 <textarea id="note" placeholder="Write reflection..."></textarea>
 
-<br><br>
+<div class="card-actions">
 
-<button onclick="saveEncounter()">Collect</button>
-<button onclick="closeEncounter()">Close</button>
+<button class="collect-btn" onclick="saveEncounter()">Collect</button>
+<button class="close-btn" onclick="closeEncounter()">Close</button>
 
 </div>
+
+</div>
+
+<!-- COLLECTION -->
 
 <div id="collection-page">
 
 <h1>Your Cultural Collection</h1>
 
-<div id="collection-grid"></div>
+<div id="collection-container"></div>
 
 <br>
-<button onclick="closeCollection()">Close</button>
+<button onclick="closeCollection()">Back to Map</button>
 
 </div>
 
 <script>
 
 mapboxgl.accessToken="pk.eyJ1IjoiYmlnYWwxIiwiYSI6ImNtbWIzODZuaDA0cWYycXIyMXVydmx1eDkifQ.2tS6Ro5jbDlGjbR74_Ox0Q"
-const API_URL="https://script.google.com/macros/s/AKfycbyaSu9_SytF-_iHGFSUd-p0T8mdeE3He3cXEWwq7_JxBTAfIMO-Ru6uwT-SWUBEfolY/exec"
+const API_URL="https://script.google.com/macros/s/AKfycby74t0PVXTdY3Bk74si4hR9d0fy6MOo7bu2prje8sDRfE81jm_qlr4rzeU6dch8vipp/exec"
 
 let map
 let routeCoords=null
 let markers=[]
-let archiveMarkers=[]
-
-let destinationCoords=null
-let startCoords=null
-
-let userMarker=null
-let watchId=null
-
 let currentEncounter=null
+let uploadedPhotoBase64=null
+
+let startCoords=null
+let destinationCoords=null
 
 let USER_ID=localStorage.getItem("hg_user")
 
@@ -214,10 +337,14 @@ USER_ID=crypto.randomUUID()
 localStorage.setItem("hg_user",USER_ID)
 }
 
+/* START APP */
+
 function startApp(){
 document.getElementById("home-screen").style.display="none"
 initMap()
 }
+
+/* MAP */
 
 function initMap(){
 
@@ -239,33 +366,9 @@ initSearch()
 
 }
 
+/* GPS */
+
 function startGPS(){
-
-navigator.geolocation.watchPosition(
-
-pos=>{
-
-const coords=[pos.coords.longitude,pos.coords.latitude]
-
-if(!userMarker){
-
-userMarker=new mapboxgl.Marker({color:"#2b7cff"})
-.setLngLat(coords)
-.addTo(map)
-
-}else{
-
-userMarker.setLngLat(coords)
-
-}
-
-startCoords=coords
-
-})
-
-}
-
-document.getElementById("gps-btn").onclick=()=>{
 
 navigator.geolocation.getCurrentPosition(pos=>{
 
@@ -277,6 +380,8 @@ map.flyTo({center:startCoords,zoom:14})
 
 }
 
+/* SEARCH */
+
 function initSearch(){
 
 const startGeo=new MapboxGeocoder({
@@ -285,8 +390,7 @@ mapboxgl:mapboxgl,
 placeholder:"Start location"
 })
 
-document.getElementById("start-search")
-.appendChild(startGeo.onAdd(map))
+document.getElementById("start-search").appendChild(startGeo.onAdd(map))
 
 startGeo.on("result",e=>{
 startCoords=e.result.center
@@ -298,8 +402,7 @@ mapboxgl:mapboxgl,
 placeholder:"Destination"
 })
 
-document.getElementById("dest-search")
-.appendChild(destGeo.onAdd(map))
+document.getElementById("dest-search").appendChild(destGeo.onAdd(map))
 
 destGeo.on("result",e=>{
 destinationCoords=e.result.center
@@ -308,6 +411,8 @@ destinationCoords=e.result.center
 document.getElementById("route-button").onclick=generateRoute
 
 }
+
+/* ROUTE */
 
 async function generateRoute(){
 
@@ -327,10 +432,12 @@ const data=await res.json()
 routeCoords=data.geometry.coordinates
 
 drawRoute(routeCoords)
-zoomToRoute()
+
 loadEncounters(routeCoords)
 
 }
+
+/* DRAW ROUTE */
 
 function drawRoute(coords){
 
@@ -362,15 +469,29 @@ paint:{
 
 }
 
-function zoomToRoute(){
+/* TYPE + DISCOVERY SYSTEM */
 
-const bounds=turf.bbox(
-turf.lineString(routeCoords)
-)
+function getType(tags){
 
-map.fitBounds(bounds,{padding:60})
+if(tags.tourism==="museum") return "Museum"
+if(tags.tourism==="artwork") return "Artwork"
+if(tags.historic) return "Historic"
+
+return "Culture"
 
 }
+
+function getDiscovery(distance){
+
+if(distance<0.05) return "Landmark"
+if(distance<0.1) return "Notable"
+if(distance<0.2) return "HiddenGem"
+
+return "Secret"
+
+}
+
+/* LOAD ENCOUNTERS */
 
 async function loadEncounters(coords){
 
@@ -378,7 +499,6 @@ markers.forEach(m=>m.remove())
 markers=[]
 
 const line=turf.lineString(coords)
-
 const bbox=turf.bbox(line)
 
 const query=`
@@ -391,26 +511,16 @@ node["historic"](${bbox[1]},${bbox[0]},${bbox[3]},${bbox[2]});
 out center;
 `
 
-const res=await fetch(
-"https://overpass-api.de/api/interpreter",
-{method:"POST",body:query}
-)
-
+const res=await fetch("https://overpass-api.de/api/interpreter",{method:"POST",body:query})
 const data=await res.json()
 
-const filtered=data.elements.filter(el=>el.tags&&el.tags.name)
+if(!data.elements) return
 
-filtered
-.sort((a,b)=>{
+const candidates=[]
 
-const scoreA=(a.tags.tourism?3:0)+(a.tags.historic?2:0)
-const scoreB=(b.tags.tourism?3:0)+(b.tags.historic?2:0)
+data.elements.forEach(el=>{
 
-return scoreB-scoreA
-
-})
-.slice(0,4)
-.forEach(el=>{
+if(!el.tags || !el.tags.name) return
 
 const coords=[el.lon||el.center.lon,el.lat||el.center.lat]
 
@@ -418,42 +528,57 @@ const point=turf.point(coords)
 
 const dist=turf.pointToLineDistance(point,line,{units:"kilometers"})
 
-if(dist>0.2) return
+if(dist>0.25) return
 
-const marker=new mapboxgl.Marker({color:"#ff2fa3"})
-.setLngLat(coords)
-.addTo(map)
+const type=getType(el.tags)
+const discovery=getDiscovery(dist)
 
-marker.site={
+candidates.push({
 name:el.tags.name,
-coords:coords
-}
-
-marker.getElement().onclick=()=>openEncounter(marker.site)
-
-markers.push(marker)
+coords:coords,
+type:type,
+discovery:discovery
+})
 
 })
 
+const step=Math.floor(candidates.length/4)
+
+for(let i=0;i<4;i++){
+
+const index=i*step
+
+const site=candidates[index]
+
+if(!site) continue
+
+const marker=new mapboxgl.Marker({color:"#ff2fa3"})
+.setLngLat(site.coords)
+.addTo(map)
+
+marker.site=site
+
+marker.getElement().onclick=()=>openEncounter(site)
+
+markers.push(marker)
+
 }
+
+}
+
+/* PREVIEW */
 
 async function previewJourney(){
 
-if(!routeCoords||markers.length==0) return
+if(!markers.length) return
 
-const start=routeCoords[0]
+for(const m of markers){
 
-map.flyTo({center:start,zoom:15,pitch:45})
+map.flyTo({center:m.site.coords,zoom:17})
 
 await sleep(2000)
 
-for(const marker of markers){
-
-map.flyTo({center:marker.site.coords,zoom:17,pitch:60})
-
-await sleep(1500)
-
-openEncounter(marker.site)
+openEncounter(m.site)
 
 await sleep(2500)
 
@@ -461,13 +586,13 @@ closeEncounter()
 
 }
 
-map.flyTo({center:start,zoom:15,pitch:45})
-
 }
 
 function sleep(ms){
 return new Promise(r=>setTimeout(r,ms))
 }
+
+/* OPEN CARD */
 
 function openEncounter(site){
 
@@ -475,32 +600,78 @@ currentEncounter=site
 
 document.getElementById("encounter-title").innerText=site.name
 
+document.getElementById("type-badge").innerText=site.type
+
+document.getElementById("discovery-badge").innerText=site.discovery
+document.getElementById("discovery-badge").className="badge discovery-"+site.discovery
+
 document.getElementById("encounter-photo").src=
-"https://source.unsplash.com/400x300/?architecture,city"
+"https://picsum.photos/400/250?random="+Math.random()
 
 document.getElementById("encounter").style.display="block"
 
 }
 
+/* CLOSE */
+
 function closeEncounter(){
-
-document.getElementById("note").value=""
-
 document.getElementById("encounter").style.display="none"
+}
+
+/* PHOTO UPLOAD */
+
+document.getElementById("photo-input").addEventListener("change",function(e){
+
+const file=e.target.files[0]
+if(!file) return
+
+const reader=new FileReader()
+
+reader.onload=function(evt){
+
+uploadedPhotoBase64=evt.target.result.split(",")[1]
+
+document.getElementById("encounter-photo").src=evt.target.result
+
+document.getElementById("remove-photo").style.display="block"
 
 }
+
+reader.readAsDataURL(file)
+
+})
+
+document.getElementById("remove-photo").onclick=function(){
+
+uploadedPhotoBase64=null
+
+document.getElementById("encounter-photo").src=
+"https://picsum.photos/400/250?random="+Math.random()
+
+this.style.display="none"
+
+}
+
+/* SAVE */
 
 function saveEncounter(){
 
 fetch(API_URL,{
 method:"POST",
 body:JSON.stringify({
-action:"collectEncounter",
-user:USER_ID,
+
+action:"encounter",
+
+user_id:USER_ID,
 site_name:currentEncounter.name,
+
 lat:currentEncounter.coords[1],
 lng:currentEncounter.coords[0],
-note:document.getElementById("note").value
+
+note:document.getElementById("note").value,
+
+photo:uploadedPhotoBase64
+
 })
 })
 
@@ -508,112 +679,13 @@ closeEncounter()
 
 }
 
-function startWalk(){
-
-if(watchId){
-navigator.geolocation.clearWatch(watchId)
-}
-
-watchId=navigator.geolocation.watchPosition(updateWalk)
-
-}
-
-function pauseWalk(){
-navigator.geolocation.clearWatch(watchId)
-}
-
-function resumeWalk(){
-watchId=navigator.geolocation.watchPosition(updateWalk)
-}
-
-function endWalk(){
-navigator.geolocation.clearWatch(watchId)
-}
-
-function updateWalk(pos){
-
-const coords=[pos.coords.longitude,pos.coords.latitude]
-
-map.easeTo({
-center:coords,
-zoom:17,
-pitch:65
-})
-
-}
-
-async function toggleMemories(){
-
-archiveMarkers.forEach(m=>m.remove())
-archiveMarkers=[]
-
-const res=await fetch(API_URL+"?action=getMemories&user="+USER_ID)
-
-const memories=await res.json()
-
-memories.forEach(mem=>{
-
-const marker=new mapboxgl.Marker({color:"#ff9ecb"})
-.setLngLat([mem.lng,mem.lat])
-.addTo(map)
-
-const popup=new mapboxgl.Popup({offset:25})
-.setHTML(`<b>${mem.site_name}</b><br>${mem.note||""}`)
-
-marker.setPopup(popup)
-
-archiveMarkers.push(marker)
-
-})
-
-}
-
-async function openCollection(){
-
-document.getElementById("collection-page").style.display="block"
-
-const grid=document.getElementById("collection-grid")
-
-grid.innerHTML="Loading..."
-
-const res=await fetch(API_URL+"?action=getMemories&user="+USER_ID)
-
-const data=await res.json()
-
-grid.innerHTML=""
-
-data.forEach(card=>{
-
-const div=document.createElement("div")
-
-div.style.border="1px solid #ddd"
-div.style.borderRadius="12px"
-div.style.padding="10px"
-
-div.innerHTML=`
-<img src="https://source.unsplash.com/400x300/?architecture,city"
-style="width:100%;border-radius:8px">
-
-<h3>${card.site_name}</h3>
-
-<p style="font-size:13px">${card.note||""}</p>
-`
-
-grid.appendChild(div)
-
-})
-
-}
-
-function closeCollection(){
-document.getElementById("collection-page").style.display="none"
-}
+/* SHARE */
 
 async function shareJourney(){
 
 const card=document.getElementById("encounter")
 
-const canvas=await html2canvas(card)
+const canvas=await html2canvas(card,{backgroundColor:"#fff7ec"})
 
 canvas.toBlob(blob=>{
 
@@ -624,6 +696,50 @@ link.click()
 
 })
 
+}
+
+/* COLLECTION */
+
+async function openCollection(){
+
+document.getElementById("collection-page").style.display="block"
+
+const container=document.getElementById("collection-container")
+
+const res=await fetch(API_URL+"?action=encounters")
+const data=await res.json()
+
+container.innerHTML=""
+
+const grid=document.createElement("div")
+grid.className="collection-grid"
+
+data.forEach(card=>{
+
+const div=document.createElement("div")
+
+div.className="collection-card"
+
+div.innerHTML=`
+
+<img src="${card.photo || 'https://picsum.photos/300/200?random='+Math.random()}">
+
+<h3>${card.site_name}</h3>
+
+<p>${card.note||""}</p>
+
+`
+
+grid.appendChild(div)
+
+})
+
+container.appendChild(grid)
+
+}
+
+function closeCollection(){
+document.getElementById("collection-page").style.display="none"
 }
 
 </script>
