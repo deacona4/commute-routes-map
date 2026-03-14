@@ -19,10 +19,13 @@
 
 <style>
 
+/* GLOBAL */
+
 body{
 margin:0;
 font-family:'Inter',sans-serif;
 background:#fff7ec;
+overflow:hidden;
 }
 
 /* MAP */
@@ -32,66 +35,100 @@ width:100%;
 height:100vh;
 }
 
-/* HOME */
+/* HOME SCREEN */
 
 #home-screen{
+
 position:absolute;
 top:0;
 left:0;
 width:100%;
 height:100%;
+
 background:#ff2fa3;
+
 display:flex;
 flex-direction:column;
 justify-content:center;
 align-items:center;
+
 z-index:20;
 color:white;
+
 text-align:center;
+
 }
 
 .home-title{
-font-size:56px;
+font-size:64px;
 font-weight:800;
+}
+
+.home-sub{
+margin-top:10px;
+font-size:18px;
 }
 
 /* SEARCH PANEL */
 
 #search-panel{
+
 position:absolute;
 top:16px;
 right:16px;
+
 background:white;
+
 padding:12px;
 border-radius:12px;
+
 box-shadow:0 4px 16px rgba(0,0,0,0.2);
+
 z-index:5;
-width:300px;
+
+width:320px;
+
 display:flex;
 flex-direction:column;
 gap:8px;
+
 }
 
 /* NAV */
 
 #nav{
+
 position:absolute;
 bottom:20px;
 left:50%;
+
 transform:translateX(-50%);
+
 background:white;
-padding:8px 14px;
-border-radius:20px;
-box-shadow:0 4px 16px rgba(0,0,0,.2);
+
+padding:10px 16px;
+
+border-radius:24px;
+
+box-shadow:0 4px 16px rgba(0,0,0,.25);
+
 z-index:5;
+
+display:flex;
+gap:10px;
+
 }
 
 #nav button{
+
 border:none;
 background:none;
-margin:0 6px;
+
 font-weight:600;
 cursor:pointer;
+
+padding:6px 10px;
+
 }
 
 /* ENCOUNTER CARD */
@@ -101,141 +138,264 @@ cursor:pointer;
 position:absolute;
 top:50%;
 left:50%;
+
 transform:translate(-50%,-50%);
 
-width:min(92vw,340px);
+width:min(92vw,360px);
 
 background:#fff7ec;
+
 border:5px solid #ff2fa3;
+
 border-radius:18px;
 
-box-shadow:0 20px 40px rgba(0,0,0,.35);
+box-shadow:0 20px 40px rgba(0,0,0,.4);
 
 padding:14px;
+
 display:none;
+
 z-index:10;
 
 }
 
+/* CARD TITLE */
+
 .card-title{
+
 font-size:20px;
 font-weight:800;
+
 color:#2b7cff;
-}
 
-.card-image{
-position:relative;
-margin-top:6px;
-}
+margin-bottom:4px;
 
-.card-image img{
-width:100%;
-height:190px;
-object-fit:cover;
-border-radius:10px;
-}
-
-/* REMOVE PHOTO BUTTON */
-
-.photo-remove{
-position:absolute;
-top:6px;
-right:6px;
-background:#ff2fa3;
-color:white;
-border-radius:50%;
-width:24px;
-height:24px;
-text-align:center;
-line-height:24px;
-font-weight:700;
-cursor:pointer;
-display:none;
 }
 
 /* BADGES */
 
 .badge{
+
 display:inline-block;
+
 padding:4px 8px;
+
 border-radius:8px;
+
 font-size:12px;
+
 font-weight:700;
+
 margin-top:4px;
+
 }
 
-.discovery-Landmark{background:#2b7cff;color:white;}
-.discovery-Notable{background:#7a3cff;color:white;}
-.discovery-HiddenGem{background:#ff2fa3;color:white;}
-.discovery-Secret{background:#f5b400;color:black;}
+.discovery-Landmark{
+background:#2b7cff;
+color:white;
+}
+
+.discovery-Notable{
+background:#7a3cff;
+color:white;
+}
+
+.discovery-HiddenGem{
+background:#ff2fa3;
+color:white;
+}
+
+.discovery-Secret{
+background:#f5b400;
+color:black;
+}
+
+/* IMAGE */
+
+.card-image{
+
+position:relative;
+margin-top:6px;
+
+}
+
+.card-image img{
+
+width:100%;
+height:200px;
+
+object-fit:cover;
+
+border-radius:10px;
+
+}
+
+/* REMOVE PHOTO BUTTON */
+
+.photo-remove{
+
+position:absolute;
+
+top:6px;
+right:6px;
+
+background:#ff2fa3;
+
+color:white;
+
+border-radius:50%;
+
+width:24px;
+height:24px;
+
+text-align:center;
+
+line-height:24px;
+
+font-weight:700;
+
+cursor:pointer;
+
+display:none;
+
+}
+
+/* REFLECTION */
 
 textarea{
+
 width:100%;
+
 margin-top:8px;
+
 padding:8px;
+
 border-radius:10px;
+
 border:1px solid #ddd;
+
 }
 
+/* CARD ACTIONS */
+
 .card-actions{
+
 display:flex;
+
 justify-content:space-between;
+
 margin-top:10px;
+
 }
 
 .collect-btn{
+
 background:#2b7cff;
 color:white;
+
 border:none;
+
 padding:8px 12px;
+
 border-radius:10px;
+
 }
 
 .close-btn{
+
 background:#eee;
+
 border:none;
+
 padding:8px 12px;
+
 border-radius:10px;
+
 }
 
 /* COLLECTION PAGE */
 
 #collection-page{
+
 position:absolute;
+
 top:0;
 left:0;
+
 width:100%;
 height:100%;
+
 background:white;
+
 z-index:30;
+
 display:none;
+
 overflow:auto;
+
 padding:20px;
+
 }
 
 .collection-grid{
+
 display:grid;
+
 grid-template-columns:repeat(auto-fill,minmax(200px,1fr));
+
 gap:16px;
+
 }
 
 .collection-card{
+
 background:#fff7ec;
+
 border:3px solid #ff2fa3;
+
 border-radius:14px;
+
 padding:10px;
+
 }
 
 .collection-card img{
+
 width:100%;
 height:140px;
+
 object-fit:cover;
+
 border-radius:8px;
+
 }
 
 .collection-card h3{
+
 color:#2b7cff;
+
 }
+
+/* ROUTE SHARE CARD */
+
+.route-share-card{
+
+width:360px;
+height:640px;
+
+background:#fff7ec;
+
+border:6px solid #ff2fa3;
+
+border-radius:20px;
+
+padding:20px;
+
+font-family:'Inter';
+
+}
+
+/* MOBILE */
 
 @media(max-width:600px){
 
@@ -244,32 +404,67 @@ width:90%;
 right:5%;
 }
 
+#nav{
+bottom:10px;
+}
+
 }
 
 </style>
+
 </head>
 
 <body>
 
+<!-- HOME SCREEN -->
+
 <div id="home-screen">
+
 <div class="home-title">Hot Girl Walk</div>
-<div>Turn everyday routes into cultural discovery</div>
-<br>
-<button onclick="startApp()">Start Walk</button>
+
+<div class="home-sub">
+Turn everyday routes into cultural discovery
 </div>
+
+<br>
+
+<button onclick="startApp()">Start Walk</button>
+
+</div>
+
+<!-- SEARCH PANEL -->
 
 <div id="search-panel">
+
 <div id="start-search"></div>
+
 <button id="gps-btn">Use my GPS</button>
+
 <div id="dest-search"></div>
+
 <button id="route-button">Generate Route</button>
+
 </div>
 
+<!-- NAVIGATION -->
+
 <div id="nav">
+
 <button onclick="previewJourney()">Preview</button>
+
+<button onclick="startWalk()">Start Walk</button>
+
+<button onclick="stopWalk()">End Walk</button>
+
 <button onclick="openCollection()">Collection</button>
-<button onclick="shareJourney()">Share</button>
+
+<button onclick="shareRoute()">Share Route</button>
+
+<button onclick="shareEncounter()">Share Card</button>
+
 </div>
+
+<!-- MAP -->
 
 <div id="map"></div>
 
@@ -280,6 +475,7 @@ right:5%;
 <div class="card-title" id="encounter-title"></div>
 
 <div id="type-badge" class="badge"></div>
+
 <div id="discovery-badge" class="badge"></div>
 
 <div class="card-image">
@@ -297,13 +493,14 @@ right:5%;
 <div class="card-actions">
 
 <button class="collect-btn" onclick="saveEncounter()">Collect</button>
+
 <button class="close-btn" onclick="closeEncounter()">Close</button>
 
 </div>
 
 </div>
 
-<!-- COLLECTION -->
+<!-- COLLECTION PAGE -->
 
 <div id="collection-page">
 
@@ -312,23 +509,30 @@ right:5%;
 <div id="collection-container"></div>
 
 <br>
+
 <button onclick="closeCollection()">Back to Map</button>
 
 </div>
 
 <script>
-
 mapboxgl.accessToken="pk.eyJ1IjoiYmlnYWwxIiwiYSI6ImNtbWIzODZuaDA0cWYycXIyMXVydmx1eDkifQ.2tS6Ro5jbDlGjbR74_Ox0Q"
-const API_URL="https://script.google.com/macros/s/AKfycby74t0PVXTdY3Bk74si4hR9d0fy6MOo7bu2prje8sDRfE81jm_qlr4rzeU6dch8vipp/exec"
+const API_URL="https://script.google.com/macros/s/AKfycbyuqgDUQjUfsXKDPeRHZhBSPNUHLlLoIEX9rAvV6oAjAAI1xzYZ2mfRlBYKmixKS-FR/exec"
+
+/* GLOBAL STATE */
 
 let map
 let routeCoords=null
 let markers=[]
-let currentEncounter=null
-let uploadedPhotoBase64=null
 
 let startCoords=null
 let destinationCoords=null
+
+let currentEncounter=null
+let uploadedPhotoBase64=null
+
+let walkMode=false
+let walkWatcher=null
+let userMarker=null
 
 let USER_ID=localStorage.getItem("hg_user")
 
@@ -340,11 +544,14 @@ localStorage.setItem("hg_user",USER_ID)
 /* START APP */
 
 function startApp(){
+
 document.getElementById("home-screen").style.display="none"
+
 initMap()
+
 }
 
-/* MAP */
+/* MAP INIT */
 
 function initMap(){
 
@@ -366,7 +573,7 @@ initSearch()
 
 }
 
-/* GPS */
+/* GPS START */
 
 function startGPS(){
 
@@ -374,13 +581,16 @@ navigator.geolocation.getCurrentPosition(pos=>{
 
 startCoords=[pos.coords.longitude,pos.coords.latitude]
 
-map.flyTo({center:startCoords,zoom:14})
+map.flyTo({
+center:startCoords,
+zoom:14
+})
 
 })
 
 }
 
-/* SEARCH */
+/* SEARCH BOXES */
 
 function initSearch(){
 
@@ -412,11 +622,14 @@ document.getElementById("route-button").onclick=generateRoute
 
 }
 
-/* ROUTE */
+/* GENERATE ROUTE */
 
 async function generateRoute(){
 
-if(!startCoords||!destinationCoords) return
+if(!startCoords || !destinationCoords){
+alert("Select start and destination")
+return
+}
 
 const url=
 API_URL+
@@ -445,15 +658,23 @@ const geojson={
 type:"FeatureCollection",
 features:[{
 type:"Feature",
-geometry:{type:"LineString",coordinates:coords}
+geometry:{
+type:"LineString",
+coordinates:coords
+}
 }]
 }
 
 if(map.getSource("route")){
+
 map.getSource("route").setData(geojson)
+
 }else{
 
-map.addSource("route",{type:"geojson",data:geojson})
+map.addSource("route",{
+type:"geojson",
+data:geojson
+})
 
 map.addLayer({
 id:"route",
@@ -469,7 +690,7 @@ paint:{
 
 }
 
-/* TYPE + DISCOVERY SYSTEM */
+/* TYPE SYSTEM */
 
 function getType(tags){
 
@@ -480,6 +701,8 @@ if(tags.historic) return "Historic"
 return "Culture"
 
 }
+
+/* DISCOVERY LEVEL */
 
 function getDiscovery(distance){
 
@@ -499,7 +722,10 @@ markers.forEach(m=>m.remove())
 markers=[]
 
 const line=turf.lineString(coords)
+
 const bbox=turf.bbox(line)
+
+/* OVERPASS QUERY */
 
 const query=`
 [out:json];
@@ -511,7 +737,14 @@ node["historic"](${bbox[1]},${bbox[0]},${bbox[3]},${bbox[2]});
 out center;
 `
 
-const res=await fetch("https://overpass-api.de/api/interpreter",{method:"POST",body:query})
+const res=await fetch(
+"https://overpass-api.de/api/interpreter",
+{
+method:"POST",
+body:query
+}
+)
+
 const data=await res.json()
 
 if(!data.elements) return
@@ -524,9 +757,9 @@ if(!el.tags || !el.tags.name) return
 
 const coords=[el.lon||el.center.lon,el.lat||el.center.lat]
 
-const point=turf.point(coords)
+const pt=turf.point(coords)
 
-const dist=turf.pointToLineDistance(point,line,{units:"kilometers"})
+const dist=turf.pointToLineDistance(pt,line,{units:"kilometers"})
 
 if(dist>0.25) return
 
@@ -541,6 +774,8 @@ discovery:discovery
 })
 
 })
+
+/* EVEN DISTRIBUTION */
 
 const step=Math.floor(candidates.length/4)
 
@@ -566,7 +801,7 @@ markers.push(marker)
 
 }
 
-/* PREVIEW */
+/* PREVIEW JOURNEY */
 
 async function previewJourney(){
 
@@ -574,7 +809,11 @@ if(!markers.length) return
 
 for(const m of markers){
 
-map.flyTo({center:m.site.coords,zoom:17})
+map.flyTo({
+center:m.site.coords,
+zoom:17,
+pitch:60
+})
 
 await sleep(2000)
 
@@ -588,12 +827,85 @@ closeEncounter()
 
 }
 
+/* SLEEP */
+
 function sleep(ms){
 return new Promise(r=>setTimeout(r,ms))
 }
 
-/* OPEN CARD */
+/* WALK MODE */
 
+function startWalk(){
+
+walkMode=true
+
+document.getElementById("search-panel").style.display="none"
+
+map.easeTo({
+pitch:65,
+zoom:17
+})
+
+walkWatcher=navigator.geolocation.watchPosition(updateWalkPosition,{
+enableHighAccuracy:true,
+maximumAge:0
+})
+
+}
+
+/* STOP WALK */
+
+function stopWalk(){
+
+walkMode=false
+
+if(walkWatcher){
+navigator.geolocation.clearWatch(walkWatcher)
+}
+
+document.getElementById("search-panel").style.display="block"
+
+map.easeTo({
+pitch:0,
+zoom:14
+})
+
+}
+
+/* GPS POSITION */
+
+function updateWalkPosition(pos){
+
+const coords=[pos.coords.longitude,pos.coords.latitude]
+
+if(!userMarker){
+
+const el=document.createElement("div")
+
+el.style.width="16px"
+el.style.height="16px"
+el.style.background="#2b7cff"
+el.style.borderRadius="50%"
+el.style.boxShadow="0 0 0 6px rgba(43,124,255,0.3)"
+
+userMarker=new mapboxgl.Marker(el)
+.setLngLat(coords)
+.addTo(map)
+
+}else{
+
+userMarker.setLngLat(coords)
+
+}
+
+map.easeTo({
+center:coords,
+zoom:17,
+pitch:65,
+bearing:pos.coords.heading || map.getBearing()
+})
+
+}
 function openEncounter(site){
 
 currentEncounter=site
@@ -602,8 +914,10 @@ document.getElementById("encounter-title").innerText=site.name
 
 document.getElementById("type-badge").innerText=site.type
 
-document.getElementById("discovery-badge").innerText=site.discovery
-document.getElementById("discovery-badge").className="badge discovery-"+site.discovery
+const discovery=document.getElementById("discovery-badge")
+
+discovery.innerText=site.discovery
+discovery.className="badge discovery-"+site.discovery
 
 document.getElementById("encounter-photo").src=
 "https://picsum.photos/400/250?random="+Math.random()
@@ -612,10 +926,12 @@ document.getElementById("encounter").style.display="block"
 
 }
 
-/* CLOSE */
+/* CLOSE CARD */
 
 function closeEncounter(){
+
 document.getElementById("encounter").style.display="none"
+
 }
 
 /* PHOTO UPLOAD */
@@ -623,6 +939,7 @@ document.getElementById("encounter").style.display="none"
 document.getElementById("photo-input").addEventListener("change",function(e){
 
 const file=e.target.files[0]
+
 if(!file) return
 
 const reader=new FileReader()
@@ -641,6 +958,8 @@ reader.readAsDataURL(file)
 
 })
 
+/* REMOVE PHOTO */
+
 document.getElementById("remove-photo").onclick=function(){
 
 uploadedPhotoBase64=null
@@ -652,7 +971,7 @@ this.style.display="none"
 
 }
 
-/* SAVE */
+/* SAVE ENCOUNTER */
 
 function saveEncounter(){
 
@@ -663,9 +982,11 @@ body:JSON.stringify({
 action:"encounter",
 
 user_id:USER_ID,
+
 site_name:currentEncounter.name,
 
 lat:currentEncounter.coords[1],
+
 lng:currentEncounter.coords[0],
 
 note:document.getElementById("note").value,
@@ -679,26 +1000,125 @@ closeEncounter()
 
 }
 
-/* SHARE */
+/* SHARE ENCOUNTER CARD */
 
-async function shareJourney(){
+async function shareEncounter(){
 
 const card=document.getElementById("encounter")
 
-const canvas=await html2canvas(card,{backgroundColor:"#fff7ec"})
+if(!card){
+alert("Open an encounter card first")
+return
+}
+
+const canvas=await html2canvas(card,{
+backgroundColor:"#fff7ec",
+ignoreElements:(el)=>el.classList?.contains("mapboxgl-canvas")
+})
 
 canvas.toBlob(blob=>{
+
+if(!blob){
+alert("Share failed")
+return
+}
+
+const file=new File([blob],"encounter-card.png",{type:"image/png"})
+
+if(navigator.share){
+
+navigator.share({
+files:[file],
+title:"Cultural Encounter"
+})
+
+}else{
 
 const link=document.createElement("a")
 link.href=URL.createObjectURL(blob)
 link.download="encounter-card.png"
 link.click()
 
+}
+
 })
 
 }
 
-/* COLLECTION */
+/* SHARE ROUTE */
+
+async function shareRoute(){
+
+if(!routeCoords){
+alert("Generate a route first")
+return
+}
+
+const routeName=prompt("Name this route")
+
+const card=document.createElement("div")
+
+card.className="route-share-card"
+
+card.innerHTML=`
+
+<h2 style="color:#2b7cff">Hot Girl Walk</h2>
+
+<h3>${routeName || "My Cultural Walk"}</h3>
+
+<p>${markers.length} discoveries</p>
+
+<div style="
+height:280px;
+background:#eee;
+border-radius:10px;
+display:flex;
+align-items:center;
+justify-content:center;
+margin-top:20px;
+">
+Route Preview
+</div>
+
+<p style="margin-top:20px">Explore culture along your route</p>
+
+`
+
+document.body.appendChild(card)
+
+const canvas=await html2canvas(card,{
+backgroundColor:"#fff7ec"
+})
+
+card.remove()
+
+canvas.toBlob(blob=>{
+
+if(!blob) return
+
+const file=new File([blob],"route-card.png",{type:"image/png"})
+
+if(navigator.share){
+
+navigator.share({
+files:[file],
+title:"Hot Girl Walk Route"
+})
+
+}else{
+
+const link=document.createElement("a")
+link.href=URL.createObjectURL(blob)
+link.download="route-card.png"
+link.click()
+
+}
+
+})
+
+}
+
+/* COLLECTION PAGE */
 
 async function openCollection(){
 
@@ -706,12 +1126,24 @@ document.getElementById("collection-page").style.display="block"
 
 const container=document.getElementById("collection-container")
 
+container.innerHTML="Loading..."
+
 const res=await fetch(API_URL+"?action=encounters")
+
 const data=await res.json()
+
+if(!Array.isArray(data)){
+
+container.innerHTML="No encounters yet"
+
+return
+
+}
 
 container.innerHTML=""
 
 const grid=document.createElement("div")
+
 grid.className="collection-grid"
 
 data.forEach(card=>{
@@ -726,9 +1158,21 @@ div.innerHTML=`
 
 <h3>${card.site_name}</h3>
 
-<p>${card.note||""}</p>
+<p>${card.note || ""}</p>
 
 `
+
+div.onclick=function(){
+
+document.getElementById("encounter-title").innerText=card.site_name
+
+document.getElementById("encounter-photo").src=card.photo
+
+document.getElementById("note").value=card.note || ""
+
+document.getElementById("encounter").style.display="block"
+
+}
 
 grid.appendChild(div)
 
@@ -738,10 +1182,15 @@ container.appendChild(grid)
 
 }
 
+/* CLOSE COLLECTION */
+
 function closeCollection(){
+
 document.getElementById("collection-page").style.display="none"
+
 }
 
 </script>
+
 </body>
 </html>
