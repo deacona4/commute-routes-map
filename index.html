@@ -205,6 +205,21 @@ cursor:pointer;
 #share-story-btn{background:#ff2fa3;color:#fff;}
 #end-preview-btn{background:#222;color:#fff;}
 
+#encounter-status{
+position:absolute;
+top:14px;
+left:50%;
+transform:translateX(-50%);
+background:rgba(255,255,255,.92);
+padding:8px 12px;
+border-radius:12px;
+font-size:13px;
+font-weight:600;
+z-index:30;
+display:none;
+box-shadow:0 4px 16px rgba(0,0,0,.2);
+}
+
 </style>
 </head>
 
@@ -236,6 +251,7 @@ Walking Mode
 </div>
 
 <div id="map"></div>
+<div id="encounter-status"></div>
 
 <div id="encounter">
 
@@ -285,6 +301,8 @@ walkWatcher:null
 STATE.overpassCache=new Map()
 STATE.previewInterval=null
 STATE.previewFrameIndex=0
+STATE.encounterFetchAttempts=0
+STATE.encounterFetchSuccesses=0
 
 let previewFrames=[]
 
@@ -310,6 +328,42 @@ turf.point(b),
 
 return km*1000
 
+}
+
+function setEncounterStatus(msg,show=true){
+const el=document.getElementById("encounter-status")
+if(!el) return
+el.innerText=msg
+el.style.display=show?"block":"none"
+}
+
+function buildFallbackFrame(index){
+const c=document.createElement("canvas")
+c.width=540
+c.height=960
+const ctx=c.getContext("2d")
+ctx.fillStyle="#ffe3f3"
+ctx.fillRect(0,0,c.width,c.height)
+ctx.fillStyle="#ff2fa3"
+ctx.font="bold 42px Inter"
+ctx.fillText("Hot Girl Walk",95,140)
+ctx.fillStyle="#333"
+ctx.font="30px Inter"
+ctx.fillText(`Preview stop ${index+1}`,130,220)
+ctx.fillStyle="#ff2fa3"
+ctx.font="24px Inter"
+ctx.fillText("Map preview unavailable",120,300)
+return c.toDataURL("image/jpeg")
+}
+
+function captureMapFrame(index){
+try{
+const frame=STATE.map.getCanvas().toDataURL("image/jpeg")
+if(!frame || frame === "data:,") return buildFallbackFrame(index)
+return frame
+}catch(e){
+return buildFallbackFrame(index)
+}
 }
 
 
@@ -352,7 +406,8 @@ container:"map",
 style:"mapbox://styles/mapbox/streets-v12",
 center:[-0.1276,51.5072],
 zoom:12,
-pitch:40
+pitch:40,
+preserveDrawingBuffer:true
 
 })
 
@@ -494,11 +549,6 @@ alert("No walking route was found for these points.")
 return
 }
 
-if(!data.routes || !data.routes.length){
-alert("No walking route was found for these points.")
-return
-}
-
 STATE.routeCoords=data.routes[0].geometry.coordinates
 
 drawRoute()
@@ -557,6 +607,10 @@ async function loadEncounters(){
 
 if(!STATE.routeCoords || STATE.routeCoords.length<2) return
 
+setEncounterStatus("Finding discoveries on your route…")
+STATE.encounterFetchAttempts=0
+STATE.encounterFetchSuccesses=0
+
 clearMarkers()
 
 STATE.encounters=[]
@@ -598,6 +652,8 @@ for(const p of uniqueScanPoints){
 
 const sites = await fetchNearbySites(p)
 
+if(sites.length) STATE.encounterFetchSuccesses+=1
+
 candidates.push(...sites.map(site=>({...site,routePoint:p})))
 
 /* tiny pause helps prevent 429 bursts on long routes */
@@ -611,6 +667,18 @@ for(const c of candidates){
 
 c.score = scoreCulturalSite(c,c.routePoint)
 
+}
+
+const seenKeys=new Set()
+
+const deduped=[]
+
+for(const c of candidates){
+const key=`${c.name}-${c.coords[0].toFixed(5)}-${c.coords[1].toFixed(5)}`
+if(!seenKeys.has(key)){
+seenKeys.add(key)
+deduped.push(c)
+}
 }
 
 const seenKeys=new Set()
@@ -661,6 +729,7 @@ if(chosen.length >= getEncounterCount()) break
 }
 
 if(!chosen.length){
+setEncounterStatus("No API results yet — using scenic stops instead.")
 const fallbackCount=Math.min(getEncounterCount(),Math.max(2,Math.floor(STATE.routeCoords.length/4)))
 for(let i=1;i<=fallbackCount;i++){
 const idx=Math.min(
@@ -679,6 +748,10 @@ score:0
 STATE.encounters = chosen
 
 renderEncounterMarkers()
+
+setEncounterStatus(`${STATE.encounters.length} discoveries ready`,true)
+setTimeout(()=>setEncounterStatus("",false),2500)
+console.info("encounters_loaded",{count:STATE.encounters.length,fetchAttempts:STATE.encounterFetchAttempts,fetchSuccesses:STATE.encounterFetchSuccesses})
 
 }
 
@@ -708,6 +781,7 @@ FETCH CULTURAL SITES
 async function fetchNearbySites(coord){
 
 const cacheKey=cacheKeyFromCoord(coord)
+STATE.encounterFetchAttempts+=1
 
 if(STATE.overpassCache.has(cacheKey)){
 return STATE.overpassCache.get(cacheKey)
@@ -967,11 +1041,11 @@ duration:1400
 
 pulseEncounter(coord)
 
-await sleep(1500)
+await sleep(1550)
 
 /* capture frame */
 
-const frame = STATE.map.getCanvas().toDataURL("image/jpeg")
+const frame = captureMapFrame(previewFrames.length)
 
 previewFrames.push(frame)
 
