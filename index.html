@@ -234,11 +234,13 @@ return new Promise(resolve=>setTimeout(resolve,ms))
 
 function distanceMeters(a,b){
 
-return turf.distance(
+const km=turf.distance(
 turf.point(a),
 turf.point(b),
-{units:"meters"}
+{units:"kilometers"}
 )
+
+return km*1000
 
 }
 
@@ -350,6 +352,10 @@ center:STATE.startCoords,
 zoom:15
 })
 
+},()=>{
+
+alert("Unable to access GPS. Please allow location permissions.")
+
 })
 
 }
@@ -360,16 +366,32 @@ ROUTE
 
 async function generateRoute(){
 
+if(!STATE.startCoords || !STATE.destinationCoords){
+alert("Please choose both a start and destination.")
+return
+}
+
 const url=`https://api.mapbox.com/directions/v5/mapbox/walking/${STATE.startCoords[0]},${STATE.startCoords[1]};${STATE.destinationCoords[0]},${STATE.destinationCoords[1]}?geometries=geojson&access_token=${mapboxgl.accessToken}`
 
 const res=await fetch(url)
+
+if(!res.ok){
+alert("Could not fetch route right now. Please try again.")
+return
+}
+
 const data=await res.json()
+
+if(!data.routes || !data.routes.length){
+alert("No walking route was found for these points.")
+return
+}
 
 STATE.routeCoords=data.routes[0].geometry.coordinates
 
 drawRoute()
 
-loadEncounters()
+await loadEncounters()
 
 }
 
@@ -407,12 +429,21 @@ paint:{
 
 }
 
+const bounds=STATE.routeCoords.reduce(
+(b,coord)=>b.extend(coord),
+new mapboxgl.LngLatBounds(STATE.routeCoords[0],STATE.routeCoords[0])
+)
+
+STATE.map.fitBounds(bounds,{padding:60,maxZoom:16,duration:900})
+
 }
 /************************************************
 DISCOVERY ENGINE
 ************************************************/
 
 async function loadEncounters(){
+
+if(!STATE.routeCoords || STATE.routeCoords.length<2) return
 
 clearMarkers()
 
@@ -426,7 +457,7 @@ const scanPoints=[]
 
 /* scan route every ~150m */
 
-const segments = Math.floor(length*1000/150)
+const segments = Math.max(1,Math.floor(length*1000/150))
 
 for(let i=0;i<=segments;i++){
 
@@ -444,7 +475,7 @@ for(const p of scanPoints){
 
 const sites = await fetchNearbySites(p)
 
-candidates.push(...sites)
+candidates.push(...sites.map(site=>({...site,routePoint:p})))
 
 }
 
@@ -452,13 +483,25 @@ candidates.push(...sites)
 
 for(const c of candidates){
 
-c.score = scoreCulturalSite(c,c.coords)
+c.score = scoreCulturalSite(c,c.routePoint)
 
+}
+
+const seenKeys=new Set()
+
+const deduped=[]
+
+for(const c of candidates){
+const key=`${c.name}-${c.coords[0].toFixed(5)}-${c.coords[1].toFixed(5)}`
+if(!seenKeys.has(key)){
+seenKeys.add(key)
+deduped.push(c)
+}
 }
 
 /* sort best first */
 
-candidates.sort((a,b)=>b.score-a.score)
+deduped.sort((a,b)=>b.score-a.score)
 
 /* spread encounters */
 
@@ -466,7 +509,7 @@ const chosen=[]
 
 const minSpacing = 450
 
-for(const site of candidates){
+for(const site of deduped){
 
 let tooClose=false
 
@@ -538,12 +581,24 @@ node(around:350,${lat},${lng})["tourism"="attraction"];
 out;
 `
 
+let data
+
+try{
+
 const res = await fetch(
 "https://overpass-api.de/api/interpreter",
 {method:"POST",body:query}
 )
 
-const data = await res.json()
+if(!res.ok) return []
+
+data = await res.json()
+
+}catch(e){
+
+return []
+
+}
 
 if(!data.elements) return []
 
@@ -840,15 +895,25 @@ y+=60
 
 canvas.toBlob(async blob=>{
 
+if(!blob) return
+
 const file=new File([blob],"hot-girl-walk-story.png",{type:"image/png"})
 
 if(navigator.share){
+
+try{
 
 await navigator.share({
 files:[file],
 title:"Hot Girl Walk",
 text:"My cultural walk"
 })
+
+}catch(e){
+
+/* ignore cancelled share */
+
+}
 
 }else{
 
@@ -871,9 +936,16 @@ WALK MODE
 
 function startWalk(){
 
+if(!STATE.map){
+alert("Start the app first.")
+return
+}
+
 document.getElementById("walk-indicator").style.display="block"
 
-STATE.walkWatcher=navigator.geolocation.watchPosition(updateUserPosition)
+STATE.walkWatcher=navigator.geolocation.watchPosition(updateUserPosition,()=>{
+alert("Unable to start walk tracking. Please allow location access.")
+})
 
 }
 
@@ -881,6 +953,7 @@ function stopWalk(){
 
 if(STATE.walkWatcher){
 navigator.geolocation.clearWatch(STATE.walkWatcher)
+STATE.walkWatcher=null
 }
 
 document.getElementById("walk-indicator").style.display="none"
