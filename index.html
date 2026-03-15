@@ -4,7 +4,6 @@
 
 <meta charset="utf-8">
 <title>Hot Girl Walk</title>
-
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
 <link href="https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.css" rel="stylesheet">
@@ -14,7 +13,6 @@
 <script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v5.0.0/mapbox-gl-geocoder.min.js"></script>
 
 <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
-<script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
 
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
 
@@ -31,6 +29,8 @@ overflow:hidden;
 width:100%;
 height:100vh;
 }
+
+/* HOME */
 
 #home-screen{
 position:absolute;
@@ -63,6 +63,8 @@ font-weight:700;
 cursor:pointer;
 }
 
+/* SEARCH PANEL */
+
 #search-panel{
 position:absolute;
 top:20px;
@@ -77,6 +79,8 @@ flex-direction:column;
 gap:10px;
 z-index:10;
 }
+
+/* NAV */
 
 #nav{
 position:absolute;
@@ -99,6 +103,8 @@ font-weight:600;
 cursor:pointer;
 }
 
+/* WALK MODE */
+
 .walk-indicator{
 position:absolute;
 top:14px;
@@ -110,6 +116,8 @@ border-radius:12px;
 display:none;
 z-index:20;
 }
+
+/* ENCOUNTER CARD */
 
 #encounter{
 position:absolute;
@@ -158,39 +166,24 @@ Walking Mode
 </div>
 
 <div id="home-screen">
-
-<div class="home-title">
-Hot Girl Walk
-</div>
-
-<button class="start-button" onclick="startApp()">
-Start Walk
-</button>
-
+<div class="home-title">Hot Girl Walk</div>
+<button class="start-button" onclick="startApp()">Start Walk</button>
 </div>
 
 <div id="search-panel">
 
 <div id="start-search"></div>
-
-<button id="gps-btn">
-Use my GPS
-</button>
+<button id="gps-btn">Use my GPS</button>
 
 <div id="dest-search"></div>
-
-<button id="route-button">
-Generate Route
-</button>
+<button id="route-button">Generate Route</button>
 
 </div>
 
 <div id="nav">
-
 <button id="preview-btn">Preview</button>
 <button id="walk-btn">Start Walk</button>
 <button id="stop-btn">End Walk</button>
-
 </div>
 
 <div id="map"></div>
@@ -198,11 +191,8 @@ Generate Route
 <div id="encounter">
 
 <h2 id="encounter-title"></h2>
-
 <div id="encounter-badge" class="badge"></div>
-
 <img id="encounter-image">
-
 <p id="encounter-description"></p>
 
 <button class="close-btn" onclick="closeEncounter()">Close</button>
@@ -210,36 +200,29 @@ Generate Route
 </div>
 
 <script>
-  
+
 /************************************************
 CONFIG
 ************************************************/
 
-const API_URL =
-"https://script.google.com/macros/s/AKfycbzVLNGZORvNbCTllMP8stvsNycM9itkDpqMLsDFEY783Gmx4G-I11OIR_P3SccOXImM/exec"
-
-mapboxgl.accessToken = "pk.eyJ1IjoiYmlnYWwxIiwiYSI6ImNtbWIzODZuaDA0cWYycXIyMXVydmx1eDkifQ.2tS6Ro5jbDlGjbR74_Ox0Q"
+mapboxgl.accessToken="pk.eyJ1IjoiYmlnYWwxIiwiYSI6ImNtbWIzODZuaDA0cWYycXIyMXVydmx1eDkifQ.2tS6Ro5jbDlGjbR74_Ox0Q"
 
 /************************************************
 GLOBAL STATE
 ************************************************/
 
-const STATE = {
-
+const STATE={
 map:null,
 startCoords:null,
 destinationCoords:null,
 routeCoords:null,
-routeId:null,
 encounters:[],
 markers:[],
 userMarker:null,
-walkWatcher:null,
-walkStartTime:null,
-prompts:[],
-cultureTypes:[]
-
+walkWatcher:null
 }
+
+let previewFrames=[]
 
 /************************************************
 UTILITIES
@@ -249,10 +232,6 @@ function sleep(ms){
 return new Promise(resolve=>setTimeout(resolve,ms))
 }
 
-function randomItem(arr){
-return arr[Math.floor(Math.random()*arr.length)]
-}
-
 function distanceMeters(a,b){
 
 return turf.distance(
@@ -260,30 +239,6 @@ turf.point(a),
 turf.point(b),
 {units:"meters"}
 )
-
-}
-/************************************************
-API HELPERS
-************************************************/
-
-async function apiGet(params){
-
-const query = new URLSearchParams(params).toString()
-
-const res = await fetch(API_URL + "?" + query)
-
-return await res.json()
-
-}
-
-async function apiPost(data){
-
-const res = await fetch(API_URL,{
-method:"POST",
-body:JSON.stringify(data)
-})
-
-return await res.json()
 
 }
 
@@ -297,82 +252,20 @@ document.getElementById("home-screen").style.display="none"
 
 initMap()
 
-loadPrompts()
-
-loadCultureTypes()
-
 }
 
 /************************************************
-LOAD PROMPTS
-************************************************/
-
-async function loadPrompts(){
-
-try{
-
-STATE.prompts = await apiGet({action:"prompts"})
-
-}catch(err){
-
-console.warn("prompts load failed")
-
-}
-
-}
-
-/************************************************
-LOAD CULTURE TYPES
-************************************************/
-
-async function loadCultureTypes(){
-
-try{
-
-STATE.cultureTypes = await apiGet({action:"cultureTypes"})
-
-}catch(err){
-
-console.warn("culture types load failed")
-
-}
-
-}
-
-/************************************************
-BUTTON INITIALIZATION
-************************************************/
-
-function initButtons(){
-
-document.getElementById("gps-btn").onclick = requestGPS
-
-document.getElementById("route-button").onclick = generateRoute
-
-document.getElementById("preview-btn").onclick = previewJourney
-
-document.getElementById("walk-btn").onclick = startWalk
-
-document.getElementById("stop-btn").onclick = stopWalk
-
-}
-
-/************************************************
-MAP INITIALIZATION
+MAP INIT
 ************************************************/
 
 function initMap(){
 
-STATE.map = new mapboxgl.Map({
+STATE.map=new mapboxgl.Map({
 
 container:"map",
-
 style:"mapbox://styles/mapbox/streets-v12",
-
 center:[-0.1276,51.5072],
-
 zoom:12,
-
 pitch:40
 
 })
@@ -382,7 +275,6 @@ STATE.map.addControl(new mapboxgl.NavigationControl())
 STATE.map.on("load",()=>{
 
 initSearch()
-
 initButtons()
 
 })
@@ -390,22 +282,30 @@ initButtons()
 }
 
 /************************************************
-SEARCH SYSTEM
+BUTTONS
+************************************************/
+
+function initButtons(){
+
+document.getElementById("gps-btn").onclick=requestGPS
+document.getElementById("route-button").onclick=generateRoute
+document.getElementById("preview-btn").onclick=previewJourney
+document.getElementById("walk-btn").onclick=startWalk
+document.getElementById("stop-btn").onclick=stopWalk
+
+}
+
+/************************************************
+SEARCH
 ************************************************/
 
 function initSearch(){
 
-const londonBounds = [
--0.563,51.261,
-0.280,51.686
-]
-
-const startGeocoder = new MapboxGeocoder({
-accessToken: mapboxgl.accessToken,
-mapboxgl: mapboxgl,
+const startGeocoder=new MapboxGeocoder({
+accessToken:mapboxgl.accessToken,
+mapboxgl:mapboxgl,
 placeholder:"Start location",
 countries:"gb",
-bbox:londonBounds,
 marker:false
 })
 
@@ -414,15 +314,14 @@ document
 .appendChild(startGeocoder.onAdd(STATE.map))
 
 startGeocoder.on("result",e=>{
-STATE.startCoords = e.result.center
+STATE.startCoords=e.result.center
 })
 
-const destGeocoder = new MapboxGeocoder({
-accessToken: mapboxgl.accessToken,
-mapboxgl: mapboxgl,
+const destGeocoder=new MapboxGeocoder({
+accessToken:mapboxgl.accessToken,
+mapboxgl:mapboxgl,
 placeholder:"Destination",
 countries:"gb",
-bbox:londonBounds,
 marker:false
 })
 
@@ -431,7 +330,7 @@ document
 .appendChild(destGeocoder.onAdd(STATE.map))
 
 destGeocoder.on("result",e=>{
-STATE.destinationCoords = e.result.center
+STATE.destinationCoords=e.result.center
 })
 
 }
@@ -444,10 +343,7 @@ function requestGPS(){
 
 navigator.geolocation.getCurrentPosition(pos=>{
 
-STATE.startCoords=[
-pos.coords.longitude,
-pos.coords.latitude
-]
+STATE.startCoords=[pos.coords.longitude,pos.coords.latitude]
 
 STATE.map.flyTo({
 center:STATE.startCoords,
@@ -459,46 +355,21 @@ zoom:15
 }
 
 /************************************************
-ROUTE GENERATION
+ROUTE
 ************************************************/
 
 async function generateRoute(){
 
-if(!STATE.startCoords || !STATE.destinationCoords){
+const url=`https://api.mapbox.com/directions/v5/mapbox/walking/${STATE.startCoords[0]},${STATE.startCoords[1]};${STATE.destinationCoords[0]},${STATE.destinationCoords[1]}?geometries=geojson&access_token=${mapboxgl.accessToken}`
 
-alert("Choose start and destination")
+const res=await fetch(url)
+const data=await res.json()
 
-return
+STATE.routeCoords=data.routes[0].geometry.coordinates
 
-}
+drawRoute()
 
-try{
-
-const route = await apiGet({
-
-action:"routeFromCoords",
-lng:STATE.startCoords[0],
-lat:STATE.startCoords[1],
-destLng:STATE.destinationCoords[0],
-destLat:STATE.destinationCoords[1]
-
-})
-
-STATE.routeCoords = route.geometry.coordinates
-STATE.routeId = route.properties.route_id || null
-
-drawRoute(STATE.routeCoords)
-
-fitCameraToRoute(STATE.routeCoords)
-
-await loadEncounters()
-
-}catch(err){
-
-console.error(err)
-alert("Route generation failed")
-
-}
+loadEncounters()
 
 }
 
@@ -506,13 +377,13 @@ alert("Route generation failed")
 DRAW ROUTE
 ************************************************/
 
-function drawRoute(coords){
+function drawRoute(){
 
 const geojson={
 type:"Feature",
 geometry:{
 type:"LineString",
-coordinates:coords
+coordinates:STATE.routeCoords
 }
 }
 
@@ -525,7 +396,7 @@ STATE.map.getSource("route").setData(geojson)
 STATE.map.addSource("route",{type:"geojson",data:geojson})
 
 STATE.map.addLayer({
-id:"route-line",
+id:"route",
 type:"line",
 source:"route",
 paint:{
@@ -537,40 +408,9 @@ paint:{
 }
 
 }
-
-/************************************************
-FIT CAMERA TO ROUTE (FIX)
-************************************************/
-
-function fitCameraToRoute(coords){
-
-const bounds = coords.reduce((b,c)=>b.extend(c),
-new mapboxgl.LngLatBounds(coords[0],coords[0]))
-
-STATE.map.fitBounds(bounds,{
-padding:80,
-pitch:40
-})
-
-}
 /************************************************
 DISCOVERY ENGINE
 ************************************************/
-
-function sampleRoutePoints(){
-
-const line = turf.lineString(STATE.routeCoords)
-
-const length = turf.length(line,{units:"kilometers"})
-
-const checkpoints=[0.2,0.4,0.6,0.8]
-
-return checkpoints.map(p=>{
-const pt=turf.along(line,length*p,{units:"kilometers"})
-return pt.geometry.coordinates
-})
-
-}
 
 async function loadEncounters(){
 
@@ -578,9 +418,27 @@ clearMarkers()
 
 STATE.encounters=[]
 
-const candidates=[]
+const line = turf.lineString(STATE.routeCoords)
 
-const scanPoints = sampleRoutePoints()
+const length = turf.length(line,{units:"kilometers"})
+
+const scanPoints=[]
+
+/* scan route every ~150m */
+
+const segments = Math.floor(length*1000/150)
+
+for(let i=0;i<=segments;i++){
+
+const dist=(length/segments)*i
+
+const pt=turf.along(line,dist,{units:"kilometers"})
+
+scanPoints.push(pt.geometry.coordinates)
+
+}
+
+const candidates=[]
 
 for(const p of scanPoints){
 
@@ -590,7 +448,7 @@ candidates.push(...sites)
 
 }
 
-/* score candidates */
+/* score cultural value */
 
 for(const c of candidates){
 
@@ -606,15 +464,15 @@ candidates.sort((a,b)=>b.score-a.score)
 
 const chosen=[]
 
-const minSpacing = 400
+const minSpacing = 450
 
-for(const c of candidates){
+for(const site of candidates){
 
 let tooClose=false
 
 for(const e of chosen){
 
-if(distanceMeters(c.coords,e.coords) < minSpacing){
+if(distanceMeters(site.coords,e.coords) < minSpacing){
 
 tooClose=true
 break
@@ -625,7 +483,7 @@ break
 
 if(!tooClose){
 
-chosen.push(c)
+chosen.push(site)
 
 }
 
@@ -638,6 +496,106 @@ STATE.encounters = chosen
 renderEncounterMarkers()
 
 }
+
+/************************************************
+DYNAMIC ENCOUNTER COUNT
+************************************************/
+
+function getEncounterCount(){
+
+const line=turf.lineString(STATE.routeCoords)
+
+const length=turf.length(line,{units:"kilometers"})
+
+if(length < 1) return 3
+if(length < 2) return 4
+if(length < 3) return 5
+if(length < 5) return 6
+
+return 7
+
+}
+
+/************************************************
+FETCH CULTURAL SITES
+************************************************/
+
+async function fetchNearbySites(coord){
+
+const lat=coord[1]
+const lng=coord[0]
+
+const query=`
+[out:json];
+(
+node(around:350,${lat},${lng})["tourism"="museum"];
+node(around:350,${lat},${lng})["tourism"="gallery"];
+node(around:350,${lat},${lng})["amenity"="theatre"];
+node(around:350,${lat},${lng})["tourism"="artwork"];
+node(around:350,${lat},${lng})["historic"];
+node(around:350,${lat},${lng})["tourism"="attraction"];
+);
+out;
+`
+
+const res = await fetch(
+"https://overpass-api.de/api/interpreter",
+{method:"POST",body:query}
+)
+
+const data = await res.json()
+
+if(!data.elements) return []
+
+const sites=[]
+
+for(const el of data.elements){
+
+sites.push({
+name:el.tags?.name || "Cultural Site",
+coords:[el.lon,el.lat],
+tags:el.tags
+})
+
+}
+
+return sites
+
+}
+
+/************************************************
+CULTURAL SCORING
+************************************************/
+
+function scoreCulturalSite(site,routePoint){
+
+let score = 0
+
+const tags = site.tags || {}
+
+/* cultural importance */
+
+if(tags.tourism === "museum") score += 4
+if(tags.tourism === "gallery") score += 3
+if(tags.amenity === "theatre") score += 2
+if(tags.tourism === "artwork") score += 2
+if(tags.historic) score += 2
+
+/* named place */
+
+if(tags.name) score += 1
+
+/* proximity bonus */
+
+const dist = distanceMeters(routePoint,site.coords)
+
+if(dist < 60) score += 2
+else if(dist < 120) score += 1
+
+return score
+
+}
+
 /************************************************
 CLEAR MARKERS
 ************************************************/
@@ -651,48 +609,7 @@ STATE.markers=[]
 }
 
 /************************************************
-OVERPASS FETCH
-************************************************/
-
-async function fetchNearbyCulturalSite(coord){
-
-const lat=coord[1]
-const lng=coord[0]
-
-const query=`
-[out:json];
-(
-node(around:200,${lat},${lng})["tourism"="museum"];
-node(around:200,${lat},${lng})["tourism"="artwork"];
-node(around:200,${lat},${lng})["historic"];
-);
-out;
-`
-
-const url="https://overpass-api.de/api/interpreter"
-
-const res=await fetch(url,{method:"POST",body:query})
-
-const data=await res.json()
-
-if(!data.elements || !data.elements.length) return null
-
-const el=data.elements[0]
-
-return {
-name:el.tags.name || "Cultural Site",
-coords:[el.lon,el.lat],
-badge:rankDiscovery(el),
-description:"",
-const image = await fetchWikipediaImage(el.tags.name)
-
-image:image
-}
-
-}
-
-/************************************************
-ENCOUNTER MARKERS
+RENDER ENCOUNTER MARKERS
 ************************************************/
 
 function renderEncounterMarkers(){
@@ -720,35 +637,37 @@ STATE.markers.push(marker)
 
 }
 
-function rankDiscovery(site){
-
-if(site.tags?.tourism==="museum") return "Landmark"
-if(site.tags?.tourism==="artwork") return "Hidden Gem"
-if(site.tags?.historic) return "Historic"
-
-return "Discovery"
-
-}
-
 /************************************************
 ENCOUNTER CARD
 ************************************************/
 
-function openEncounter(site){
+async function openEncounter(site){
 
 document.getElementById("encounter-title").innerText=site.name
 
-document.getElementById("encounter-badge").innerText=site.badge
+document.getElementById("encounter-badge").innerText="Discovery"
 
 document.getElementById("encounter-description").innerText=
-site.description || randomItem(STATE.prompts)
+"A cultural discovery along your walk."
 
 const img=document.getElementById("encounter-image")
 
-if(site.image){
+/* fetch wikipedia image */
 
-img.src=site.image
+if(site.name){
+
+const wikiImage = await fetchWikipediaImage(site.name)
+
+if(wikiImage){
+
+img.src=wikiImage
 img.style.display="block"
+
+}else{
+
+img.style.display="none"
+
+}
 
 }else{
 
@@ -763,202 +682,6 @@ document.getElementById("encounter").style.display="block"
 function closeEncounter(){
 
 document.getElementById("encounter").style.display="none"
-
-}
-
-/************************************************
-WALK MODE
-************************************************/
-
-function startWalk(){
-
-STATE.walkStartTime=new Date()
-
-document.getElementById("walk-indicator").style.display="block"
-
-STATE.walkWatcher=navigator.geolocation.watchPosition(updateUserPosition)
-
-}
-
-function stopWalk(){
-
-navigator.geolocation.clearWatch(STATE.walkWatcher)
-
-document.getElementById("walk-indicator").style.display="none"
-
-saveWalk()
-
-}
-
-function updateUserPosition(pos){
-
-const coords=[pos.coords.longitude,pos.coords.latitude]
-
-if(!STATE.userMarker){
-
-STATE.userMarker=new mapboxgl.Marker({color:"#2b7cff"})
-.setLngLat(coords)
-.addTo(STATE.map)
-
-}else{
-
-STATE.userMarker.setLngLat(coords)
-
-}
-
-STATE.map.easeTo({
-center:coords,
-zoom:16
-})
-
-}
-
-/************************************************
-SAVE WALK
-************************************************/
-
-async function saveWalk(){
-
-await apiPost({
-action:"walk",
-user_id:"guest",
-route_id:STATE.routeId,
-start_time:STATE.walkStartTime,
-end_time:new Date()
-})
-
-}
-
-/************************************************
-CINEMATIC PREVIEW
-************************************************/
-
-async function previewJourney(){
-
-if(!STATE.routeCoords){
-alert("Generate route first")
-return
-}
-
-const route = STATE.routeCoords
-
-STATE.map.flyTo({
-center:route[0],
-zoom:16,
-pitch:65,
-bearing:0,
-duration:1500
-})
-
-await sleep(1500)
-
-await cinematicFlythrough(route)
-
-STATE.map.flyTo({
-center:route[0],
-zoom:15,
-pitch:45,
-duration:1200
-})
-
-generateRouteStory()
-
-}
-
-async function cinematicFlythrough(){
-
-const points = [
-STATE.routeCoords[0],
-...STATE.encounters.map(e=>e.coords)
-]
-
-for(const coord of points){
-
-STATE.map.flyTo({
-center:coord,
-zoom:17,
-pitch:65,
-duration:1400
-})
-
-pulseEncounter(coord)
-
-await sleep(1500)
-
-}
-
-}
-/************************************************
-STORY EXPORT
-************************************************/
-
-async function createPreviewVideo()(){
-
-const canvas = document.createElement("canvas")
-
-canvas.width = 1080
-canvas.height = 1920
-
-const ctx = canvas.getContext("2d")
-
-ctx.fillStyle="#fff7ec"
-ctx.fillRect(0,0,1080,1920)
-
-ctx.fillStyle="#ff2fa3"
-ctx.font="bold 80px Inter"
-ctx.fillText("Hot Girl Walk",180,200)
-
-const mapCanvas = STATE.map.getCanvas()
-
-ctx.drawImage(mapCanvas,90,420,900,900)
-
-canvas.toBlob(async blob=>{
-
-const file=new File([blob],"walk.png",{type:"image/png"})
-
-if(navigator.share){
-
-await navigator.share({
-files:[file],
-title:"Hot Girl Walk"
-})
-
-}
-
-})
-
-}
-/************************************************
-CULTURAL SCORING SYSTEM
-************************************************/
-
-function scoreCulturalSite(el, routePoint){
-
-let score = 0
-
-const tags = el.tags || {}
-
-/* cultural importance */
-
-if(tags.tourism === "museum") score += 3
-if(tags.tourism === "gallery") score += 3
-if(tags.amenity === "theatre") score += 2
-if(tags.tourism === "artwork") score += 2
-if(tags.historic) score += 2
-if(tags.street_art) score += 1
-
-/* named place */
-
-if(tags.name) score += 1
-
-/* proximity bonus */
-
-const dist = distanceMeters(routePoint,[el.lon,el.lat])
-
-if(dist < 50) score += 2
-else if(dist < 120) score += 1
-
-return score
 
 }
 
@@ -988,33 +711,136 @@ return null
 
 }
 /************************************************
-CREATE PREVIEW VIDEO
+PREVIEW ENGINE
 ************************************************/
 
-async function createPreviewVideo(){
+async function previewJourney(){
 
-const canvas=document.createElement("canvas")
-const ctx=canvas.getContext("2d")
+if(!STATE.routeCoords){
+alert("Generate a route first")
+return
+}
 
-canvas.width=1080
-canvas.height=1920
+previewFrames=[]
 
-for(const frame of previewFrames){
+const points=[
+STATE.routeCoords[0],
+...STATE.encounters.map(e=>e.coords)
+]
 
-const img=new Image()
-img.src=frame
+for(const coord of points){
 
-await new Promise(r=>img.onload=r)
+STATE.map.flyTo({
+center:coord,
+zoom:17,
+pitch:65,
+duration:1400
+})
 
-ctx.drawImage(img,0,0,1080,1920)
+pulseEncounter(coord)
 
-await sleep(80)
+await sleep(1500)
+
+/* capture frame */
+
+const frame = STATE.map.getCanvas().toDataURL("image/jpeg")
+
+previewFrames.push(frame)
 
 }
 
+createPreviewStory()
+
+}
+
+/************************************************
+ENCOUNTER PULSE EFFECT
+************************************************/
+
+function pulseEncounter(coord){
+
+STATE.encounters.forEach(site=>{
+
+const dist = distanceMeters(coord,site.coords)
+
+if(dist < 80){
+
+const marker = STATE.markers.find(m=>{
+
+const p = m.getLngLat()
+
+return Math.abs(p.lng-site.coords[0]) < 0.0001
+
+})
+
+if(marker){
+
+const el = marker.getElement()
+
+el.style.transform="scale(1.8)"
+
+setTimeout(()=>{
+el.style.transform="scale(1)"
+},600)
+
+}
+
+}
+
+})
+
+}
+
+/************************************************
+STORY GENERATOR
+************************************************/
+
+async function createPreviewStory(){
+
+const canvas=document.createElement("canvas")
+canvas.width=1080
+canvas.height=1920
+
+const ctx=canvas.getContext("2d")
+
+/* background */
+
+ctx.fillStyle="#fff7ec"
+ctx.fillRect(0,0,1080,1920)
+
+/* title */
+
+ctx.fillStyle="#ff2fa3"
+ctx.font="bold 80px Inter"
+ctx.fillText("Hot Girl Walk",180,180)
+
+ctx.fillStyle="#333"
+ctx.font="40px Inter"
+ctx.fillText("My Cultural Discoveries",180,260)
+
+/* map preview */
+
+const mapCanvas=STATE.map.getCanvas()
+
+ctx.drawImage(mapCanvas,90,380,900,900)
+
+/* discoveries list */
+
+ctx.fillStyle="#ff2fa3"
+ctx.font="36px Inter"
+
+let y=1350
+
+STATE.encounters.forEach(site=>{
+ctx.fillText("• "+site.name,140,y)
+y+=60
+})
+
+/* export story */
+
 canvas.toBlob(async blob=>{
 
-const file=new File([blob],"hot-girl-walk.webm")
+const file=new File([blob],"hot-girl-walk-story.png",{type:"image/png"})
 
 if(navigator.share){
 
@@ -1024,8 +850,66 @@ title:"Hot Girl Walk",
 text:"My cultural walk"
 })
 
+}else{
+
+const url=URL.createObjectURL(blob)
+
+const a=document.createElement("a")
+a.href=url
+a.download="hot-girl-walk-story.png"
+a.click()
+
 }
 
+})
+
+}
+
+/************************************************
+WALK MODE
+************************************************/
+
+function startWalk(){
+
+document.getElementById("walk-indicator").style.display="block"
+
+STATE.walkWatcher=navigator.geolocation.watchPosition(updateUserPosition)
+
+}
+
+function stopWalk(){
+
+if(STATE.walkWatcher){
+navigator.geolocation.clearWatch(STATE.walkWatcher)
+}
+
+document.getElementById("walk-indicator").style.display="none"
+
+}
+
+/************************************************
+USER GPS TRACKING
+************************************************/
+
+function updateUserPosition(pos){
+
+const coords=[pos.coords.longitude,pos.coords.latitude]
+
+if(!STATE.userMarker){
+
+STATE.userMarker=new mapboxgl.Marker({color:"#2b7cff"})
+.setLngLat(coords)
+.addTo(STATE.map)
+
+}else{
+
+STATE.userMarker.setLngLat(coords)
+
+}
+
+STATE.map.easeTo({
+center:coords,
+zoom:16
 })
 
 }
