@@ -279,12 +279,12 @@ routeCoords:null,
 encounters:[],
 markers:[],
 userMarker:null,
-walkWatcher:null,
-overpassCache:new Map(),
-previewInterval:null,
-previewFrameIndex:0
-overpassCache:new Map()
-}
+walkWatcher:null
+};
+
+STATE.overpassCache=new Map()
+STATE.previewInterval=null
+STATE.previewFrameIndex=0
 
 let previewFrames=[]
 
@@ -309,6 +309,20 @@ turf.point(b),
 )
 
 return km*1000
+
+}
+
+
+function initRootHandlers(){
+
+const startBtn=document.getElementById("start-btn")
+
+if(startBtn){
+startBtn.onclick=startApp
+}
+
+/* keep global for backward compatibility with old inline handlers */
+window.startApp=startApp
 
 }
 
@@ -479,7 +493,6 @@ if(!data.routes || !data.routes.length){
 alert("No walking route was found for these points.")
 return
 }
-const data=await res.json()
 
 if(!data.routes || !data.routes.length){
 alert("No walking route was found for these points.")
@@ -558,9 +571,6 @@ const scanPoints=[]
 
 const rawSegments = Math.max(1,Math.floor(length*1000/250))
 const segments = Math.min(rawSegments,10)
-const rawSegments = Math.max(1,Math.floor(length*1000/150))
-const segments = Math.min(rawSegments,18)
-const segments = Math.max(1,Math.floor(length*1000/150))
 
 for(let i=0;i<=segments;i++){
 
@@ -601,18 +611,6 @@ for(const c of candidates){
 
 c.score = scoreCulturalSite(c,c.routePoint)
 
-}
-
-const seenKeys=new Set()
-
-const deduped=[]
-
-for(const c of candidates){
-const key=`${c.name}-${c.coords[0].toFixed(5)}-${c.coords[1].toFixed(5)}`
-if(!seenKeys.has(key)){
-seenKeys.add(key)
-deduped.push(c)
-}
 }
 
 const seenKeys=new Set()
@@ -732,11 +730,6 @@ out;
 `
 
 const endpoints=[
-let data
-
-try{
-
-const res = await fetch(
 "https://overpass-api.de/api/interpreter",
 "https://overpass.kumi.systems/api/interpreter"
 ]
@@ -772,33 +765,6 @@ break
 if(data) break
 
 await sleep(500*(attempt+1))
-
-
-if(!res.ok) continue
-
-data = await res.json()
-break
-
-}catch(e){
-
-/* try next endpoint */
-
-}
-
-}
-
-if(data) break
-
-await sleep(500*(attempt+1))
-if(!res.ok) return []
-
-data = await res.json()
-
-}catch(e){
-
-return []
-
-}
 
 }
 
