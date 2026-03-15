@@ -78,6 +78,22 @@ display:flex;
 flex-direction:column;
 gap:10px;
 z-index:10;
+transition:all .25s ease;
+overflow:hidden;
+}
+
+#search-panel.collapsed{
+width:180px;
+padding:10px 12px;
+gap:0;
+opacity:.92;
+}
+
+#search-panel.collapsed #start-search,
+#search-panel.collapsed #dest-search,
+#search-panel.collapsed #gps-btn,
+#search-panel.collapsed #route-button{
+display:none;
 }
 
 /* NAV */
@@ -295,7 +311,9 @@ routeCoords:null,
 encounters:[],
 markers:[],
 userMarker:null,
-walkWatcher:null
+walkWatcher:null,
+startGeocoder:null,
+destGeocoder:null
 };
 
 STATE.overpassCache=new Map()
@@ -364,6 +382,71 @@ return frame
 }catch(e){
 return buildFallbackFrame(index)
 }
+}
+
+function setSearchPanelCollapsed(collapsed){
+const panel=document.getElementById("search-panel")
+if(!panel) return
+panel.classList.toggle("collapsed",collapsed)
+}
+
+async function reverseGeocode(coord){
+const [lng,lat]=coord
+const url=`https://api.mapbox.com/geocoding/v5/mapbox.places/${lng},${lat}.json?types=address,poi,place&limit=1&access_token=${mapboxgl.accessToken}`
+try{
+const res=await fetch(url)
+if(!res.ok) return `${lat.toFixed(5)}, ${lng.toFixed(5)}`
+const data=await res.json()
+return data.features?.[0]?.place_name || `${lat.toFixed(5)}, ${lng.toFixed(5)}`
+}catch(e){
+return `${lat.toFixed(5)}, ${lng.toFixed(5)}`
+}
+}
+
+async function createPreviewVideoBlob(){
+if(!previewFrames.length) return null
+
+const canvas=document.createElement("canvas")
+canvas.width=540
+canvas.height=960
+const ctx=canvas.getContext("2d")
+if(!ctx || !canvas.captureStream || typeof MediaRecorder==="undefined") return null
+
+const stream=canvas.captureStream(2)
+const mime=MediaRecorder.isTypeSupported("video/webm;codecs=vp9") ? "video/webm;codecs=vp9" : "video/webm"
+let recorder
+try{
+recorder=new MediaRecorder(stream,{mimeType:mime})
+}catch(e){
+return null
+}
+const chunks=[]
+
+recorder.ondataavailable=e=>{
+if(e.data && e.data.size) chunks.push(e.data)
+}
+
+const done=new Promise(resolve=>{
+recorder.onstop=()=>resolve(new Blob(chunks,{type:"video/webm"}))
+})
+
+recorder.start()
+
+for(const src of previewFrames){
+const img=new Image()
+await new Promise(resolve=>{
+img.onload=resolve
+img.onerror=resolve
+img.src=src
+})
+ctx.fillStyle="#000"
+ctx.fillRect(0,0,canvas.width,canvas.height)
+ctx.drawImage(img,0,0,canvas.width,canvas.height)
+await sleep(800)
+}
+
+recorder.stop()
+return await done
 }
 
 
@@ -444,7 +527,7 @@ SEARCH
 
 function initSearch(){
 
-const startGeocoder=new MapboxGeocoder({
+STATE.startGeocoder=new MapboxGeocoder({
 accessToken:mapboxgl.accessToken,
 mapboxgl:mapboxgl,
 placeholder:"Start location",
@@ -454,13 +537,13 @@ marker:false
 
 document
 .getElementById("start-search")
-.appendChild(startGeocoder.onAdd(STATE.map))
+.appendChild(STATE.startGeocoder.onAdd(STATE.map))
 
-startGeocoder.on("result",e=>{
+STATE.startGeocoder.on("result",e=>{
 STATE.startCoords=e.result.center
 })
 
-const destGeocoder=new MapboxGeocoder({
+STATE.destGeocoder=new MapboxGeocoder({
 accessToken:mapboxgl.accessToken,
 mapboxgl:mapboxgl,
 placeholder:"Destination",
@@ -470,9 +553,9 @@ marker:false
 
 document
 .getElementById("dest-search")
-.appendChild(destGeocoder.onAdd(STATE.map))
+.appendChild(STATE.destGeocoder.onAdd(STATE.map))
 
-destGeocoder.on("result",e=>{
+STATE.destGeocoder.on("result",e=>{
 STATE.destinationCoords=e.result.center
 })
 
@@ -494,7 +577,7 @@ alert("Geolocation is not supported in this browser.")
 return
 }
 
-navigator.geolocation.getCurrentPosition(pos=>{
+navigator.geolocation.getCurrentPosition(async pos=>{
 
 STATE.startCoords=[pos.coords.longitude,pos.coords.latitude]
 
@@ -502,6 +585,11 @@ STATE.map.flyTo({
 center:STATE.startCoords,
 zoom:15
 })
+
+const label=await reverseGeocode(STATE.startCoords)
+if(STATE.startGeocoder){
+STATE.startGeocoder.setInput(label)
+}
 
 },()=>{
 
@@ -667,18 +755,6 @@ for(const c of candidates){
 
 c.score = scoreCulturalSite(c,c.routePoint)
 
-}
-
-const seenKeys=new Set()
-
-const deduped=[]
-
-for(const c of candidates){
-const key=`${c.name}-${c.coords[0].toFixed(5)}-${c.coords[1].toFixed(5)}`
-if(!seenKeys.has(key)){
-seenKeys.add(key)
-deduped.push(c)
-}
 }
 
 const seenKeys=new Set()
@@ -1018,6 +1094,8 @@ PREVIEW ENGINE
 
 async function previewJourney(){
 
+setSearchPanelCollapsed(true)
+
 if(!STATE.routeCoords){
 alert("Generate a route first")
 return
@@ -1087,6 +1165,8 @@ frame.src=previewFrames[STATE.previewFrameIndex]
 }
 
 function endPreview(){
+
+setSearchPanelCollapsed(false)
 
 const player=document.getElementById("preview-player")
 player.style.display="none"
@@ -1187,14 +1267,17 @@ canvas.toBlob(async blob=>{
 
 if(!blob) return
 
-const file=new File([blob],"hot-girl-walk-story.png",{type:"image/png"})
+const imageFile=new File([blob],"hot-girl-walk-story.png",{type:"image/png"})
+
+const videoBlob=await createPreviewVideoBlob()
+const videoFile=videoBlob ? new File([videoBlob],"hot-girl-walk-story.webm",{type:"video/webm"}) : null
 
 if(navigator.share){
 
 try{
 
 await navigator.share({
-files:[file],
+files:videoFile?[videoFile]:[imageFile],
 title:"Hot Girl Walk",
 text:"My cultural walk"
 })
@@ -1207,11 +1290,12 @@ text:"My cultural walk"
 
 }else{
 
-const url=URL.createObjectURL(blob)
+const downloadable=videoFile || imageFile
+const url=URL.createObjectURL(downloadable)
 
 const a=document.createElement("a")
 a.href=url
-a.download="hot-girl-walk-story.png"
+a.download=downloadable.name
 a.click()
 
 }
@@ -1227,6 +1311,8 @@ WALK MODE
 ************************************************/
 
 function startWalk(){
+
+setSearchPanelCollapsed(true)
 
 if(!STATE.map){
 alert("Start the app first.")
@@ -1252,6 +1338,8 @@ alert("Unable to start walk tracking. Please allow location access.")
 }
 
 function stopWalk(){
+
+setSearchPanelCollapsed(false)
 
 if(STATE.walkWatcher){
 navigator.geolocation.clearWatch(STATE.walkWatcher)
