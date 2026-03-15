@@ -219,7 +219,8 @@ routeCoords:null,
 encounters:[],
 markers:[],
 userMarker:null,
-walkWatcher:null
+walkWatcher:null,
+overpassCache:new Map()
 }
 
 let previewFrames=[]
@@ -230,6 +231,10 @@ UTILITIES
 
 function sleep(ms){
 return new Promise(resolve=>setTimeout(resolve,ms))
+}
+
+function cacheKeyFromCoord(coord){
+return `${coord[0].toFixed(3)},${coord[1].toFixed(3)}`
 }
 
 function distanceMeters(a,b){
@@ -343,6 +348,16 @@ GPS
 
 function requestGPS(){
 
+if(!STATE.map){
+alert("Start the app first.")
+return
+}
+
+if(!navigator.geolocation){
+alert("Geolocation is not supported in this browser.")
+return
+}
+
 navigator.geolocation.getCurrentPosition(pos=>{
 
 STATE.startCoords=[pos.coords.longitude,pos.coords.latitude]
@@ -373,6 +388,10 @@ return
 
 const url=`https://api.mapbox.com/directions/v5/mapbox/walking/${STATE.startCoords[0]},${STATE.startCoords[1]};${STATE.destinationCoords[0]},${STATE.destinationCoords[1]}?geometries=geojson&access_token=${mapboxgl.accessToken}`
 
+let data
+
+try{
+
 const res=await fetch(url)
 
 if(!res.ok){
@@ -380,6 +399,19 @@ alert("Could not fetch route right now. Please try again.")
 return
 }
 
+data=await res.json()
+
+}catch(e){
+
+alert("Network error while generating route. Please try again.")
+return
+
+}
+
+if(!data.routes || !data.routes.length){
+alert("No walking route was found for these points.")
+return
+}
 const data=await res.json()
 
 if(!data.routes || !data.routes.length){
@@ -455,8 +487,10 @@ const length = turf.length(line,{units:"kilometers"})
 
 const scanPoints=[]
 
-/* scan route every ~150m */
+/* scan route every ~150m with a hard cap to avoid API rate limits */
 
+const rawSegments = Math.max(1,Math.floor(length*1000/150))
+const segments = Math.min(rawSegments,18)
 const segments = Math.max(1,Math.floor(length*1000/150))
 
 for(let i=0;i<=segments;i++){
@@ -470,12 +504,25 @@ scanPoints.push(pt.geometry.coordinates)
 }
 
 const candidates=[]
+const uniqueScanPoints=[]
+const seenScanPoints=new Set()
 
 for(const p of scanPoints){
+const key=cacheKeyFromCoord(p)
+if(!seenScanPoints.has(key)){
+seenScanPoints.add(key)
+uniqueScanPoints.push(p)
+}
+}
+
+for(const p of uniqueScanPoints){
 
 const sites = await fetchNearbySites(p)
 
 candidates.push(...sites.map(site=>({...site,routePoint:p})))
+
+/* tiny pause helps prevent 429 bursts on long routes */
+await sleep(90)
 
 }
 
@@ -565,11 +612,17 @@ FETCH CULTURAL SITES
 
 async function fetchNearbySites(coord){
 
+const cacheKey=cacheKeyFromCoord(coord)
+
+if(STATE.overpassCache.has(cacheKey)){
+return STATE.overpassCache.get(cacheKey)
+}
+
 const lat=coord[1]
 const lng=coord[0]
 
 const query=`
-[out:json];
+[out:json][timeout:20];
 (
 node(around:350,${lat},${lng})["tourism"="museum"];
 node(around:350,${lat},${lng})["tourism"="gallery"];
@@ -581,15 +634,47 @@ node(around:350,${lat},${lng})["tourism"="attraction"];
 out;
 `
 
+const endpoints=[
 let data
 
 try{
 
 const res = await fetch(
 "https://overpass-api.de/api/interpreter",
-{method:"POST",body:query}
-)
+"https://overpass.kumi.systems/api/interpreter"
+]
 
+let data
+
+for(let attempt=0;attempt<3;attempt++){
+
+for(const endpoint of endpoints){
+
+try{
+
+const res = await fetch(endpoint,{method:"POST",body:query})
+
+if(res.status===429){
+await sleep(600*(attempt+1))
+continue
+}
+
+if(!res.ok) continue
+
+data = await res.json()
+break
+
+}catch(e){
+
+/* try next endpoint */
+
+}
+
+}
+
+if(data) break
+
+await sleep(500*(attempt+1))
 if(!res.ok) return []
 
 data = await res.json()
@@ -600,7 +685,12 @@ return []
 
 }
 
-if(!data.elements) return []
+}
+
+if(!data?.elements){
+STATE.overpassCache.set(cacheKey,[])
+return []
+}
 
 const sites=[]
 
@@ -613,6 +703,8 @@ tags:el.tags
 })
 
 }
+
+STATE.overpassCache.set(cacheKey,sites)
 
 return sites
 
@@ -939,6 +1031,16 @@ function startWalk(){
 if(!STATE.map){
 alert("Start the app first.")
 return
+}
+
+if(!navigator.geolocation){
+alert("Geolocation is not supported in this browser.")
+return
+}
+
+if(STATE.walkWatcher){
+navigator.geolocation.clearWatch(STATE.walkWatcher)
+STATE.walkWatcher=null
 }
 
 document.getElementById("walk-indicator").style.display="block"
