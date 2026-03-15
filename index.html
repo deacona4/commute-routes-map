@@ -210,7 +210,7 @@ Generate Route
 </div>
 
 <script>
-
+  
 /************************************************
 CONFIG
 ************************************************/
@@ -578,22 +578,66 @@ clearMarkers()
 
 STATE.encounters=[]
 
-const points=sampleRoutePoints()
+const candidates=[]
 
-for(const p of points){
+const scanPoints = sampleRoutePoints()
 
-const site = await fetchNearbyCulturalSite(p)
+for(const p of scanPoints){
 
-if(site){
-STATE.encounters.push(site)
+const sites = await fetchNearbySites(p)
+
+candidates.push(...sites)
+
+}
+
+/* score candidates */
+
+for(const c of candidates){
+
+c.score = scoreCulturalSite(c,c.coords)
+
+}
+
+/* sort best first */
+
+candidates.sort((a,b)=>b.score-a.score)
+
+/* spread encounters */
+
+const chosen=[]
+
+const minSpacing = 400
+
+for(const c of candidates){
+
+let tooClose=false
+
+for(const e of chosen){
+
+if(distanceMeters(c.coords,e.coords) < minSpacing){
+
+tooClose=true
+break
+
 }
 
 }
+
+if(!tooClose){
+
+chosen.push(c)
+
+}
+
+if(chosen.length >= getEncounterCount()) break
+
+}
+
+STATE.encounters = chosen
 
 renderEncounterMarkers()
 
 }
-
 /************************************************
 CLEAR MARKERS
 ************************************************/
@@ -640,7 +684,9 @@ name:el.tags.name || "Cultural Site",
 coords:[el.lon,el.lat],
 badge:rankDiscovery(el),
 description:"",
-image:null
+const image = await fetchWikipediaImage(el.tags.name)
+
+image:image
 }
 
 }
@@ -819,39 +865,34 @@ generateRouteStory()
 
 }
 
-async function cinematicFlythrough(route){
+async function cinematicFlythrough(){
 
-const line = turf.lineString(route)
+const points = [
+STATE.routeCoords[0],
+...STATE.encounters.map(e=>e.coords)
+]
 
-const length = turf.length(line,{units:"kilometers"})
+for(const coord of points){
 
-const steps = 120
-
-for(let i=0;i<=steps;i++){
-
-const dist = (length/steps)*i
-
-const pt = turf.along(line,dist,{units:"kilometers"})
-
-const coord = pt.geometry.coordinates
-
-STATE.map.easeTo({
+STATE.map.flyTo({
 center:coord,
+zoom:17,
 pitch:65,
-duration:250
+duration:1400
 })
 
-await sleep(250)
+pulseEncounter(coord)
+
+await sleep(1500)
 
 }
 
 }
-
 /************************************************
 STORY EXPORT
 ************************************************/
 
-async function generateRouteStory(){
+async function createPreviewVideo()(){
 
 const canvas = document.createElement("canvas")
 
@@ -880,6 +921,107 @@ if(navigator.share){
 await navigator.share({
 files:[file],
 title:"Hot Girl Walk"
+})
+
+}
+
+})
+
+}
+/************************************************
+CULTURAL SCORING SYSTEM
+************************************************/
+
+function scoreCulturalSite(el, routePoint){
+
+let score = 0
+
+const tags = el.tags || {}
+
+/* cultural importance */
+
+if(tags.tourism === "museum") score += 3
+if(tags.tourism === "gallery") score += 3
+if(tags.amenity === "theatre") score += 2
+if(tags.tourism === "artwork") score += 2
+if(tags.historic) score += 2
+if(tags.street_art) score += 1
+
+/* named place */
+
+if(tags.name) score += 1
+
+/* proximity bonus */
+
+const dist = distanceMeters(routePoint,[el.lon,el.lat])
+
+if(dist < 50) score += 2
+else if(dist < 120) score += 1
+
+return score
+
+}
+
+/************************************************
+WIKIPEDIA IMAGE FETCH
+************************************************/
+
+async function fetchWikipediaImage(title){
+
+try{
+
+const url =
+"https://en.wikipedia.org/api/rest_v1/page/summary/" +
+encodeURIComponent(title)
+
+const res = await fetch(url)
+
+const data = await res.json()
+
+return data.thumbnail?.source || null
+
+}catch(e){
+
+return null
+
+}
+
+}
+/************************************************
+CREATE PREVIEW VIDEO
+************************************************/
+
+async function createPreviewVideo(){
+
+const canvas=document.createElement("canvas")
+const ctx=canvas.getContext("2d")
+
+canvas.width=1080
+canvas.height=1920
+
+for(const frame of previewFrames){
+
+const img=new Image()
+img.src=frame
+
+await new Promise(r=>img.onload=r)
+
+ctx.drawImage(img,0,0,1080,1920)
+
+await sleep(80)
+
+}
+
+canvas.toBlob(async blob=>{
+
+const file=new File([blob],"hot-girl-walk.webm")
+
+if(navigator.share){
+
+await navigator.share({
+files:[file],
+title:"Hot Girl Walk",
+text:"My cultural walk"
 })
 
 }
