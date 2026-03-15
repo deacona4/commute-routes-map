@@ -156,6 +156,55 @@ border-radius:10px;
 cursor:pointer;
 }
 
+
+
+/* PREVIEW PLAYER */
+
+#preview-player{
+position:absolute;
+inset:0;
+background:rgba(0,0,0,.72);
+display:none;
+justify-content:center;
+align-items:center;
+z-index:80;
+}
+
+.preview-card{
+width:min(420px,92vw);
+background:#fff7ec;
+border:4px solid #ff2fa3;
+border-radius:16px;
+padding:14px;
+box-shadow:0 10px 30px rgba(0,0,0,.35);
+}
+
+#preview-frame{
+width:100%;
+aspect-ratio:9/16;
+object-fit:cover;
+border-radius:10px;
+background:#ffe3f3;
+}
+
+.preview-actions{
+display:flex;
+gap:10px;
+margin-top:10px;
+}
+
+.preview-actions button{
+flex:1;
+border:none;
+padding:10px 12px;
+border-radius:10px;
+font-weight:700;
+cursor:pointer;
+}
+
+#share-story-btn{background:#ff2fa3;color:#fff;}
+#end-preview-btn{background:#222;color:#fff;}
+
 </style>
 </head>
 
@@ -199,6 +248,17 @@ Walking Mode
 
 </div>
 
+
+<div id="preview-player">
+<div class="preview-card">
+<img id="preview-frame" alt="Preview story frame">
+<div class="preview-actions">
+<button id="share-story-btn">Share to Stories</button>
+<button id="end-preview-btn">End Preview</button>
+</div>
+</div>
+</div>
+
 <script>
 
 /************************************************
@@ -220,6 +280,9 @@ encounters:[],
 markers:[],
 userMarker:null,
 walkWatcher:null,
+overpassCache:new Map(),
+previewInterval:null,
+previewFrameIndex:0
 overpassCache:new Map()
 }
 
@@ -299,6 +362,8 @@ document.getElementById("route-button").onclick=generateRoute
 document.getElementById("preview-btn").onclick=previewJourney
 document.getElementById("walk-btn").onclick=startWalk
 document.getElementById("stop-btn").onclick=stopWalk
+document.getElementById("end-preview-btn").onclick=endPreview
+document.getElementById("share-story-btn").onclick=createPreviewStory
 
 }
 
@@ -489,6 +554,8 @@ const scanPoints=[]
 
 /* scan route every ~150m with a hard cap to avoid API rate limits */
 
+const rawSegments = Math.max(1,Math.floor(length*1000/250))
+const segments = Math.min(rawSegments,10)
 const rawSegments = Math.max(1,Math.floor(length*1000/150))
 const segments = Math.min(rawSegments,18)
 const segments = Math.max(1,Math.floor(length*1000/150))
@@ -546,6 +613,18 @@ deduped.push(c)
 }
 }
 
+const seenKeys=new Set()
+
+const deduped=[]
+
+for(const c of candidates){
+const key=`${c.name}-${c.coords[0].toFixed(5)}-${c.coords[1].toFixed(5)}`
+if(!seenKeys.has(key)){
+seenKeys.add(key)
+deduped.push(c)
+}
+}
+
 /* sort best first */
 
 deduped.sort((a,b)=>b.score-a.score)
@@ -579,6 +658,22 @@ chosen.push(site)
 
 if(chosen.length >= getEncounterCount()) break
 
+}
+
+if(!chosen.length){
+const fallbackCount=Math.min(getEncounterCount(),Math.max(2,Math.floor(STATE.routeCoords.length/4)))
+for(let i=1;i<=fallbackCount;i++){
+const idx=Math.min(
+STATE.routeCoords.length-1,
+Math.floor((i/(fallbackCount+1))*STATE.routeCoords.length)
+)
+chosen.push({
+name:`Scenic Stop ${i}`,
+coords:STATE.routeCoords[idx],
+tags:{name:`Scenic Stop ${i}`},
+score:0
+})
+}
 }
 
 STATE.encounters = chosen
@@ -658,6 +753,24 @@ if(res.status===429){
 await sleep(600*(attempt+1))
 continue
 }
+
+if(!res.ok) continue
+
+data = await res.json()
+break
+
+}catch(e){
+
+/* try next endpoint */
+
+}
+
+}
+
+if(data) break
+
+await sleep(500*(attempt+1))
+
 
 if(!res.ok) continue
 
@@ -896,7 +1009,50 @@ previewFrames.push(frame)
 
 }
 
-createPreviewStory()
+openPreviewPlayer()
+
+}
+
+
+/************************************************
+PREVIEW PLAYER
+************************************************/
+
+function openPreviewPlayer(){
+
+if(!previewFrames.length){
+alert("No preview frames were generated.")
+return
+}
+
+const player=document.getElementById("preview-player")
+const frame=document.getElementById("preview-frame")
+
+player.style.display="flex"
+STATE.previewFrameIndex=0
+frame.src=previewFrames[0]
+
+if(STATE.previewInterval){
+clearInterval(STATE.previewInterval)
+}
+
+STATE.previewInterval=setInterval(()=>{
+if(!previewFrames.length) return
+STATE.previewFrameIndex=(STATE.previewFrameIndex+1)%previewFrames.length
+frame.src=previewFrames[STATE.previewFrameIndex]
+},900)
+
+}
+
+function endPreview(){
+
+const player=document.getElementById("preview-player")
+player.style.display="none"
+
+if(STATE.previewInterval){
+clearInterval(STATE.previewInterval)
+STATE.previewInterval=null
+}
 
 }
 
@@ -1017,6 +1173,8 @@ a.download="hot-girl-walk-story.png"
 a.click()
 
 }
+
+endPreview()
 
 })
 
