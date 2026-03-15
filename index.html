@@ -32,8 +32,6 @@ width:100%;
 height:100vh;
 }
 
-/* HOME SCREEN */
-
 #home-screen{
 position:absolute;
 top:0;
@@ -65,8 +63,6 @@ font-weight:700;
 cursor:pointer;
 }
 
-/* SEARCH PANEL */
-
 #search-panel{
 position:absolute;
 top:20px;
@@ -81,8 +77,6 @@ flex-direction:column;
 gap:10px;
 z-index:10;
 }
-
-/* NAV */
 
 #nav{
 position:absolute;
@@ -105,8 +99,6 @@ font-weight:600;
 cursor:pointer;
 }
 
-/* WALK INDICATOR */
-
 .walk-indicator{
 position:absolute;
 top:14px;
@@ -118,8 +110,6 @@ border-radius:12px;
 display:none;
 z-index:20;
 }
-
-/* ENCOUNTER CARD */
 
 #encounter{
 position:absolute;
@@ -215,13 +205,12 @@ Generate Route
 
 <p id="encounter-description"></p>
 
-<button class="close-btn" onclick="closeEncounter()">
-Close
-</button>
+<button class="close-btn" onclick="closeEncounter()">Close</button>
 
 </div>
 
 <script>
+
 /************************************************
 CONFIG
 ************************************************/
@@ -238,21 +227,15 @@ GLOBAL STATE
 const STATE = {
 
 map:null,
-
 startCoords:null,
 destinationCoords:null,
-
 routeCoords:null,
 routeId:null,
-
 encounters:[],
 markers:[],
-
 userMarker:null,
 walkWatcher:null,
-
 walkStartTime:null,
-
 prompts:[],
 cultureTypes:[]
 
@@ -279,7 +262,6 @@ turf.point(b),
 )
 
 }
-
 /************************************************
 API HELPERS
 ************************************************/
@@ -376,18 +358,6 @@ document.getElementById("stop-btn").onclick = stopWalk
 }
 
 /************************************************
-CLEAR MARKERS
-************************************************/
-
-function clearMarkers(){
-
-STATE.markers.forEach(marker=>marker.remove())
-
-STATE.markers=[]
-
-}
-
-/************************************************
 MAP INITIALIZATION
 ************************************************/
 
@@ -418,6 +388,7 @@ initButtons()
 })
 
 }
+
 /************************************************
 SEARCH SYSTEM
 ************************************************/
@@ -464,6 +435,29 @@ STATE.destinationCoords = e.result.center
 })
 
 }
+
+/************************************************
+GPS
+************************************************/
+
+function requestGPS(){
+
+navigator.geolocation.getCurrentPosition(pos=>{
+
+STATE.startCoords=[
+pos.coords.longitude,
+pos.coords.latitude
+]
+
+STATE.map.flyTo({
+center:STATE.startCoords,
+zoom:15
+})
+
+})
+
+}
+
 /************************************************
 ROUTE GENERATION
 ************************************************/
@@ -523,7 +517,9 @@ coordinates:coords
 }
 
 if(STATE.map.getSource("route")){
+
 STATE.map.getSource("route").setData(geojson)
+
 }else{
 
 STATE.map.addSource("route",{type:"geojson",data:geojson})
@@ -539,6 +535,22 @@ paint:{
 })
 
 }
+
+}
+
+/************************************************
+FIT CAMERA TO ROUTE (FIX)
+************************************************/
+
+function fitCameraToRoute(coords){
+
+const bounds = coords.reduce((b,c)=>b.extend(c),
+new mapboxgl.LngLatBounds(coords[0],coords[0]))
+
+STATE.map.fitBounds(bounds,{
+padding:80,
+pitch:40
+})
 
 }
 /************************************************
@@ -583,6 +595,18 @@ renderEncounterMarkers()
 }
 
 /************************************************
+CLEAR MARKERS
+************************************************/
+
+function clearMarkers(){
+
+STATE.markers.forEach(marker=>marker.remove())
+
+STATE.markers=[]
+
+}
+
+/************************************************
 OVERPASS FETCH
 ************************************************/
 
@@ -620,6 +644,7 @@ image:null
 }
 
 }
+
 /************************************************
 ENCOUNTER MARKERS
 ************************************************/
@@ -658,6 +683,7 @@ if(site.tags?.historic) return "Historic"
 return "Discovery"
 
 }
+
 /************************************************
 ENCOUNTER CARD
 ************************************************/
@@ -671,13 +697,16 @@ document.getElementById("encounter-badge").innerText=site.badge
 document.getElementById("encounter-description").innerText=
 site.description || randomItem(STATE.prompts)
 
+const img=document.getElementById("encounter-image")
+
 if(site.image){
 
-document.getElementById("encounter-image").src=site.image
+img.src=site.image
+img.style.display="block"
 
 }else{
 
-document.getElementById("encounter-image").style.display="none"
+img.style.display="none"
 
 }
 
@@ -690,6 +719,7 @@ function closeEncounter(){
 document.getElementById("encounter").style.display="none"
 
 }
+
 /************************************************
 WALK MODE
 ************************************************/
@@ -752,174 +782,19 @@ end_time:new Date()
 })
 
 }
-/************************************************
-LOAD COLLECTION
-************************************************/
-
-async function loadCollection(){
-
-const encounters = await apiGet({action:"encounters"})
-
-console.log("collection",encounters)
-
-}
 
 /************************************************
-SHARE ENCOUNTER
-************************************************/
-
-async function shareEncounter(){
-
-const card=document.getElementById("encounter")
-
-const canvas=await html2canvas(card)
-
-canvas.toBlob(async blob=>{
-
-const file=new File([blob],"discovery.png",{type:"image/png"})
-
-if(navigator.share){
-
-await navigator.share({
-files:[file],
-title:"Hot Girl Walk Discovery"
-})
-
-}
-
-})
-
-}
-/************************************************
-CINEMATIC ROUTE PREVIEW + STORY GENERATOR
+CINEMATIC PREVIEW
 ************************************************/
 
 async function previewJourney(){
 
 if(!STATE.routeCoords){
-
-alert("Generate a route first")
-
-return
-
-}
-
-closeEncounter()
-
-const coords = STATE.routeCoords
-
-/* start camera */
-
-STATE.map.flyTo({
-center:coords[0],
-zoom:16,
-pitch:60,
-bearing:0,
-duration:1200
-})
-
-await sleep(1200)
-
-/* animate route */
-
-await animateRouteCamera(coords)
-
-/* return to start */
-
-STATE.map.flyTo({
-center:coords[0],
-zoom:15,
-pitch:45,
-duration:1200
-})
-
-/* create shareable story */
-
-generateRouteStory()
-
-}
-
-/************************************************
-CAMERA ANIMATION
-************************************************/
-
-async function animateRouteCamera(coords){
-
-const total = coords.length
-
-const step = Math.max(1,Math.floor(total/60))
-
-for(let i=0;i<total;i+=step){
-
-const coord = coords[i]
-
-STATE.map.easeTo({
-center:coord,
-duration:300,
-pitch:60
-})
-
-flashEncounterNear(coord)
-
-await sleep(300)
-
-}
-
-}
-
-/************************************************
-ENCOUNTER FLASH
-************************************************/
-
-function flashEncounterNear(coord){
-
-STATE.encounters.forEach(site=>{
-
-const dist = distanceMeters(coord,site.coords)
-
-if(dist < 80){
-
-const marker = STATE.markers.find(m=>{
-
-const p = m.getLngLat()
-
-return Math.abs(p.lng-site.coords[0])<0.0001
-})
-
-if(marker){
-
-const el = marker.getElement()
-
-el.style.transform="scale(1.6)"
-
-setTimeout(()=>{
-el.style.transform="scale(1)"
-},600)
-
-}
-
-}
-
-})
-
-}
-
-/************************************************
-CINEMATIC ROUTE PREVIEW ENGINE
-************************************************/
-
-async function previewJourney(){
-
-if(!STATE.routeCoords){
-alert("Generate a route first")
+alert("Generate route first")
 return
 }
-
-closeEncounter()
 
 const route = STATE.routeCoords
-
-/* move camera to start */
 
 STATE.map.flyTo({
 center:route[0],
@@ -931,11 +806,7 @@ duration:1500
 
 await sleep(1500)
 
-/* run cinematic flythrough */
-
 await cinematicFlythrough(route)
-
-/* return camera */
 
 STATE.map.flyTo({
 center:route[0],
@@ -944,15 +815,9 @@ pitch:45,
 duration:1200
 })
 
-/* generate share story */
-
 generateRouteStory()
 
 }
-
-/************************************************
-SMOOTH ROUTE FLYTHROUGH
-************************************************/
 
 async function cinematicFlythrough(route){
 
@@ -970,25 +835,11 @@ const pt = turf.along(line,dist,{units:"kilometers"})
 
 const coord = pt.geometry.coordinates
 
-const nextDist = dist + (length/steps)
-const nextPt = turf.along(line,nextDist,{units:"kilometers"})
-const nextCoord = nextPt.geometry.coordinates
-
-/* calculate bearing */
-
-const bearing = turf.bearing(
-turf.point(coord),
-turf.point(nextCoord)
-)
-
 STATE.map.easeTo({
 center:coord,
-bearing:bearing,
 pitch:65,
 duration:250
 })
-
-pulseEncounterIfNearby(coord)
 
 await sleep(250)
 
@@ -997,113 +848,46 @@ await sleep(250)
 }
 
 /************************************************
-ENCOUNTER HIGHLIGHT
-************************************************/
-
-function pulseEncounterIfNearby(coord){
-
-STATE.encounters.forEach(site=>{
-
-const dist = distanceMeters(coord,site.coords)
-
-if(dist < 80){
-
-const marker = STATE.markers.find(m=>{
-const p = m.getLngLat()
-return Math.abs(p.lng-site.coords[0])<0.0001
-})
-
-if(marker){
-
-const el = marker.getElement()
-
-el.style.transform="scale(1.8)"
-
-setTimeout(()=>{
-el.style.transform="scale(1)"
-},700)
-
-}
-
-}
-
-})
-
-}
-
-/************************************************
-VERTICAL STORY GENERATOR
+STORY EXPORT
 ************************************************/
 
 async function generateRouteStory(){
 
 const canvas = document.createElement("canvas")
+
 canvas.width = 1080
 canvas.height = 1920
 
 const ctx = canvas.getContext("2d")
 
-/* background */
-
 ctx.fillStyle="#fff7ec"
 ctx.fillRect(0,0,1080,1920)
-
-/* title */
 
 ctx.fillStyle="#ff2fa3"
 ctx.font="bold 80px Inter"
 ctx.fillText("Hot Girl Walk",180,200)
 
-ctx.fillStyle="#333"
-ctx.font="40px Inter"
-ctx.fillText("My cultural discoveries",200,300)
-
-/* capture map */
-
 const mapCanvas = STATE.map.getCanvas()
 
 ctx.drawImage(mapCanvas,90,420,900,900)
 
-/* encounter list */
-
-ctx.fillStyle="#ff2fa3"
-ctx.font="36px Inter"
-
-let y = 1400
-
-STATE.encounters.forEach(site=>{
-ctx.fillText("• "+site.name,140,y)
-y+=60
-})
-
-/* export */
-
 canvas.toBlob(async blob=>{
 
-const file = new File([blob],"hot-girl-walk-story.png",{type:"image/png"})
+const file=new File([blob],"walk.png",{type:"image/png"})
 
 if(navigator.share){
 
 await navigator.share({
 files:[file],
-title:"Hot Girl Walk",
-text:"My cultural walk"
+title:"Hot Girl Walk"
 })
-
-}else{
-
-const url = URL.createObjectURL(blob)
-
-const a = document.createElement("a")
-a.href = url
-a.download = "hot-girl-walk-story.png"
-a.click()
 
 }
 
 })
 
 }
+
 </script>
 </body>
 </html>
