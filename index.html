@@ -494,6 +494,11 @@ alert("No walking route was found for these points.")
 return
 }
 
+if(!data.routes || !data.routes.length){
+alert("No walking route was found for these points.")
+return
+}
+
 STATE.routeCoords=data.routes[0].geometry.coordinates
 
 drawRoute()
