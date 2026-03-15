@@ -156,6 +156,55 @@ border-radius:10px;
 cursor:pointer;
 }
 
+
+
+/* PREVIEW PLAYER */
+
+#preview-player{
+position:absolute;
+inset:0;
+background:rgba(0,0,0,.72);
+display:none;
+justify-content:center;
+align-items:center;
+z-index:80;
+}
+
+.preview-card{
+width:min(420px,92vw);
+background:#fff7ec;
+border:4px solid #ff2fa3;
+border-radius:16px;
+padding:14px;
+box-shadow:0 10px 30px rgba(0,0,0,.35);
+}
+
+#preview-frame{
+width:100%;
+aspect-ratio:9/16;
+object-fit:cover;
+border-radius:10px;
+background:#ffe3f3;
+}
+
+.preview-actions{
+display:flex;
+gap:10px;
+margin-top:10px;
+}
+
+.preview-actions button{
+flex:1;
+border:none;
+padding:10px 12px;
+border-radius:10px;
+font-weight:700;
+cursor:pointer;
+}
+
+#share-story-btn{background:#ff2fa3;color:#fff;}
+#end-preview-btn{background:#222;color:#fff;}
+
 </style>
 </head>
 
@@ -167,7 +216,7 @@ Walking Mode
 
 <div id="home-screen">
 <div class="home-title">Hot Girl Walk</div>
-<button class="start-button" onclick="startApp()">Start Walk</button>
+<button id="start-btn" class="start-button">Start Walk</button>
 </div>
 
 <div id="search-panel">
@@ -199,6 +248,17 @@ Walking Mode
 
 </div>
 
+
+<div id="preview-player">
+<div class="preview-card">
+<img id="preview-frame" alt="Preview story frame">
+<div class="preview-actions">
+<button id="share-story-btn">Share to Stories</button>
+<button id="end-preview-btn">End Preview</button>
+</div>
+</div>
+</div>
+
 <script>
 
 /************************************************
@@ -219,8 +279,11 @@ routeCoords:null,
 encounters:[],
 markers:[],
 userMarker:null,
-walkWatcher:null
-}
+walkWatcher:null,
+overpassCache:new Map(),
+previewInterval:null,
+previewFrameIndex:0
+};
 
 let previewFrames=[]
 
@@ -232,15 +295,37 @@ function sleep(ms){
 return new Promise(resolve=>setTimeout(resolve,ms))
 }
 
+function cacheKeyFromCoord(coord){
+return `${coord[0].toFixed(3)},${coord[1].toFixed(3)}`
+}
+
 function distanceMeters(a,b){
 
-return turf.distance(
+const km=turf.distance(
 turf.point(a),
 turf.point(b),
-{units:"meters"}
+{units:"kilometers"}
 )
 
+return km*1000
+
 }
+
+
+function initRootHandlers(){
+
+const startBtn=document.getElementById("start-btn")
+
+if(startBtn){
+startBtn.onclick=startApp
+}
+
+/* keep global for backward compatibility with old inline handlers */
+window.startApp=startApp
+
+}
+
+initRootHandlers()
 
 /************************************************
 APP START
@@ -292,6 +377,8 @@ document.getElementById("route-button").onclick=generateRoute
 document.getElementById("preview-btn").onclick=previewJourney
 document.getElementById("walk-btn").onclick=startWalk
 document.getElementById("stop-btn").onclick=stopWalk
+document.getElementById("end-preview-btn").onclick=endPreview
+document.getElementById("share-story-btn").onclick=createPreviewStory
 
 }
 
@@ -341,6 +428,16 @@ GPS
 
 function requestGPS(){
 
+if(!STATE.map){
+alert("Start the app first.")
+return
+}
+
+if(!navigator.geolocation){
+alert("Geolocation is not supported in this browser.")
+return
+}
+
 navigator.geolocation.getCurrentPosition(pos=>{
 
 STATE.startCoords=[pos.coords.longitude,pos.coords.latitude]
@@ -349,6 +446,10 @@ STATE.map.flyTo({
 center:STATE.startCoords,
 zoom:15
 })
+
+},()=>{
+
+alert("Unable to access GPS. Please allow location permissions.")
 
 })
 
@@ -360,16 +461,43 @@ ROUTE
 
 async function generateRoute(){
 
+if(!STATE.startCoords || !STATE.destinationCoords){
+alert("Please choose both a start and destination.")
+return
+}
+
 const url=`https://api.mapbox.com/directions/v5/mapbox/walking/${STATE.startCoords[0]},${STATE.startCoords[1]};${STATE.destinationCoords[0]},${STATE.destinationCoords[1]}?geometries=geojson&access_token=${mapboxgl.accessToken}`
 
+let data
+
+try{
+
 const res=await fetch(url)
-const data=await res.json()
+
+if(!res.ok){
+alert("Could not fetch route right now. Please try again.")
+return
+}
+
+data=await res.json()
+
+}catch(e){
+
+alert("Network error while generating route. Please try again.")
+return
+
+}
+
+if(!data.routes || !data.routes.length){
+alert("No walking route was found for these points.")
+return
+}
 
 STATE.routeCoords=data.routes[0].geometry.coordinates
 
 drawRoute()
 
-loadEncounters()
+await loadEncounters()
 
 }
 
@@ -407,12 +535,21 @@ paint:{
 
 }
 
+const bounds=STATE.routeCoords.reduce(
+(b,coord)=>b.extend(coord),
+new mapboxgl.LngLatBounds(STATE.routeCoords[0],STATE.routeCoords[0])
+)
+
+STATE.map.fitBounds(bounds,{padding:60,maxZoom:16,duration:900})
+
 }
 /************************************************
 DISCOVERY ENGINE
 ************************************************/
 
 async function loadEncounters(){
+
+if(!STATE.routeCoords || STATE.routeCoords.length<2) return
 
 clearMarkers()
 
@@ -424,9 +561,10 @@ const length = turf.length(line,{units:"kilometers"})
 
 const scanPoints=[]
 
-/* scan route every ~150m */
+/* scan route every ~150m with a hard cap to avoid API rate limits */
 
-const segments = Math.floor(length*1000/150)
+const rawSegments = Math.max(1,Math.floor(length*1000/250))
+const segments = Math.min(rawSegments,10)
 
 for(let i=0;i<=segments;i++){
 
@@ -439,12 +577,25 @@ scanPoints.push(pt.geometry.coordinates)
 }
 
 const candidates=[]
+const uniqueScanPoints=[]
+const seenScanPoints=new Set()
 
 for(const p of scanPoints){
+const key=cacheKeyFromCoord(p)
+if(!seenScanPoints.has(key)){
+seenScanPoints.add(key)
+uniqueScanPoints.push(p)
+}
+}
+
+for(const p of uniqueScanPoints){
 
 const sites = await fetchNearbySites(p)
 
-candidates.push(...sites)
+candidates.push(...sites.map(site=>({...site,routePoint:p})))
+
+/* tiny pause helps prevent 429 bursts on long routes */
+await sleep(90)
 
 }
 
@@ -452,13 +603,25 @@ candidates.push(...sites)
 
 for(const c of candidates){
 
-c.score = scoreCulturalSite(c,c.coords)
+c.score = scoreCulturalSite(c,c.routePoint)
 
+}
+
+const seenKeys=new Set()
+
+const deduped=[]
+
+for(const c of candidates){
+const key=`${c.name}-${c.coords[0].toFixed(5)}-${c.coords[1].toFixed(5)}`
+if(!seenKeys.has(key)){
+seenKeys.add(key)
+deduped.push(c)
+}
 }
 
 /* sort best first */
 
-candidates.sort((a,b)=>b.score-a.score)
+deduped.sort((a,b)=>b.score-a.score)
 
 /* spread encounters */
 
@@ -466,7 +629,7 @@ const chosen=[]
 
 const minSpacing = 450
 
-for(const site of candidates){
+for(const site of deduped){
 
 let tooClose=false
 
@@ -489,6 +652,22 @@ chosen.push(site)
 
 if(chosen.length >= getEncounterCount()) break
 
+}
+
+if(!chosen.length){
+const fallbackCount=Math.min(getEncounterCount(),Math.max(2,Math.floor(STATE.routeCoords.length/4)))
+for(let i=1;i<=fallbackCount;i++){
+const idx=Math.min(
+STATE.routeCoords.length-1,
+Math.floor((i/(fallbackCount+1))*STATE.routeCoords.length)
+)
+chosen.push({
+name:`Scenic Stop ${i}`,
+coords:STATE.routeCoords[idx],
+tags:{name:`Scenic Stop ${i}`},
+score:0
+})
+}
 }
 
 STATE.encounters = chosen
@@ -522,11 +701,17 @@ FETCH CULTURAL SITES
 
 async function fetchNearbySites(coord){
 
+const cacheKey=cacheKeyFromCoord(coord)
+
+if(STATE.overpassCache.has(cacheKey)){
+return STATE.overpassCache.get(cacheKey)
+}
+
 const lat=coord[1]
 const lng=coord[0]
 
 const query=`
-[out:json];
+[out:json][timeout:20];
 (
 node(around:350,${lat},${lng})["tourism"="museum"];
 node(around:350,${lat},${lng})["tourism"="gallery"];
@@ -538,14 +723,49 @@ node(around:350,${lat},${lng})["tourism"="attraction"];
 out;
 `
 
-const res = await fetch(
+const endpoints=[
 "https://overpass-api.de/api/interpreter",
-{method:"POST",body:query}
-)
+"https://overpass.kumi.systems/api/interpreter"
+]
 
-const data = await res.json()
+let data
 
-if(!data.elements) return []
+for(let attempt=0;attempt<3;attempt++){
+
+for(const endpoint of endpoints){
+
+try{
+
+const res = await fetch(endpoint,{method:"POST",body:query})
+
+if(res.status===429){
+await sleep(600*(attempt+1))
+continue
+}
+
+if(!res.ok) continue
+
+data = await res.json()
+break
+
+}catch(e){
+
+/* try next endpoint */
+
+}
+
+}
+
+if(data) break
+
+await sleep(500*(attempt+1))
+
+}
+
+if(!data?.elements){
+STATE.overpassCache.set(cacheKey,[])
+return []
+}
 
 const sites=[]
 
@@ -558,6 +778,8 @@ tags:el.tags
 })
 
 }
+
+STATE.overpassCache.set(cacheKey,sites)
 
 return sites
 
@@ -749,7 +971,50 @@ previewFrames.push(frame)
 
 }
 
-createPreviewStory()
+openPreviewPlayer()
+
+}
+
+
+/************************************************
+PREVIEW PLAYER
+************************************************/
+
+function openPreviewPlayer(){
+
+if(!previewFrames.length){
+alert("No preview frames were generated.")
+return
+}
+
+const player=document.getElementById("preview-player")
+const frame=document.getElementById("preview-frame")
+
+player.style.display="flex"
+STATE.previewFrameIndex=0
+frame.src=previewFrames[0]
+
+if(STATE.previewInterval){
+clearInterval(STATE.previewInterval)
+}
+
+STATE.previewInterval=setInterval(()=>{
+if(!previewFrames.length) return
+STATE.previewFrameIndex=(STATE.previewFrameIndex+1)%previewFrames.length
+frame.src=previewFrames[STATE.previewFrameIndex]
+},900)
+
+}
+
+function endPreview(){
+
+const player=document.getElementById("preview-player")
+player.style.display="none"
+
+if(STATE.previewInterval){
+clearInterval(STATE.previewInterval)
+STATE.previewInterval=null
+}
 
 }
 
@@ -840,15 +1105,25 @@ y+=60
 
 canvas.toBlob(async blob=>{
 
+if(!blob) return
+
 const file=new File([blob],"hot-girl-walk-story.png",{type:"image/png"})
 
 if(navigator.share){
+
+try{
 
 await navigator.share({
 files:[file],
 title:"Hot Girl Walk",
 text:"My cultural walk"
 })
+
+}catch(e){
+
+/* ignore cancelled share */
+
+}
 
 }else{
 
@@ -861,6 +1136,8 @@ a.click()
 
 }
 
+endPreview()
+
 })
 
 }
@@ -871,9 +1148,26 @@ WALK MODE
 
 function startWalk(){
 
+if(!STATE.map){
+alert("Start the app first.")
+return
+}
+
+if(!navigator.geolocation){
+alert("Geolocation is not supported in this browser.")
+return
+}
+
+if(STATE.walkWatcher){
+navigator.geolocation.clearWatch(STATE.walkWatcher)
+STATE.walkWatcher=null
+}
+
 document.getElementById("walk-indicator").style.display="block"
 
-STATE.walkWatcher=navigator.geolocation.watchPosition(updateUserPosition)
+STATE.walkWatcher=navigator.geolocation.watchPosition(updateUserPosition,()=>{
+alert("Unable to start walk tracking. Please allow location access.")
+})
 
 }
 
@@ -881,6 +1175,7 @@ function stopWalk(){
 
 if(STATE.walkWatcher){
 navigator.geolocation.clearWatch(STATE.walkWatcher)
+STATE.walkWatcher=null
 }
 
 document.getElementById("walk-indicator").style.display="none"
