@@ -681,6 +681,18 @@ deduped.push(c)
 }
 }
 
+const seenKeys=new Set()
+
+const deduped=[]
+
+for(const c of candidates){
+const key=`${c.name}-${c.coords[0].toFixed(5)}-${c.coords[1].toFixed(5)}`
+if(!seenKeys.has(key)){
+seenKeys.add(key)
+deduped.push(c)
+}
+}
+
 /* sort best first */
 
 deduped.sort((a,b)=>b.score-a.score)
