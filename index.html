@@ -5,7 +5,7 @@
 <meta charset="utf-8">
 <title>Hot Girl Walk</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="build-id" content="2026-03-18-pages-redeploy-2">
+<meta name="build-id" content="2026-03-18-pages-redeploy-1">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 64%22%3E%3Ccircle cx=%2232%22 cy=%2232%22 r=%2230%22 fill=%22%23ff2fa3%22/%3E%3Ctext x=%2232%22 y=%2240%22 font-size=%2232%22 text-anchor=%22middle%22 fill=%22white%22 font-family=%22Arial%22%3EH%3C/text%3E%3C/svg%3E">
 
 <link href="https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.css" rel="stylesheet">
@@ -335,27 +335,27 @@ return new Promise(resolve=>setTimeout(resolve,ms))
 }
 
 function cacheKeyFromCoord(coord){
-return coord[0].toFixed(3)+","+coord[1].toFixed(3)
-}
-
-function toRadians(value){
-return value*Math.PI/180
+return `${coord[0].toFixed(3)},${coord[1].toFixed(3)}`
 }
 
 function distanceMeters(a,b){
-var lat1=a[1]
-var lng1=a[0]
-var lat2=b[1]
-var lng2=b[0]
-var earthRadius=6371000
-var dLat=toRadians(lat2-lat1)
-var dLng=toRadians(lng2-lng1)
-var lat1Rad=toRadians(lat1)
-var lat2Rad=toRadians(lat2)
-var sinLat=Math.sin(dLat/2)
-var sinLng=Math.sin(dLng/2)
-var hav=(sinLat*sinLat)+(
-Math.cos(lat1Rad)*Math.cos(lat2Rad)*sinLng*sinLng
+const toRad=value=>value*Math.PI/180
+const [lng1,lat1]=a
+const [lng2,lat2]=b
+const earthRadius=6371000
+const dLat=toRad(lat2-lat1)
+const dLng=toRad(lng2-lng1)
+const lat1Rad=toRad(lat1)
+const lat2Rad=toRad(lat2)
+const hav=Math.sin(dLat/2)**2+
+Math.cos(lat1Rad)*Math.cos(lat2Rad)*Math.sin(dLng/2)**2
+return 2*earthRadius*Math.asin(Math.sqrt(hav))
+}
+
+const km=turf.distance(
+turf.point(a),
+turf.point(b),
+{units:"kilometers"}
 )
 return 2*earthRadius*Math.asin(Math.sqrt(hav))
 }
@@ -368,28 +368,8 @@ total+=distanceMeters(coords[i-1],coords[i])
 return total/1000
 }
 
-function interpolateCoord(a,b,ratio){
-return [
-a[0]+((b[0]-a[0])*ratio),
-a[1]+((b[1]-a[1])*ratio)
-]
-}
+return km*1000
 
-function pointAlongRoute(coords,distanceKm){
-if(!coords.length) return null
-if(coords.length===1) return coords[0]
-var traveledMeters=0
-var targetMeters=distanceKm*1000
-for(var i=1;i<coords.length;i++){
-var segmentMeters=distanceMeters(coords[i-1],coords[i])
-if(traveledMeters+segmentMeters>=targetMeters){
-var remaining=targetMeters-traveledMeters
-var ratio=segmentMeters===0?0:remaining/segmentMeters
-return interpolateCoord(coords[i-1],coords[i],ratio)
-}
-traveledMeters+=segmentMeters
-}
-return coords[coords.length-1]
 }
 
 function setEncounterStatus(msg,show=true){
@@ -493,6 +473,7 @@ recorder.stop()
 return await done
 }
 
+
 function initRootHandlers(){
 
 const startBtn=document.getElementById("start-btn")
@@ -505,6 +486,10 @@ startBtn.onclick=startApp
 window.startApp=startApp
 
 }
+
+initRootHandlers()
+
+initRootHandlers()
 
 initRootHandlers()
 
@@ -743,17 +728,26 @@ STATE.encounterFetchAttempts=0
 STATE.encounterFetchSuccesses=0
 
 clearMarkers()
+
 STATE.encounters=[]
 
 const length = routeLengthKm(STATE.routeCoords)
+
+const length = routeLengthKm(STATE.routeCoords)
 const scanPoints=[]
+
+/* scan route every ~150m with a hard cap to avoid API rate limits */
+
 const rawSegments = Math.max(1,Math.floor(length*1000/250))
 const segments = Math.min(rawSegments,10)
 
 for(let i=0;i<=segments;i++){
 const dist=(length/segments)*i
+
 const pt=pointAlongRoute(STATE.routeCoords,dist)
+
 if(pt) scanPoints.push(pt)
+
 }
 
 const candidates=[]
@@ -769,17 +763,33 @@ uniqueScanPoints.push(p)
 }
 
 for(const p of uniqueScanPoints){
+
+for(const p of uniqueScanPoints){
 const sites = await fetchNearbySites(p)
+
 if(sites.length) STATE.encounterFetchSuccesses+=1
+
 candidates.push(...sites.map(site=>({...site,routePoint:p})))
+
+/* tiny pause helps prevent 429 bursts on long routes */
 await sleep(90)
+
 }
 
 for(const c of candidates){
+
 c.score = scoreCulturalSite(c,c.routePoint)
+
+for(const c of candidates){
+const key=`${c.name}-${c.coords[0].toFixed(5)}-${c.coords[1].toFixed(5)}`
+if(!seenKeys.has(key)){
+seenKeys.add(key)
+deduped.push(c)
+}
 }
 
 const seenKeys=new Set()
+
 const deduped=[]
 
 for(const c of candidates){
@@ -790,12 +800,30 @@ deduped.push(c)
 }
 }
 
+const seenKeys=new Set()
+
+const deduped=[]
+
+for(const c of candidates){
+const key=`${c.name}-${c.coords[0].toFixed(5)}-${c.coords[1].toFixed(5)}`
+if(!seenKeys.has(key)){
+seenKeys.add(key)
+deduped.push(c)
+}
+}
+
+const seenKeys=new Set()
+const deduped=[]
+
+deduped.sort((a,b)=>b.score-a.score)
+
 deduped.sort((a,b)=>b.score-a.score)
 
 const chosen=[]
 const minSpacing = 450
 
 for(const site of deduped){
+
 let tooClose=false
 for(const e of chosen){
 if(distanceMeters(site.coords,e.coords) < minSpacing){
@@ -826,8 +854,29 @@ score:0
 }
 }
 
+if(!chosen.length){
+setEncounterStatus("No API results yet — using scenic stops instead.")
+const fallbackCount=Math.min(getEncounterCount(),Math.max(2,Math.floor(STATE.routeCoords.length/4)))
+for(let i=1;i<=fallbackCount;i++){
+const idx=Math.min(
+STATE.routeCoords.length-1,
+Math.floor((i/(fallbackCount+1))*STATE.routeCoords.length)
+)
+chosen.push({
+name:`Scenic Stop ${i}`,
+coords:STATE.routeCoords[idx],
+tags:{name:`Scenic Stop ${i}`},
+score:0
+})
+}
+}
+
 STATE.encounters = chosen
 renderEncounterMarkers()
+setEncounterStatus(`${STATE.encounters.length} discoveries ready`,true)
+setTimeout(()=>setEncounterStatus("",false),2500)
+console.info("encounters_loaded",{count:STATE.encounters.length,fetchAttempts:STATE.encounterFetchAttempts,fetchSuccesses:STATE.encounterFetchSuccesses})
+
 setEncounterStatus(`${STATE.encounters.length} discoveries ready`,true)
 setTimeout(()=>setEncounterStatus("",false),2500)
 console.info("encounters_loaded",{count:STATE.encounters.length,fetchAttempts:STATE.encounterFetchAttempts,fetchSuccesses:STATE.encounterFetchSuccesses})
@@ -881,8 +930,8 @@ out;
 `
 
 const endpoints=[
-"https://overpass.kumi.systems/api/interpreter",
-"https://overpass.openstreetmap.fr/api/interpreter"
+"https://overpass-api.de/api/interpreter",
+"https://overpass.kumi.systems/api/interpreter"
 ]
 
 let data
