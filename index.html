@@ -129,54 +129,62 @@ overflow:auto;
 padding:20px;
 }
 
+#route-info{
+position:absolute;
+top:16px;
+left:16px;
+background:white;
+padding:8px 12px;
+border-radius:10px;
+box-shadow:0 4px 12px rgba(0,0,0,0.2);
+z-index:5;
+font-weight:600;
+
+}
+
 </style>
 </head>
 
 <body>
-
 <div id="walk-indicator">Walking Mode</div>
 
 <div id="home-screen">
-<div class="home-title">Hot Girl Walk</div>
-<button onclick="startApp()">Start Walk</button>
+  <div class="home-title">Hot Girl Walk</div>
+  <button onclick="startApp()">Start Walk</button>
 </div>
 
 <div id="search-panel">
-<div id="start-search"></div>
-<button id="gps-btn">Use my GPS</button>
-<div id="dest-search"></div>
-<button id="route-button">Generate Route</button>
+  <div id="start-search"></div>
+  <button id="gps-btn">Use my GPS</button>
+  <div id="dest-search"></div>
+  <button id="route-button">Generate Route</button>
 </div>
 
 <div id="nav">
-<button onclick="previewJourney()">Preview</button>
-<button onclick="startWalk()">Start Walk</button>
-<button onclick="stopWalk()">End Walk</button>
-<button onclick="openCollection()">Collection</button>
-<button onclick="saveCurrentRoute()">Save Route</button>
-<button onclick="sharePreview()">Share Preview</button>
+  <button onclick="previewJourney()">Preview</button>
+  <button onclick="startWalk()">Start Walk</button>
+  <button onclick="stopWalk()">End Walk</button>
+  <button onclick="openCollection()">Collection</button>
+  <button onclick="saveCurrentRoute()">Save Route</button>
+  <button onclick="sharePreview()">Share Preview</button>
+  <button onclick="selectRoute(0)">Fast</button>
+  <button onclick="selectRoute(1)">Scenic</button>
 </div>
 
 <div id="map"></div>
+<div id="route-info"></div>
 
 <div id="encounter">
-
-<h2 id="encounter-title"></h2>
-
-<div id="encounter-badge" class="badge"></div>
-
-<img id="encounter-image">
-
-<textarea id="note" placeholder="Write something..."></textarea>
-
-<div style="display:flex;gap:8px;margin-top:10px;">
-<button onclick="saveEncounter()">Collect</button>
-<button onclick="closeEncounter()">Close</button>
+  <h2 id="encounter-title"></h2>
+  <div id="encounter-badge" class="badge"></div>
+  <img id="encounter-image">
+  <textarea id="note" placeholder="Write something..."></textarea>
+  <div style="display:flex;gap:8px;margin-top:10px;">
+    <button onclick="saveEncounter()">Collect</button>
+    <button onclick="closeEncounter()">Close</button>
+  </div>
 </div>
 
-</div>
-
-<!-- COLLECTION PAGE -->
 <div id="collection-page"></div>
   
 <script>
@@ -209,16 +217,13 @@ let currentEncounter=null
 let uploadedPhotoBase64=null
 
 let previewFrames=[]
+let routes = []
+let selectedRouteIndex = 0
 
 let USER_ID=localStorage.getItem("hg_user")
 function sleep(ms){
   return new Promise(resolve => setTimeout(resolve, ms))
 }  
-
-if(!USER_ID){
-USER_ID=crypto.randomUUID()
-localStorage.setItem("hg_user",USER_ID)
-}
 
 /************************************************
 START APP
@@ -345,11 +350,41 @@ alert("Route generation failed")
 return
 }
 
-routeCoords=data.geometry.coordinates
+routes = data.routes || []
+selectedRouteIndex = 0
 
+if(routes.length > 0){
+routeCoords = routes[0].geometry.coordinates
+}else{
+routeCoords = data.geometry.coordinates
+}
 drawRoute(routeCoords)
 
 await loadEncounters(routeCoords)
+/* ⏱️ INITIAL TIME */
+if(routes.length > 0 && routes[0].duration){
+const minutes = Math.round(routes[0].duration / 60)
+document.getElementById("route-info").innerText =
+minutes + " min walk"
+}
+}
+
+function selectRoute(index){
+
+if(!routes[index]) return
+
+selectedRouteIndex = index
+routeCoords = routes[index].geometry.coordinates
+
+drawRoute(routeCoords)
+loadEncounters(routeCoords)
+
+/* ⏱️ UPDATE TIME ONLY */
+if(routes[index].duration){
+const minutes = Math.round(routes[index].duration / 60)
+document.getElementById("route-info").innerText =
+minutes + " min walk"
+}
 
 }
 
