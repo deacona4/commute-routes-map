@@ -12,7 +12,6 @@
 <link href="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v5.0.0/mapbox-gl-geocoder.css" rel="stylesheet">
 <script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v5.0.0/mapbox-gl-geocoder.min.js"></script>
 
-<script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
 
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
 
@@ -337,6 +336,18 @@ return `${coord[0].toFixed(3)},${coord[1].toFixed(3)}`
 }
 
 function distanceMeters(a,b){
+const toRad=value=>value*Math.PI/180
+const [lng1,lat1]=a
+const [lng2,lat2]=b
+const earthRadius=6371000
+const dLat=toRad(lat2-lat1)
+const dLng=toRad(lng2-lng1)
+const lat1Rad=toRad(lat1)
+const lat2Rad=toRad(lat2)
+const hav=Math.sin(dLat/2)**2+
+Math.cos(lat1Rad)*Math.cos(lat2Rad)*Math.sin(dLng/2)**2
+return 2*earthRadius*Math.asin(Math.sqrt(hav))
+}
 
 const km=turf.distance(
 turf.point(a),
@@ -703,9 +714,7 @@ clearMarkers()
 
 STATE.encounters=[]
 
-const line = turf.lineString(STATE.routeCoords)
-
-const length = turf.length(line,{units:"kilometers"})
+const length = routeLengthKm(STATE.routeCoords)
 
 const scanPoints=[]
 
@@ -718,9 +727,9 @@ for(let i=0;i<=segments;i++){
 
 const dist=(length/segments)*i
 
-const pt=turf.along(line,dist,{units:"kilometers"})
+const pt=pointAlongRoute(STATE.routeCoords,dist)
 
-scanPoints.push(pt.geometry.coordinates)
+if(pt) scanPoints.push(pt)
 
 }
 
@@ -755,6 +764,12 @@ for(const c of candidates){
 
 c.score = scoreCulturalSite(c,c.routePoint)
 
+for(const c of candidates){
+const key=`${c.name}-${c.coords[0].toFixed(5)}-${c.coords[1].toFixed(5)}`
+if(!seenKeys.has(key)){
+seenKeys.add(key)
+deduped.push(c)
+}
 }
 
 const seenKeys=new Set()
@@ -837,9 +852,7 @@ DYNAMIC ENCOUNTER COUNT
 
 function getEncounterCount(){
 
-const line=turf.lineString(STATE.routeCoords)
-
-const length=turf.length(line,{units:"kilometers"})
+const length=routeLengthKm(STATE.routeCoords)
 
 if(length < 1) return 3
 if(length < 2) return 4
