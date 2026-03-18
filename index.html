@@ -74,29 +74,25 @@ gap:8px;
 /* NAV */
 #nav{
 position:absolute;
-bottom:20px;
+bottom:12px;
 left:50%;
 transform:translateX(-50%);
 background:white;
-padding:10px 16px;
-border-radius:24px;
+padding:8px 10px;
+border-radius:20px;
 box-shadow:0 4px 16px rgba(0,0,0,.25);
 display:flex;
-gap:10px;
+gap:8px;
 z-index:5;
+
+/* 🔥 FIX */
+max-width:95vw;
+overflow-x:auto;
+white-space:nowrap;
 }
 
-.walk-indicator{
-position:absolute;
-top:12px;
-left:12px;
-background:#2b7cff;
-color:white;
-padding:6px 10px;
-border-radius:10px;
-font-size:13px;
-z-index:10;
-display:none;
+#nav button{
+flex:0 0 auto;
 }
 
 /* CARD */
@@ -554,101 +550,54 @@ PREVIEW JOURNEY (VIDEO + ORDERED)
 
 async function previewJourney(){
 
-if(!routeCoords || markers.length===0){
-alert("Generate a route first")
+if(!routeCoords){
+alert("Generate route first")
 return
 }
 
-const line=turf.lineString(routeCoords)
+const canvas = document.createElement("canvas")
+canvas.width = 540
+canvas.height = 960
+const ctx = canvas.getContext("2d")
 
-/* 🔥 ORDER PROPERLY */
-const ordered=markers.map(m=>{
+const stream = canvas.captureStream(30)
+const recorder = new MediaRecorder(stream)
 
-const pt=turf.point(m.site.coords)
-
-const snapped=turf.nearestPointOnLine(line,pt)
-
-return{
-site:m.site,
-dist:snapped.properties.location
-}
-
-}).sort((a,b)=>a.dist-b.dist)
-
-/* 🎥 VIDEO SETUP */
-const canvas=document.createElement("canvas")
-canvas.width=540
-canvas.height=960
-const ctx=canvas.getContext("2d")
-
-const stream=canvas.captureStream(2)
-const recorder=new MediaRecorder(stream)
-
-const chunks=[]
-
-recorder.ondataavailable=e=>{
+const chunks = []
+recorder.ondataavailable = e => {
 if(e.data.size) chunks.push(e.data)
 }
 
 recorder.start()
 
-/* START AT ORIGIN */
-map.flyTo({
-center:routeCoords[0],
-zoom:16,
-pitch:55
+/* 🔥 FOLLOW ROUTE */
+for(let i = 0; i < routeCoords.length; i+=5){
+
+map.jumpTo({
+center: routeCoords[i],
+zoom: 16,
+pitch: 60
 })
 
-await sleep(1500)
+await sleep(60)
 
-/* LOOP ENCOUNTERS */
-for(const item of ordered){
-
-map.flyTo({
-center:item.site.coords,
-zoom:17,
-pitch:65,
-duration:1400
-})
-
-await sleep(1500)
-
-openEncounter(item.site)
-
-await sleep(1200)
-
-/* CAPTURE */
-ctx.drawImage(map.getCanvas(),0,0,540,960)
-
-closeEncounter()
+/* draw map frame */
+ctx.drawImage(map.getCanvas(), 0, 0, 540, 960)
 
 }
-
-/* RETURN TO START */
-map.flyTo({
-center:routeCoords[0],
-zoom:14,
-pitch:40
-})
-
-await sleep(1500)
 
 recorder.stop()
 
-const blob=await new Promise(res=>{
-recorder.onstop=()=>res(new Blob(chunks,{type:"video/webm"}))
+const blob = await new Promise(res=>{
+recorder.onstop = () => res(new Blob(chunks,{type:"video/webm"}))
 })
 
-/* SHARE */
-const file=new File([blob],"walk.webm",{type:"video/webm"})
-
-/* STORE VIDEO FOR LATER SHARE */
+const file = new File([blob],"walk.webm",{type:"video/webm"})
 window.previewVideoFile = file
 
-alert("Preview ready! Tap 'Share Preview' button.")
+alert("Preview ready!")
 
 }
-
 function sharePreview(){
 
 if(!window.previewVideoFile){
@@ -656,21 +605,14 @@ alert("No preview yet")
 return
 }
 
-if(navigator.share && navigator.canShare?.({files:[window.previewVideoFile]})){
-navigator.share({
-files:[window.previewVideoFile],
-title:"My Hot Girl Walk"
-})
-}else{
-
 const url = URL.createObjectURL(window.previewVideoFile)
 
 const a = document.createElement("a")
 a.href = url
-a.download = "walk.webm"
+a.download = "walk.mp4"
 a.click()
 
-}
+alert("Upload this to Instagram Stories 🚀")
 
 }
 /************************************************
