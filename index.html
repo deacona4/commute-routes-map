@@ -158,7 +158,6 @@ padding:20px;
 
 <div id="map"></div>
 
-<!-- ENCOUNTER CARD -->
 <div id="encounter">
 
 <h2 id="encounter-title"></h2>
@@ -172,6 +171,8 @@ padding:20px;
 <div style="display:flex;gap:8px;margin-top:10px;">
 <button onclick="saveEncounter()">Collect</button>
 <button onclick="closeEncounter()">Close</button>
+</div>
+
 </div>
 
 <!-- COLLECTION PAGE -->
@@ -848,19 +849,6 @@ div.innerHTML=`
 page.appendChild(div)
 
 })
-
-}
-/************************************************
-DISCOVERY TYPE (GAME FEEL RESTORED)
-************************************************/
-
-function getDiscovery(distance){
-
-if(distance<0.05) return "Landmark"
-if(distance<0.1) return "Notable"
-if(distance<0.2) return "HiddenGem"
-
-return "Secret"
 
 }
 
