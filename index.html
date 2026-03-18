@@ -349,36 +349,14 @@ Math.cos(lat1Rad)*Math.cos(lat2Rad)*Math.sin(dLng/2)**2
 return 2*earthRadius*Math.asin(Math.sqrt(hav))
 }
 
-function routeLengthKm(coords){
-let total=0
-for(let i=1;i<coords.length;i++){
-total+=distanceMeters(coords[i-1],coords[i])
-}
-return total/1000
-}
+const km=turf.distance(
+turf.point(a),
+turf.point(b),
+{units:"kilometers"}
+)
 
-function interpolateCoord(a,b,ratio){
-return [
-a[0]+((b[0]-a[0])*ratio),
-a[1]+((b[1]-a[1])*ratio)
-]
-}
+return km*1000
 
-function pointAlongRoute(coords,distanceKm){
-if(!coords.length) return null
-if(coords.length===1) return coords[0]
-let traveledMeters=0
-const targetMeters=distanceKm*1000
-for(let i=1;i<coords.length;i++){
-const segmentMeters=distanceMeters(coords[i-1],coords[i])
-if(traveledMeters+segmentMeters>=targetMeters){
-const remaining=targetMeters-traveledMeters
-const ratio=segmentMeters===0?0:remaining/segmentMeters
-return interpolateCoord(coords[i-1],coords[i],ratio)
-}
-traveledMeters+=segmentMeters
-}
-return coords[coords.length-1]
 }
 
 function setEncounterStatus(msg,show=true){
@@ -786,6 +764,12 @@ for(const c of candidates){
 
 c.score = scoreCulturalSite(c,c.routePoint)
 
+for(const c of candidates){
+const key=`${c.name}-${c.coords[0].toFixed(5)}-${c.coords[1].toFixed(5)}`
+if(!seenKeys.has(key)){
+seenKeys.add(key)
+deduped.push(c)
+}
 }
 
 const seenKeys=new Set()
@@ -909,8 +893,8 @@ out;
 `
 
 const endpoints=[
-"https://overpass.kumi.systems/api/interpreter",
-"https://overpass.openstreetmap.fr/api/interpreter"
+"https://overpass-api.de/api/interpreter",
+"https://overpass.kumi.systems/api/interpreter"
 ]
 
 let data
