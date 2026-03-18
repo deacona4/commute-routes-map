@@ -356,6 +356,16 @@ turf.point(a),
 turf.point(b),
 {units:"kilometers"}
 )
+return 2*earthRadius*Math.asin(Math.sqrt(hav))
+}
+
+function routeLengthKm(coords){
+var total=0
+for(var i=1;i<coords.length;i++){
+total+=distanceMeters(coords[i-1],coords[i])
+}
+return total/1000
+}
 
 return km*1000
 
@@ -722,6 +732,7 @@ STATE.encounters=[]
 
 const length = routeLengthKm(STATE.routeCoords)
 
+const length = routeLengthKm(STATE.routeCoords)
 const scanPoints=[]
 
 /* scan route every ~150m with a hard cap to avoid API rate limits */
@@ -730,7 +741,6 @@ const rawSegments = Math.max(1,Math.floor(length*1000/250))
 const segments = Math.min(rawSegments,10)
 
 for(let i=0;i<=segments;i++){
-
 const dist=(length/segments)*i
 
 const pt=pointAlongRoute(STATE.routeCoords,dist)
@@ -753,6 +763,7 @@ uniqueScanPoints.push(p)
 
 for(const p of uniqueScanPoints){
 
+for(const p of uniqueScanPoints){
 const sites = await fetchNearbySites(p)
 
 if(sites.length) STATE.encounterFetchSuccesses+=1
@@ -763,8 +774,6 @@ candidates.push(...sites.map(site=>({...site,routePoint:p})))
 await sleep(90)
 
 }
-
-/* score cultural value */
 
 for(const c of candidates){
 
@@ -802,39 +811,46 @@ deduped.push(c)
 }
 }
 
-/* sort best first */
+const seenKeys=new Set()
+const deduped=[]
 
 deduped.sort((a,b)=>b.score-a.score)
 
-/* spread encounters */
+deduped.sort((a,b)=>b.score-a.score)
 
 const chosen=[]
-
 const minSpacing = 450
 
 for(const site of deduped){
 
 let tooClose=false
-
 for(const e of chosen){
-
 if(distanceMeters(site.coords,e.coords) < minSpacing){
-
 tooClose=true
 break
-
 }
-
 }
-
 if(!tooClose){
-
 chosen.push(site)
-
+}
+if(chosen.length >= getEncounterCount()) break
 }
 
-if(chosen.length >= getEncounterCount()) break
-
+if(!chosen.length){
+setEncounterStatus("No API results yet — using scenic stops instead.")
+const fallbackCount=Math.min(getEncounterCount(),Math.max(2,Math.floor(STATE.routeCoords.length/4)))
+for(let i=1;i<=fallbackCount;i++){
+const idx=Math.min(
+STATE.routeCoords.length-1,
+Math.floor((i/(fallbackCount+1))*STATE.routeCoords.length)
+)
+chosen.push({
+name:`Scenic Stop ${i}`,
+coords:STATE.routeCoords[idx],
+tags:{name:`Scenic Stop ${i}`},
+score:0
+})
+}
 }
 
 if(!chosen.length){
@@ -855,8 +871,10 @@ score:0
 }
 
 STATE.encounters = chosen
-
 renderEncounterMarkers()
+setEncounterStatus(`${STATE.encounters.length} discoveries ready`,true)
+setTimeout(()=>setEncounterStatus("",false),2500)
+console.info("encounters_loaded",{count:STATE.encounters.length,fetchAttempts:STATE.encounterFetchAttempts,fetchSuccesses:STATE.encounterFetchSuccesses})
 
 setEncounterStatus(`${STATE.encounters.length} discoveries ready`,true)
 setTimeout(()=>setEncounterStatus("",false),2500)
