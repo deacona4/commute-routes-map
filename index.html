@@ -157,8 +157,10 @@ padding:20px;
 </div>
 
 <div id="map"></div>
+
+<!-- ENCOUNTER CARD -->
 <div id="encounter">
-<div id="collection-page"></div>
+
 <h2 id="encounter-title"></h2>
 
 <div id="encounter-badge" class="badge"></div>
@@ -171,6 +173,9 @@ padding:20px;
 <button onclick="saveEncounter()">Collect</button>
 <button onclick="closeEncounter()">Close</button>
 </div>
+
+<!-- COLLECTION PAGE -->
+<div id="collection-page"></div>
 
 </div>
   
@@ -507,19 +512,6 @@ markers.push(marker)
 }
 
 }
-/************************************************
-DISCOVERY TYPE (GAME FEEL RESTORED)
-************************************************/
-
-function getDiscovery(distance){
-
-if(distance<0.05) return "Landmark"
-if(distance<0.1) return "Notable"
-if(distance<0.2) return "HiddenGem"
-
-return "Secret"
-
-}
 
 /************************************************
 PREVIEW JOURNEY (VIDEO + ORDERED)
@@ -1210,27 +1202,6 @@ page.appendChild(div)
 
 }
 
-<!-- ENCOUNTER CARD -->
-<div id="encounter">
-
-<h2 id="encounter-title"></h2>
-
-<div id="encounter-badge" class="badge"></div>
-
-<img id="encounter-image">
-
-<textarea id="note" placeholder="Write something..."></textarea>
-
-<div style="display:flex;gap:8px;margin-top:10px;">
-<button onclick="saveEncounter()">Collect</button>
-<button onclick="closeEncounter()">Close</button>
-</div>
-
-</div>
-
-<!-- COLLECTION PAGE -->
-<div id="collection-page"></div>
-  
 </script>
 </body>
 </html>
