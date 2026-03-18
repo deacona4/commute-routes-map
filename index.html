@@ -332,60 +332,31 @@ return new Promise(resolve=>setTimeout(resolve,ms))
 }
 
 function cacheKeyFromCoord(coord){
-return coord[0].toFixed(3)+","+coord[1].toFixed(3)
-}
-
-function toRadians(value){
-return value*Math.PI/180
+return `${coord[0].toFixed(3)},${coord[1].toFixed(3)}`
 }
 
 function distanceMeters(a,b){
-var lat1=a[1]
-var lng1=a[0]
-var lat2=b[1]
-var lng2=b[0]
-var earthRadius=6371000
-var dLat=toRadians(lat2-lat1)
-var dLng=toRadians(lng2-lng1)
-var lat1Rad=toRadians(lat1)
-var lat2Rad=toRadians(lat2)
-var sinLat=Math.sin(dLat/2)
-var sinLng=Math.sin(dLng/2)
-var hav=(sinLat*sinLat)+
-(Math.cos(lat1Rad)*Math.cos(lat2Rad)*sinLng*sinLng)
+const toRad=value=>value*Math.PI/180
+const [lng1,lat1]=a
+const [lng2,lat2]=b
+const earthRadius=6371000
+const dLat=toRad(lat2-lat1)
+const dLng=toRad(lng2-lng1)
+const lat1Rad=toRad(lat1)
+const lat2Rad=toRad(lat2)
+const hav=Math.sin(dLat/2)**2+
+Math.cos(lat1Rad)*Math.cos(lat2Rad)*Math.sin(dLng/2)**2
 return 2*earthRadius*Math.asin(Math.sqrt(hav))
 }
 
-function routeLengthKm(coords){
-var total=0
-for(var i=1;i<coords.length;i++){
-total+=distanceMeters(coords[i-1],coords[i])
-}
-return total/1000
-}
+const km=turf.distance(
+turf.point(a),
+turf.point(b),
+{units:"kilometers"}
+)
 
-function interpolateCoord(a,b,ratio){
-return [
-a[0]+((b[0]-a[0])*ratio),
-a[1]+((b[1]-a[1])*ratio)
-]
-}
+return km*1000
 
-function pointAlongRoute(coords,distanceKm){
-if(!coords.length) return null
-if(coords.length===1) return coords[0]
-var traveledMeters=0
-var targetMeters=distanceKm*1000
-for(var i=1;i<coords.length;i++){
-var segmentMeters=distanceMeters(coords[i-1],coords[i])
-if(traveledMeters+segmentMeters>=targetMeters){
-var remaining=targetMeters-traveledMeters
-var ratio=segmentMeters===0?0:remaining/segmentMeters
-return interpolateCoord(coords[i-1],coords[i],ratio)
-}
-traveledMeters+=segmentMeters
-}
-return coords[coords.length-1]
 }
 
 function setEncounterStatus(msg,show=true){
@@ -793,6 +764,24 @@ for(const c of candidates){
 
 c.score = scoreCulturalSite(c,c.routePoint)
 
+for(const c of candidates){
+const key=`${c.name}-${c.coords[0].toFixed(5)}-${c.coords[1].toFixed(5)}`
+if(!seenKeys.has(key)){
+seenKeys.add(key)
+deduped.push(c)
+}
+}
+
+const seenKeys=new Set()
+
+const deduped=[]
+
+for(const c of candidates){
+const key=`${c.name}-${c.coords[0].toFixed(5)}-${c.coords[1].toFixed(5)}`
+if(!seenKeys.has(key)){
+seenKeys.add(key)
+deduped.push(c)
+}
 }
 
 const seenKeys=new Set()
@@ -916,8 +905,8 @@ out;
 `
 
 const endpoints=[
-"https://overpass.kumi.systems/api/interpreter",
-"https://overpass.openstreetmap.fr/api/interpreter"
+"https://overpass-api.de/api/interpreter",
+"https://overpass.kumi.systems/api/interpreter"
 ]
 
 let data
