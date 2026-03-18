@@ -157,6 +157,23 @@ padding:20px;
 </div>
 
 <div id="map"></div>
+<div id="encounter">
+<div id="collection-page"></div>
+<h2 id="encounter-title"></h2>
+
+<div id="encounter-badge" class="badge"></div>
+
+<img id="encounter-image">
+
+<textarea id="note" placeholder="Write something..."></textarea>
+
+<div style="display:flex;gap:8px;margin-top:10px;">
+<button onclick="saveEncounter()">Collect</button>
+<button onclick="closeEncounter()">Close</button>
+</div>
+
+</div>
+  
 <script>
 
 /************************************************
@@ -189,6 +206,9 @@ let uploadedPhotoBase64=null
 let previewFrames=[]
 
 let USER_ID=localStorage.getItem("hg_user")
+function sleep(ms){
+  return new Promise(resolve => setTimeout(resolve, ms))
+}  
 
 if(!USER_ID){
 USER_ID=crypto.randomUUID()
