@@ -298,7 +298,7 @@ Walking Mode
 /************************************************
 CONFIG
 ************************************************/
-
+const BACKEND_URL = "https://script.google.com/macros/s/AKfycbzx6xgTCHZvRroPaeKNgT5drT1WxiwFiA6CygMYteLuFTdjYakK2V33XffK55EEnb-V/exec"
 mapboxgl.accessToken="pk.eyJ1IjoiYmlnYWwxIiwiYSI6ImNtbWIzODZuaDA0cWYycXIyMXVydmx1eDkifQ.2tS6Ro5jbDlGjbR74_Ox0Q"
 
 /************************************************
@@ -852,110 +852,66 @@ return 7
 }
 
 /************************************************
-FETCH CULTURAL SITES
+FETCH CULTURAL SITES (FIXED)
 ************************************************/
+async function fetchNearbySites(coord){
 
-async function fetchWikipediaNearbySites(coord){
-
-const cacheKey=cacheKeyFromCoord(coord)
-STATE.encounterFetchAttempts+=1
+const cacheKey = cacheKeyFromCoord(coord)
 
 if(STATE.overpassCache.has(cacheKey)){
-return STATE.overpassCache.get(cacheKey)
+  return STATE.overpassCache.get(cacheKey)
 }
 
-const lat=coord[1]
-const lng=coord[0]
-const url=`https://en.wikipedia.org/w/api.php?action=query&format=json&origin=*&list=geosearch&gscoord=${lat}|${lng}&gsradius=350&gslimit=20&gsnamespace=0`
+const lat = coord[1]
+const lng = coord[0]
 
-const query=`
-[out:json][timeout:20];
-(
-  nwr(around:350,${lat},${lng})["tourism"="museum"];
-  nwr(around:350,${lat},${lng})["tourism"="gallery"];
-  nwr(around:350,${lat},${lng})["amenity"="theatre"];
-  nwr(around:350,${lat},${lng})["tourism"="artwork"];
-  nwr(around:350,${lat},${lng})["historic"];
-  nwr(around:350,${lat},${lng})["tourism"="attraction"];
-);
-out center;
-`
-
-const endpoints=[
-"https://overpass.kumi.systems/api/interpreter",
-"https://overpass.openstreetmap.fr/api/interpreter"
-]
-
-let data
-
-for(let attempt=0;attempt<3;attempt++){
-
-for(const endpoint of endpoints){
+STATE.encounterFetchAttempts += 1
 
 try{
 
-const res = await fetch(endpoint,{method:"POST",body:query})
+const res = await fetch(
+  `${BACKEND_URL}?action=overpass&lat=${lat}&lng=${lng}`
+)
 
-if(res.status===429){
-await sleep(600*(attempt+1))
-continue
+if(!res.ok){
+  return []
 }
 
-if(!res.ok) continue
+const data = await res.json()
 
-data = await res.json()
-break
+const sites = []
+
+for(const el of data.elements || []){
+
+  const point =
+    el.type === "node"
+      ? [el.lon, el.lat]
+      : el.center
+      ? [el.center.lon, el.center.lat]
+      : null
+
+  if(!point) continue
+
+  sites.push({
+    name: el.tags?.name || "Cultural Site",
+    coords: point,
+    tags: el.tags || {}
+  })
+}
+
+STATE.overpassCache.set(cacheKey, sites)
+
+if(sites.length){
+  STATE.encounterFetchSuccesses += 1
+}
+
+return sites
 
 }catch(e){
 
-/* try next endpoint */
-
-}
-
-}
-
-if(data) break
-
-await sleep(500*(attempt+1))
-
-}
-
-if(!data?.elements){
-STATE.overpassCache.set(cacheKey,[])
-return []
-}
-
 return []
 
 }
-
-const point =
-el.type === "node"
-? [el.lon,el.lat]
-: el.center
-? [el.center.lon,el.center.lat]
-: null
-
-if(!point) continue
-
-sites.push({
-name:el.tags?.name || "Cultural Site",
-coords:point,
-tags:el.tags
-})
-
-async function fetchNearbySites(coord){
-
-const cacheKey=cacheKeyFromCoord(coord)
-STATE.encounterFetchAttempts+=1
-
-if(STATE.overpassCache.has(cacheKey)){
-return STATE.overpassCache.get(cacheKey)
-}
-
-STATE.overpassCache.set(cacheKey,sites)
-
-return sites
 
 }
 
