@@ -870,14 +870,14 @@ const lng=coord[0]
 const query=`
 [out:json][timeout:20];
 (
-node(around:350,${lat},${lng})["tourism"="museum"];
-node(around:350,${lat},${lng})["tourism"="gallery"];
-node(around:350,${lat},${lng})["amenity"="theatre"];
-node(around:350,${lat},${lng})["tourism"="artwork"];
-node(around:350,${lat},${lng})["historic"];
-node(around:350,${lat},${lng})["tourism"="attraction"];
+  nwr(around:350,${lat},${lng})["tourism"="museum"];
+  nwr(around:350,${lat},${lng})["tourism"="gallery"];
+  nwr(around:350,${lat},${lng})["amenity"="theatre"];
+  nwr(around:350,${lat},${lng})["tourism"="artwork"];
+  nwr(around:350,${lat},${lng})["historic"];
+  nwr(around:350,${lat},${lng})["tourism"="attraction"];
 );
-out;
+out center;
 `
 
 const endpoints=[
@@ -928,9 +928,18 @@ const sites=[]
 
 for(const el of data.elements){
 
+const point =
+el.type === "node"
+? [el.lon,el.lat]
+: el.center
+? [el.center.lon,el.center.lat]
+: null
+
+if(!point) continue
+
 sites.push({
 name:el.tags?.name || "Cultural Site",
-coords:[el.lon,el.lat],
+coords:point,
 tags:el.tags
 })
 
