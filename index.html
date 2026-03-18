@@ -154,6 +154,7 @@ padding:20px;
 <button onclick="stopWalk()">End Walk</button>
 <button onclick="openCollection()">Collection</button>
 <button onclick="saveCurrentRoute()">Save Route</button>
+<button onclick="sharePreview()">Share Preview</button>
 </div>
 
 <div id="map"></div>
@@ -606,18 +607,37 @@ recorder.onstop=()=>res(new Blob(chunks,{type:"video/webm"}))
 /* SHARE */
 const file=new File([blob],"walk.webm",{type:"video/webm"})
 
-if(navigator.share && navigator.canShare?.({files:[file]})){
-navigator.share({files:[file]})
+/* STORE VIDEO FOR LATER SHARE */
+window.previewVideoFile = file
+
+alert("Preview ready! Tap 'Share Preview' button.")
+
+}
+
+function sharePreview(){
+
+if(!window.previewVideoFile){
+alert("No preview yet")
+return
+}
+
+if(navigator.share && navigator.canShare?.({files:[window.previewVideoFile]})){
+navigator.share({
+files:[window.previewVideoFile],
+title:"My Hot Girl Walk"
+})
 }else{
-const url=URL.createObjectURL(blob)
-const a=document.createElement("a")
-a.href=url
-a.download="walk.webm"
+
+const url = URL.createObjectURL(window.previewVideoFile)
+
+const a = document.createElement("a")
+a.href = url
+a.download = "walk.webm"
 a.click()
-}
 
 }
 
+}
 /************************************************
 WALK MODE
 ************************************************/
@@ -728,7 +748,15 @@ openEncounter(site)
 /************************************************
 ENCOUNTER CARD
 ************************************************/
+function getDiscovery(distance){
 
+if(distance < 0.05) return "Landmark"
+if(distance < 0.1) return "Notable"
+if(distance < 0.2) return "HiddenGem"
+
+return "Secret"
+
+}
 async function openEncounter(site){
 
 currentEncounter=site
