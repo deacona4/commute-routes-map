@@ -855,7 +855,7 @@ return 7
 FETCH CULTURAL SITES
 ************************************************/
 
-async function fetchNearbySites(coord){
+async function fetchWikipediaNearbySites(coord){
 
 const cacheKey=cacheKeyFromCoord(coord)
 STATE.encounterFetchAttempts+=1
@@ -866,6 +866,7 @@ return STATE.overpassCache.get(cacheKey)
 
 const lat=coord[1]
 const lng=coord[0]
+const url=`https://en.wikipedia.org/w/api.php?action=query&format=json&origin=*&list=geosearch&gscoord=${lat}|${lng}&gsradius=350&gslimit=20&gsnamespace=0`
 
 const query=`
 [out:json][timeout:20];
@@ -924,9 +925,9 @@ STATE.overpassCache.set(cacheKey,[])
 return []
 }
 
-const sites=[]
+return []
 
-for(const el of data.elements){
+}
 
 const point =
 el.type === "node"
@@ -943,6 +944,13 @@ coords:point,
 tags:el.tags
 })
 
+async function fetchNearbySites(coord){
+
+const cacheKey=cacheKeyFromCoord(coord)
+STATE.encounterFetchAttempts+=1
+
+if(STATE.overpassCache.has(cacheKey)){
+return STATE.overpassCache.get(cacheKey)
 }
 
 STATE.overpassCache.set(cacheKey,sites)
@@ -972,6 +980,7 @@ if(tags.historic) score += 2
 /* named place */
 
 if(tags.name) score += 1
+if(tags.source === "wikipedia") score += 2
 
 /* proximity bonus */
 
