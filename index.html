@@ -5,6 +5,8 @@
 <meta charset="utf-8">
 <title>Hot Girl Walk</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="build-id" content="2026-03-18-pages-redeploy-1">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 64%22%3E%3Ccircle cx=%2232%22 cy=%2232%22 r=%2230%22 fill=%22%23ff2fa3%22/%3E%3Ctext x=%2232%22 y=%2240%22 font-size=%2232%22 text-anchor=%22middle%22 fill=%22white%22 font-family=%22Arial%22%3EH%3C/text%3E%3C/svg%3E">
 
 <link href="https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.css" rel="stylesheet">
 <script src="https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.js"></script>
@@ -12,7 +14,6 @@
 <link href="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v5.0.0/mapbox-gl-geocoder.css" rel="stylesheet">
 <script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v5.0.0/mapbox-gl-geocoder.min.js"></script>
 
-<script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
 
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
 
@@ -78,6 +79,22 @@ display:flex;
 flex-direction:column;
 gap:10px;
 z-index:10;
+transition:all .25s ease;
+overflow:hidden;
+}
+
+#search-panel.collapsed{
+width:180px;
+padding:10px 12px;
+gap:0;
+opacity:.92;
+}
+
+#search-panel.collapsed #start-search,
+#search-panel.collapsed #dest-search,
+#search-panel.collapsed #gps-btn,
+#search-panel.collapsed #route-button{
+display:none;
 }
 
 /* NAV */
@@ -156,6 +173,70 @@ border-radius:10px;
 cursor:pointer;
 }
 
+
+
+/* PREVIEW PLAYER */
+
+#preview-player{
+position:absolute;
+inset:0;
+background:rgba(0,0,0,.72);
+display:none;
+justify-content:center;
+align-items:center;
+z-index:80;
+}
+
+.preview-card{
+width:min(420px,92vw);
+background:#fff7ec;
+border:4px solid #ff2fa3;
+border-radius:16px;
+padding:14px;
+box-shadow:0 10px 30px rgba(0,0,0,.35);
+}
+
+#preview-frame{
+width:100%;
+aspect-ratio:9/16;
+object-fit:cover;
+border-radius:10px;
+background:#ffe3f3;
+}
+
+.preview-actions{
+display:flex;
+gap:10px;
+margin-top:10px;
+}
+
+.preview-actions button{
+flex:1;
+border:none;
+padding:10px 12px;
+border-radius:10px;
+font-weight:700;
+cursor:pointer;
+}
+
+#share-story-btn{background:#ff2fa3;color:#fff;}
+#end-preview-btn{background:#222;color:#fff;}
+
+#encounter-status{
+position:absolute;
+top:14px;
+left:50%;
+transform:translateX(-50%);
+background:rgba(255,255,255,.92);
+padding:8px 12px;
+border-radius:12px;
+font-size:13px;
+font-weight:600;
+z-index:30;
+display:none;
+box-shadow:0 4px 16px rgba(0,0,0,.2);
+}
+
 </style>
 </head>
 
@@ -167,7 +248,7 @@ Walking Mode
 
 <div id="home-screen">
 <div class="home-title">Hot Girl Walk</div>
-<button class="start-button" onclick="startApp()">Start Walk</button>
+<button id="start-btn" class="start-button">Start Walk</button>
 </div>
 
 <div id="search-panel">
@@ -187,6 +268,7 @@ Walking Mode
 </div>
 
 <div id="map"></div>
+<div id="encounter-status"></div>
 
 <div id="encounter">
 
@@ -197,6 +279,17 @@ Walking Mode
 
 <button class="close-btn" onclick="closeEncounter()">Close</button>
 
+</div>
+
+
+<div id="preview-player">
+<div class="preview-card">
+<img id="preview-frame" alt="Preview story frame">
+<div class="preview-actions">
+<button id="share-story-btn">Share to Stories</button>
+<button id="end-preview-btn">End Preview</button>
+</div>
+</div>
 </div>
 
 <script>
@@ -219,8 +312,16 @@ routeCoords:null,
 encounters:[],
 markers:[],
 userMarker:null,
-walkWatcher:null
-}
+walkWatcher:null,
+startGeocoder:null,
+destGeocoder:null
+};
+
+STATE.overpassCache=new Map()
+STATE.previewInterval=null
+STATE.previewFrameIndex=0
+STATE.encounterFetchAttempts=0
+STATE.encounterFetchSuccesses=0
 
 let previewFrames=[]
 
@@ -232,15 +333,180 @@ function sleep(ms){
 return new Promise(resolve=>setTimeout(resolve,ms))
 }
 
-function distanceMeters(a,b){
+function cacheKeyFromCoord(coord){
+return coord[0].toFixed(3)+","+coord[1].toFixed(3);
+}
 
-return turf.distance(
-turf.point(a),
-turf.point(b),
-{units:"meters"}
-)
+function toRadians(value){
+return value*Math.PI/180;
+}
+
+var distanceMeters=function(a,b){
+var lat1=a[1];
+var lng1=a[0];
+var lat2=b[1];
+var lng2=b[0];
+var earthRadius=6371000;
+var dLat=toRadians(lat2-lat1);
+var dLng=toRadians(lng2-lng1);
+var lat1Rad=toRadians(lat1);
+var lat2Rad=toRadians(lat2);
+var sinLat=Math.sin(dLat/2);
+var sinLng=Math.sin(dLng/2);
+var hav=(sinLat*sinLat)+(
+Math.cos(lat1Rad)*Math.cos(lat2Rad)*sinLng*sinLng
+);
+return 2*earthRadius*Math.asin(Math.sqrt(hav));
+};
+
+var routeLengthKm=function(coords){
+var total=0;
+for(var i=1;i<coords.length;i++){
+total+=distanceMeters(coords[i-1],coords[i]);
+}
+return total/1000;
+};
+
+function interpolateCoord(a,b,ratio){
+return [
+a[0]+((b[0]-a[0])*ratio),
+a[1]+((b[1]-a[1])*ratio)
+];
+}
+
+var pointAlongRoute=function(coords,distanceKm){
+if(!coords.length) return null;
+if(coords.length===1) return coords[0];
+var traveledMeters=0;
+var targetMeters=distanceKm*1000;
+for(var i=1;i<coords.length;i++){
+var segmentMeters=distanceMeters(coords[i-1],coords[i]);
+if(traveledMeters+segmentMeters>=targetMeters){
+var remaining=targetMeters-traveledMeters;
+var ratio=segmentMeters===0?0:remaining/segmentMeters;
+return interpolateCoord(coords[i-1],coords[i],ratio);
+}
+traveledMeters+=segmentMeters;
+}
+return coords[coords.length-1];
+};
+
+function setEncounterStatus(msg,show=true){
+const el=document.getElementById("encounter-status")
+if(!el) return
+el.innerText=msg
+el.style.display=show?"block":"none"
+}
+
+function buildFallbackFrame(index){
+const c=document.createElement("canvas")
+c.width=540
+c.height=960
+const ctx=c.getContext("2d")
+ctx.fillStyle="#ffe3f3"
+ctx.fillRect(0,0,c.width,c.height)
+ctx.fillStyle="#ff2fa3"
+ctx.font="bold 42px Inter"
+ctx.fillText("Hot Girl Walk",95,140)
+ctx.fillStyle="#333"
+ctx.font="30px Inter"
+ctx.fillText(`Preview stop ${index+1}`,130,220)
+ctx.fillStyle="#ff2fa3"
+ctx.font="24px Inter"
+ctx.fillText("Map preview unavailable",120,300)
+return c.toDataURL("image/jpeg")
+}
+
+function captureMapFrame(index){
+try{
+const frame=STATE.map.getCanvas().toDataURL("image/jpeg")
+if(!frame || frame === "data:,") return buildFallbackFrame(index)
+return frame
+}catch(e){
+return buildFallbackFrame(index)
+}
+}
+
+function setSearchPanelCollapsed(collapsed){
+const panel=document.getElementById("search-panel")
+if(!panel) return
+panel.classList.toggle("collapsed",collapsed)
+}
+
+async function reverseGeocode(coord){
+const [lng,lat]=coord
+const url=`https://api.mapbox.com/geocoding/v5/mapbox.places/${lng},${lat}.json?types=address,poi,place&limit=1&access_token=${mapboxgl.accessToken}`
+try{
+const res=await fetch(url)
+if(!res.ok) return `${lat.toFixed(5)}, ${lng.toFixed(5)}`
+const data=await res.json()
+return data.features?.[0]?.place_name || `${lat.toFixed(5)}, ${lng.toFixed(5)}`
+}catch(e){
+return `${lat.toFixed(5)}, ${lng.toFixed(5)}`
+}
+}
+
+async function createPreviewVideoBlob(){
+if(!previewFrames.length) return null
+
+const canvas=document.createElement("canvas")
+canvas.width=540
+canvas.height=960
+const ctx=canvas.getContext("2d")
+if(!ctx || !canvas.captureStream || typeof MediaRecorder==="undefined") return null
+
+const stream=canvas.captureStream(2)
+const mime=MediaRecorder.isTypeSupported("video/webm;codecs=vp9") ? "video/webm;codecs=vp9" : "video/webm"
+let recorder
+try{
+recorder=new MediaRecorder(stream,{mimeType:mime})
+}catch(e){
+return null
+}
+const chunks=[]
+
+recorder.ondataavailable=e=>{
+if(e.data && e.data.size) chunks.push(e.data)
+}
+
+const done=new Promise(resolve=>{
+recorder.onstop=()=>resolve(new Blob(chunks,{type:"video/webm"}))
+})
+
+recorder.start()
+
+for(const src of previewFrames){
+const img=new Image()
+await new Promise(resolve=>{
+img.onload=resolve
+img.onerror=resolve
+img.src=src
+})
+ctx.fillStyle="#000"
+ctx.fillRect(0,0,canvas.width,canvas.height)
+ctx.drawImage(img,0,0,canvas.width,canvas.height)
+await sleep(800)
+}
+
+recorder.stop()
+return await done
+}
+
+
+function initRootHandlers(){
+
+const startBtn=document.getElementById("start-btn")
+
+if(startBtn){
+startBtn.onclick=startApp
+}
+
+/* keep global for backward compatibility with old inline handlers */
+window.startApp=startApp
 
 }
+
+initRootHandlers()
 
 /************************************************
 APP START
@@ -266,7 +532,8 @@ container:"map",
 style:"mapbox://styles/mapbox/streets-v12",
 center:[-0.1276,51.5072],
 zoom:12,
-pitch:40
+pitch:40,
+preserveDrawingBuffer:true
 
 })
 
@@ -292,6 +559,8 @@ document.getElementById("route-button").onclick=generateRoute
 document.getElementById("preview-btn").onclick=previewJourney
 document.getElementById("walk-btn").onclick=startWalk
 document.getElementById("stop-btn").onclick=stopWalk
+document.getElementById("end-preview-btn").onclick=endPreview
+document.getElementById("share-story-btn").onclick=createPreviewStory
 
 }
 
@@ -301,7 +570,7 @@ SEARCH
 
 function initSearch(){
 
-const startGeocoder=new MapboxGeocoder({
+STATE.startGeocoder=new MapboxGeocoder({
 accessToken:mapboxgl.accessToken,
 mapboxgl:mapboxgl,
 placeholder:"Start location",
@@ -311,13 +580,13 @@ marker:false
 
 document
 .getElementById("start-search")
-.appendChild(startGeocoder.onAdd(STATE.map))
+.appendChild(STATE.startGeocoder.onAdd(STATE.map))
 
-startGeocoder.on("result",e=>{
+STATE.startGeocoder.on("result",e=>{
 STATE.startCoords=e.result.center
 })
 
-const destGeocoder=new MapboxGeocoder({
+STATE.destGeocoder=new MapboxGeocoder({
 accessToken:mapboxgl.accessToken,
 mapboxgl:mapboxgl,
 placeholder:"Destination",
@@ -327,9 +596,9 @@ marker:false
 
 document
 .getElementById("dest-search")
-.appendChild(destGeocoder.onAdd(STATE.map))
+.appendChild(STATE.destGeocoder.onAdd(STATE.map))
 
-destGeocoder.on("result",e=>{
+STATE.destGeocoder.on("result",e=>{
 STATE.destinationCoords=e.result.center
 })
 
@@ -341,7 +610,17 @@ GPS
 
 function requestGPS(){
 
-navigator.geolocation.getCurrentPosition(pos=>{
+if(!STATE.map){
+alert("Start the app first.")
+return
+}
+
+if(!navigator.geolocation){
+alert("Geolocation is not supported in this browser.")
+return
+}
+
+navigator.geolocation.getCurrentPosition(async pos=>{
 
 STATE.startCoords=[pos.coords.longitude,pos.coords.latitude]
 
@@ -349,6 +628,15 @@ STATE.map.flyTo({
 center:STATE.startCoords,
 zoom:15
 })
+
+const label=await reverseGeocode(STATE.startCoords)
+if(STATE.startGeocoder){
+STATE.startGeocoder.setInput(label)
+}
+
+},()=>{
+
+alert("Unable to access GPS. Please allow location permissions.")
 
 })
 
@@ -360,16 +648,43 @@ ROUTE
 
 async function generateRoute(){
 
+if(!STATE.startCoords || !STATE.destinationCoords){
+alert("Please choose both a start and destination.")
+return
+}
+
 const url=`https://api.mapbox.com/directions/v5/mapbox/walking/${STATE.startCoords[0]},${STATE.startCoords[1]};${STATE.destinationCoords[0]},${STATE.destinationCoords[1]}?geometries=geojson&access_token=${mapboxgl.accessToken}`
 
+let data
+
+try{
+
 const res=await fetch(url)
-const data=await res.json()
+
+if(!res.ok){
+alert("Could not fetch route right now. Please try again.")
+return
+}
+
+data=await res.json()
+
+}catch(e){
+
+alert("Network error while generating route. Please try again.")
+return
+
+}
+
+if(!data.routes || !data.routes.length){
+alert("No walking route was found for these points.")
+return
+}
 
 STATE.routeCoords=data.routes[0].geometry.coordinates
 
 drawRoute()
 
-loadEncounters()
+await loadEncounters()
 
 }
 
@@ -407,6 +722,13 @@ paint:{
 
 }
 
+const bounds=STATE.routeCoords.reduce(
+(b,coord)=>b.extend(coord),
+new mapboxgl.LngLatBounds(STATE.routeCoords[0],STATE.routeCoords[0])
+)
+
+STATE.map.fitBounds(bounds,{padding:60,maxZoom:16,duration:900})
+
 }
 /************************************************
 DISCOVERY ENGINE
@@ -414,37 +736,57 @@ DISCOVERY ENGINE
 
 async function loadEncounters(){
 
+if(!STATE.routeCoords || STATE.routeCoords.length<2) return
+
+setEncounterStatus("Finding discoveries on your route…")
+STATE.encounterFetchAttempts=0
+STATE.encounterFetchSuccesses=0
+
 clearMarkers()
 
 STATE.encounters=[]
 
-const line = turf.lineString(STATE.routeCoords)
-
-const length = turf.length(line,{units:"kilometers"})
+const length = routeLengthKm(STATE.routeCoords)
 
 const scanPoints=[]
 
-/* scan route every ~150m */
+/* scan route every ~150m with a hard cap to avoid API rate limits */
 
-const segments = Math.floor(length*1000/150)
+const rawSegments = Math.max(1,Math.floor(length*1000/250))
+const segments = Math.min(rawSegments,10)
 
 for(let i=0;i<=segments;i++){
 
 const dist=(length/segments)*i
 
-const pt=turf.along(line,dist,{units:"kilometers"})
+const pt=pointAlongRoute(STATE.routeCoords,dist)
 
-scanPoints.push(pt.geometry.coordinates)
+if(pt) scanPoints.push(pt)
 
 }
 
 const candidates=[]
+const uniqueScanPoints=[]
+const seenScanPoints=new Set()
 
 for(const p of scanPoints){
+const key=cacheKeyFromCoord(p)
+if(!seenScanPoints.has(key)){
+seenScanPoints.add(key)
+uniqueScanPoints.push(p)
+}
+}
+
+for(const p of uniqueScanPoints){
 
 const sites = await fetchNearbySites(p)
 
-candidates.push(...sites)
+if(sites.length) STATE.encounterFetchSuccesses+=1
+
+candidates.push(...sites.map(site=>({...site,routePoint:p})))
+
+/* tiny pause helps prevent 429 bursts on long routes */
+await sleep(90)
 
 }
 
@@ -452,13 +794,25 @@ candidates.push(...sites)
 
 for(const c of candidates){
 
-c.score = scoreCulturalSite(c,c.coords)
+c.score = scoreCulturalSite(c,c.routePoint)
 
+}
+
+const seenKeys=new Set()
+
+const deduped=[]
+
+for(const c of candidates){
+const key=`${c.name}-${c.coords[0].toFixed(5)}-${c.coords[1].toFixed(5)}`
+if(!seenKeys.has(key)){
+seenKeys.add(key)
+deduped.push(c)
+}
 }
 
 /* sort best first */
 
-candidates.sort((a,b)=>b.score-a.score)
+deduped.sort((a,b)=>b.score-a.score)
 
 /* spread encounters */
 
@@ -466,7 +820,7 @@ const chosen=[]
 
 const minSpacing = 450
 
-for(const site of candidates){
+for(const site of deduped){
 
 let tooClose=false
 
@@ -491,9 +845,30 @@ if(chosen.length >= getEncounterCount()) break
 
 }
 
+if(!chosen.length){
+setEncounterStatus("No API results yet — using scenic stops instead.")
+const fallbackCount=Math.min(getEncounterCount(),Math.max(2,Math.floor(STATE.routeCoords.length/4)))
+for(let i=1;i<=fallbackCount;i++){
+const idx=Math.min(
+STATE.routeCoords.length-1,
+Math.floor((i/(fallbackCount+1))*STATE.routeCoords.length)
+)
+chosen.push({
+name:`Scenic Stop ${i}`,
+coords:STATE.routeCoords[idx],
+tags:{name:`Scenic Stop ${i}`},
+score:0
+})
+}
+}
+
 STATE.encounters = chosen
 
 renderEncounterMarkers()
+
+setEncounterStatus(`${STATE.encounters.length} discoveries ready`,true)
+setTimeout(()=>setEncounterStatus("",false),2500)
+console.info("encounters_loaded",{count:STATE.encounters.length,fetchAttempts:STATE.encounterFetchAttempts,fetchSuccesses:STATE.encounterFetchSuccesses})
 
 }
 
@@ -503,9 +878,7 @@ DYNAMIC ENCOUNTER COUNT
 
 function getEncounterCount(){
 
-const line=turf.lineString(STATE.routeCoords)
-
-const length=turf.length(line,{units:"kilometers"})
+const length=routeLengthKm(STATE.routeCoords)
 
 if(length < 1) return 3
 if(length < 2) return 4
@@ -522,11 +895,18 @@ FETCH CULTURAL SITES
 
 async function fetchNearbySites(coord){
 
+const cacheKey=cacheKeyFromCoord(coord)
+STATE.encounterFetchAttempts+=1
+
+if(STATE.overpassCache.has(cacheKey)){
+return STATE.overpassCache.get(cacheKey)
+}
+
 const lat=coord[1]
 const lng=coord[0]
 
 const query=`
-[out:json];
+[out:json][timeout:20];
 (
 node(around:350,${lat},${lng})["tourism"="museum"];
 node(around:350,${lat},${lng})["tourism"="gallery"];
@@ -538,14 +918,49 @@ node(around:350,${lat},${lng})["tourism"="attraction"];
 out;
 `
 
-const res = await fetch(
-"https://overpass-api.de/api/interpreter",
-{method:"POST",body:query}
-)
+const endpoints=[
+"https://overpass.kumi.systems/api/interpreter",
+"https://overpass.openstreetmap.fr/api/interpreter"
+]
 
-const data = await res.json()
+let data
 
-if(!data.elements) return []
+for(let attempt=0;attempt<3;attempt++){
+
+for(const endpoint of endpoints){
+
+try{
+
+const res = await fetch(endpoint,{method:"POST",body:query})
+
+if(res.status===429){
+await sleep(600*(attempt+1))
+continue
+}
+
+if(!res.ok) continue
+
+data = await res.json()
+break
+
+}catch(e){
+
+/* try next endpoint */
+
+}
+
+}
+
+if(data) break
+
+await sleep(500*(attempt+1))
+
+}
+
+if(!data?.elements){
+STATE.overpassCache.set(cacheKey,[])
+return []
+}
 
 const sites=[]
 
@@ -558,6 +973,8 @@ tags:el.tags
 })
 
 }
+
+STATE.overpassCache.set(cacheKey,sites)
 
 return sites
 
@@ -716,6 +1133,8 @@ PREVIEW ENGINE
 
 async function previewJourney(){
 
+setSearchPanelCollapsed(true)
+
 if(!STATE.routeCoords){
 alert("Generate a route first")
 return
@@ -739,17 +1158,62 @@ duration:1400
 
 pulseEncounter(coord)
 
-await sleep(1500)
+await sleep(1550)
 
 /* capture frame */
 
-const frame = STATE.map.getCanvas().toDataURL("image/jpeg")
+const frame = captureMapFrame(previewFrames.length)
 
 previewFrames.push(frame)
 
 }
 
-createPreviewStory()
+openPreviewPlayer()
+
+}
+
+
+/************************************************
+PREVIEW PLAYER
+************************************************/
+
+function openPreviewPlayer(){
+
+if(!previewFrames.length){
+alert("No preview frames were generated.")
+return
+}
+
+const player=document.getElementById("preview-player")
+const frame=document.getElementById("preview-frame")
+
+player.style.display="flex"
+STATE.previewFrameIndex=0
+frame.src=previewFrames[0]
+
+if(STATE.previewInterval){
+clearInterval(STATE.previewInterval)
+}
+
+STATE.previewInterval=setInterval(()=>{
+if(!previewFrames.length) return
+STATE.previewFrameIndex=(STATE.previewFrameIndex+1)%previewFrames.length
+frame.src=previewFrames[STATE.previewFrameIndex]
+},900)
+
+}
+
+function endPreview(){
+
+setSearchPanelCollapsed(false)
+
+const player=document.getElementById("preview-player")
+player.style.display="none"
+
+if(STATE.previewInterval){
+clearInterval(STATE.previewInterval)
+STATE.previewInterval=null
+}
 
 }
 
@@ -840,26 +1304,42 @@ y+=60
 
 canvas.toBlob(async blob=>{
 
-const file=new File([blob],"hot-girl-walk-story.png",{type:"image/png"})
+if(!blob) return
+
+const imageFile=new File([blob],"hot-girl-walk-story.png",{type:"image/png"})
+
+const videoBlob=await createPreviewVideoBlob()
+const videoFile=videoBlob ? new File([videoBlob],"hot-girl-walk-story.webm",{type:"video/webm"}) : null
 
 if(navigator.share){
 
+try{
+
 await navigator.share({
-files:[file],
+files:videoFile?[videoFile]:[imageFile],
 title:"Hot Girl Walk",
 text:"My cultural walk"
 })
 
+}catch(e){
+
+/* ignore cancelled share */
+
+}
+
 }else{
 
-const url=URL.createObjectURL(blob)
+const downloadable=videoFile || imageFile
+const url=URL.createObjectURL(downloadable)
 
 const a=document.createElement("a")
 a.href=url
-a.download="hot-girl-walk-story.png"
+a.download=downloadable.name
 a.click()
 
 }
+
+endPreview()
 
 })
 
@@ -871,16 +1351,38 @@ WALK MODE
 
 function startWalk(){
 
+setSearchPanelCollapsed(true)
+
+if(!STATE.map){
+alert("Start the app first.")
+return
+}
+
+if(!navigator.geolocation){
+alert("Geolocation is not supported in this browser.")
+return
+}
+
+if(STATE.walkWatcher){
+navigator.geolocation.clearWatch(STATE.walkWatcher)
+STATE.walkWatcher=null
+}
+
 document.getElementById("walk-indicator").style.display="block"
 
-STATE.walkWatcher=navigator.geolocation.watchPosition(updateUserPosition)
+STATE.walkWatcher=navigator.geolocation.watchPosition(updateUserPosition,()=>{
+alert("Unable to start walk tracking. Please allow location access.")
+})
 
 }
 
 function stopWalk(){
 
+setSearchPanelCollapsed(false)
+
 if(STATE.walkWatcher){
 navigator.geolocation.clearWatch(STATE.walkWatcher)
+STATE.walkWatcher=null
 }
 
 document.getElementById("walk-indicator").style.display="none"
