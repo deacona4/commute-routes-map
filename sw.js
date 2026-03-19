@@ -3,5 +3,4 @@ self.addEventListener("install", e => {
 })
 
 self.addEventListener("fetch", e => {})
-icon-192.png
-icon-512.png
+
